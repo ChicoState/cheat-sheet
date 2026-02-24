@@ -1,3 +1,165 @@
 .App {
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 2rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+.create-cheat-sheet, .cheat-sheet-view, .cheat-sheet-list {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
+}
+
+.editor-container {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 2rem;
+  margin: 1rem 0;
+  width: 100%;
+}
+
+.input-section {
+  flex: 1;
+  min-width: 45%;
+}
+
+.preview-section {
+  flex: 1;
+  min-width: 45%;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+.textarea-field {
+  width: 100%;
+  height: 500px;
+  padding: 1rem;
+  font-family: 'Consolas', monospace;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.input-field {
+  width: 100%;
+  padding: 0.8rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1.1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+}
+
+.btn {
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-right: 0.8rem;
+  font-size: 0.9rem;
+}
+
+.btn.primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn.primary:hover {
+  background-color: #0056b3;
+}
+
+.btn.secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn.secondary:hover {
+  background-color: #545b62;
+}
+
+.btn.delete {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn.delete:hover {
+  background-color: #c82333;
+}
+
+.sheet-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 2rem;
+}
+
+.sheet-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.sheet-item:hover {
+  background-color: #f8f9fa;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  transform: translateY(-1px);
+}
+
+.sheet-title {
+  flex-grow: 1;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 1rem;
+}
+
+.latex-rendered {
+  line-height: 1.6;
+  font-size: 1.1rem;
+}
+
+.latex-rendered p {
+  margin-bottom: 1rem;
+}
+
+.latex-rendered h1, .latex-rendered h2, .latex-rendered h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.latex-rendered ul, .latex-rendered ol {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Ensure images don't overflow */
+img {
+  max-width: 100%;
 }
