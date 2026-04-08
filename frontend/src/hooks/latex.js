@@ -93,7 +93,11 @@ export function useLatex(initialData) {
   }, [initialData]);
 
   useEffect(() => {
-    saveLatexStorage({ title, content, columns, fontSize, spacing });
+    const timeoutId = setTimeout(() => {
+      saveLatexStorage({ title, content, columns, fontSize, spacing });
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
   }, [title, content, columns, fontSize, spacing]);
 
   const handlePreview = useCallback(async (latexContent = null, regenerateOptions = null) => {
