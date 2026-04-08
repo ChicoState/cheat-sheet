@@ -50,7 +50,11 @@ def generate_sheet(request):
     if not selected:
         return Response({"error": "No formulas selected"}, status=400)
     
-    columns = max(1, min(3, int(columns)))
+    try:
+        columns = int(columns)
+    except (TypeError, ValueError):
+        columns = 2
+    columns = max(1, min(3, columns))
     
     formula_data = get_formula_data()
     selected_formulas = []
