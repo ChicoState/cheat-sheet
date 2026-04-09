@@ -463,6 +463,23 @@ class TestGenerateSheetEndpoint:
         assert "\\documentclass[10pt,fleqn]{article}" in tex
         assert "extarticle" not in tex
 
+    def test_generate_sheet_formula_uses_displaystyle_in_adjustbox(self, api_client):
+        """Non-special-class formulas must be wrapped in $\\displaystyle ...$
+        inside \\adjustbox to preserve display-style math rendering."""
+        resp = api_client.post(
+            "/api/generate-sheet/",
+            {
+                "formulas": [
+                    {"class": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula"}
+                ]
+            },
+            format="json",
+        )
+        assert resp.status_code == 200
+        tex = resp.json()["tex_code"]
+        assert "\\adjustbox{max width=\\linewidth}" in tex
+        assert "$\\displaystyle" in tex
+
     def test_generate_sheet_latex_injection_blocked(self, api_client):
         """LaTeX injection attempts in parameters should be sanitized."""
         resp = api_client.post(
