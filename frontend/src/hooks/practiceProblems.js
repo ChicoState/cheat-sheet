@@ -326,6 +326,11 @@ export function usePracticeProblems(initialData) {
           return problem;
         }
 
+        previewRequestIdsRef.current.set(
+          problem.clientId,
+          (previewRequestIdsRef.current.get(problem.clientId) || 0) + 1
+        );
+
         const result = await requestProblemPreview(problem);
 
         return {

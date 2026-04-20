@@ -422,7 +422,7 @@ function SortableProblemBlock({ problem, onChange, onRemove, onPreview, onClearP
   );
 }
 
-function PracticeProblemEditor({ problems, onAddProblem, onChangeProblem, onRemoveProblem, onReorderProblems, onPreviewProblem, onClearPreview, disabled = false }) {
+function PracticeProblemEditor({ problems, onAddProblem, onChangeProblem, onRemoveProblem, onReorderProblems, onPreviewProblem, onClearPreview, disabled = false, isValidating = false }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -453,6 +453,9 @@ function PracticeProblemEditor({ problems, onAddProblem, onChangeProblem, onRemo
           <p className="practice-problem-section-copy">
             Author problems in <code>simple_v1</code>, drag them into order, and save to include them in the compiled PDF preview.
           </p>
+          {isValidating && (
+            <p className="practice-problem-section-status">Validating practice problems before save…</p>
+          )}
         </div>
         <button type="button" className="btn primary" onClick={onAddProblem} disabled={disabled}>Add problem block</button>
       </div>
@@ -942,6 +945,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
           onPreviewProblem={previewProblem}
           onClearPreview={clearProblemPreview}
           disabled={isSubmittingProblems || isSaving}
+          isValidating={isSubmittingProblems && !isSaving}
         />
       </div>
 
