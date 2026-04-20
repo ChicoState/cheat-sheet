@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const STORAGE_KEY = 'cheatSheetProblems';
 
@@ -14,9 +14,19 @@ const loadFromStorage = () => {
   }
 };
 
+const serializeProblemsForStorage = (problems) =>
+  problems.map((problem, index) => ({
+    clientId: problem.clientId,
+    id: problem.id,
+    label: problem.label,
+    source_text: problem.sourceText,
+    source_format: problem.sourceFormat,
+    order: problem.order ?? index + 1,
+  }));
+
 const saveToStorage = (problems) => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(problems));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeProblemsForStorage(problems)));
   } catch (error) {
     console.error('Failed to save practice problems to localStorage', error);
   }
@@ -50,6 +60,8 @@ const normalizeProblem = (problem = {}, index = 0) => ({
   compiledLatex: problem.compiledLatex ?? problem.compiled_latex ?? '',
   order: problem.order ?? index + 1,
   errors: Array.isArray(problem.errors) ? problem.errors : [],
+  isPreviewing: Boolean(problem.isPreviewing),
+  isDirty: Boolean(problem.isDirty),
 });
 
 export function usePracticeProblems(initialData) {
@@ -66,8 +78,11 @@ export function usePracticeProblems(initialData) {
 
   const [problems, setProblems] = useState(initialProblems);
   const [removedProblemIds, setRemovedProblemIds] = useState([]);
+  const problemsRef = useRef(initialProblems);
+  const previewRequestIdsRef = useRef(new Map());
 
   useEffect(() => {
+    problemsRef.current = problems;
     saveToStorage(problems);
   }, [problems]);
 
@@ -95,6 +110,7 @@ export function usePracticeProblems(initialData) {
           ? {
               ...problem,
               [field]: value,
+              isDirty: field === 'label' || field === 'sourceText' ? true : problem.isDirty,
               errors: [],
             }
           : problem
@@ -110,6 +126,8 @@ export function usePracticeProblems(initialData) {
       if (removedProblem?.id) {
         setRemovedProblemIds((current) => [...current, removedProblem.id]);
       }
+
+      previewRequestIdsRef.current.delete(clientId);
 
       return next.map((problem, index) => ({
         ...problem,
@@ -134,8 +152,132 @@ export function usePracticeProblems(initialData) {
   const clearProblems = useCallback(() => {
     setProblems([]);
     setRemovedProblemIds([]);
+    previewRequestIdsRef.current.clear();
     localStorage.removeItem(STORAGE_KEY);
   }, []);
+
+  const clearProblemPreview = useCallback((clientId) => {
+    previewRequestIdsRef.current.set(clientId, (previewRequestIdsRef.current.get(clientId) || 0) + 1);
+
+    setProblems((prev) =>
+      prev.map((problem) => {
+        if (problem.clientId !== clientId) {
+          return problem;
+        }
+
+        if (!problem.compiledLatex && problem.errors.length === 0 && !problem.isPreviewing) {
+          return problem;
+        }
+
+        return {
+          ...problem,
+          compiledLatex: '',
+          errors: [],
+          isPreviewing: false,
+        };
+      })
+    );
+  }, []);
+
+  const previewProblem = useCallback(async (clientId) => {
+    const currentProblem = problemsRef.current.find((problem) => problem.clientId === clientId);
+
+    if (!currentProblem) {
+      return null;
+    }
+
+    if (!currentProblem.sourceText.trim()) {
+      clearProblemPreview(clientId);
+      return null;
+    }
+
+    const nextRequestId = (previewRequestIdsRef.current.get(clientId) || 0) + 1;
+    previewRequestIdsRef.current.set(clientId, nextRequestId);
+
+    setProblems((prev) =>
+      prev.map((problem) =>
+        problem.clientId === clientId
+          ? {
+              ...problem,
+              isPreviewing: true,
+              errors: [],
+            }
+          : problem
+      )
+    );
+
+    try {
+      const response = await fetch('/api/problems/preview/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          label: currentProblem.label,
+          source_text: currentProblem.sourceText,
+          source_format: currentProblem.sourceFormat,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (previewRequestIdsRef.current.get(clientId) !== nextRequestId) {
+        return null;
+      }
+
+      if (!response.ok) {
+        const errors = flattenProblemErrors(data);
+        setProblems((prev) =>
+          prev.map((problem) =>
+            problem.clientId === clientId
+              ? {
+                  ...problem,
+                  isPreviewing: false,
+                  errors,
+                  compiledLatex: '',
+                }
+              : problem
+          )
+        );
+        return null;
+      }
+
+      const errors = Array.isArray(data.errors)
+        ? data.errors.map((error) => `Line ${error.line}: ${error.message}`)
+        : [];
+
+      setProblems((prev) =>
+        prev.map((problem) =>
+          problem.clientId === clientId
+            ? {
+                ...problem,
+                isPreviewing: false,
+                errors,
+                compiledLatex: data.compiled_latex || '',
+                isDirty: errors.length > 0 ? problem.isDirty : false,
+              }
+            : problem
+        )
+      );
+
+      return data;
+    } catch {
+      if (previewRequestIdsRef.current.get(clientId) !== nextRequestId) {
+        return null;
+      }
+
+      setProblems((prev) =>
+        prev.map((problem) =>
+          problem.clientId === clientId
+            ? {
+                ...problem,
+                isPreviewing: false,
+                errors: ['Failed to preview practice problem.'],
+                compiledLatex: '',
+              }
+            : problem
+        )
+      );
+      return null;
+    }
+  }, [clearProblemPreview]);
 
   const serializeProblems = useCallback(
     () =>
@@ -253,6 +395,8 @@ export function usePracticeProblems(initialData) {
     removeProblem,
     reorderProblems,
     clearProblems,
+    clearProblemPreview,
+    previewProblem,
     serializeProblems,
     syncProblems,
   };

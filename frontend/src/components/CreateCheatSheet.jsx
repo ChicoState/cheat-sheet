@@ -314,11 +314,26 @@ const FormulaSelection = ({
   </div>
 );
 
-function SortableProblemBlock({ problem, onChange, onRemove }) {
+function SortableProblemBlock({ problem, onChange, onRemove, onPreview, onClearPreview }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
     id: problem.clientId,
     data: { type: 'problem' },
   });
+
+  useEffect(() => {
+    if (!problem.sourceText.trim()) {
+      onClearPreview(problem.clientId);
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      onPreview(problem.clientId);
+    }, 500);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [problem.clientId, problem.label, problem.sourceText, onPreview, onClearPreview]);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -377,11 +392,29 @@ function SortableProblemBlock({ problem, onChange, onRemove }) {
           ))}
         </div>
       )}
+
+      <div className="practice-problem-preview-card">
+        <div className="practice-problem-preview-header">
+          <span>Compiled block preview</span>
+          <span className={`practice-problem-preview-status ${problem.errors?.length > 0 ? 'error' : problem.isPreviewing ? 'loading' : problem.compiledLatex ? 'ready' : ''}`}>
+            {problem.isPreviewing
+              ? 'Checking syntax...'
+              : problem.errors?.length > 0
+                ? 'Fix errors to preview'
+                : problem.compiledLatex
+                  ? problem.isDirty
+                    ? 'Preview ready — save to persist'
+                    : 'Preview ready'
+                  : 'Start typing to preview'}
+          </span>
+        </div>
+        <pre className="practice-problem-preview">{problem.compiledLatex || 'No compiled output yet.'}</pre>
+      </div>
     </div>
   );
 }
 
-function PracticeProblemEditor({ problems, onAddProblem, onChangeProblem, onRemoveProblem, onReorderProblems }) {
+function PracticeProblemEditor({ problems, onAddProblem, onChangeProblem, onRemoveProblem, onReorderProblems, onPreviewProblem, onClearPreview }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -431,6 +464,8 @@ function PracticeProblemEditor({ problems, onAddProblem, onChangeProblem, onRemo
                   problem={problem}
                   onChange={onChangeProblem}
                   onRemove={onRemoveProblem}
+                  onPreview={onPreviewProblem}
+                  onClearPreview={onClearPreview}
                 />
               ))}
             </div>
@@ -734,6 +769,8 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
     removeProblem,
     reorderProblems,
     clearProblems,
+    clearProblemPreview,
+    previewProblem,
     serializeProblems,
     syncProblems,
   } = usePracticeProblems(initialData);
@@ -866,6 +903,8 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
           onChangeProblem={updateProblem}
           onRemoveProblem={removeProblem}
           onReorderProblems={reorderProblems}
+          onPreviewProblem={previewProblem}
+          onClearPreview={clearProblemPreview}
         />
       </div>
 

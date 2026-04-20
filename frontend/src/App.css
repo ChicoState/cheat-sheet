@@ -825,6 +825,50 @@ label {
   font-size: 0.8125rem;
 }
 
+.practice-problem-preview-card {
+  margin-top: var(--space-md);
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.practice-problem-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.practice-problem-preview-status {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.practice-problem-preview-status.ready {
+  color: #22c55e;
+}
+
+.practice-problem-preview-status.loading {
+  color: var(--primary);
+}
+
+.practice-problem-preview-status.error {
+  color: var(--code-error);
+}
+
+.practice-problem-preview {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
 /* ==========================================================================
    LAYOUT OPTIONS
    ========================================================================== */
