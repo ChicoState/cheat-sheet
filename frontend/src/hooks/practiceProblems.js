@@ -51,6 +51,14 @@ const flattenProblemErrors = (errorData = {}) => {
   });
 };
 
+const getSaveValidationErrors = (problem) => {
+  if (!problem.sourceText.trim()) {
+    return ['Add problem source or delete this block before saving.'];
+  }
+
+  return [];
+};
+
 const normalizeProblem = (problem = {}, index = 0) => ({
   clientId: problem.clientId || `problem-${problem.id ?? index}-${index}`,
   id: problem.id ?? null,
@@ -179,6 +187,45 @@ export function usePracticeProblems(initialData) {
     );
   }, []);
 
+  const requestProblemPreview = useCallback(async (problem) => {
+    try {
+      const response = await fetch('/api/problems/preview/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          label: problem.label,
+          source_text: problem.sourceText,
+          source_format: problem.sourceFormat,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        return {
+          compiledLatex: '',
+          errors: flattenProblemErrors(data),
+          data: null,
+        };
+      }
+
+      const errors = Array.isArray(data.errors)
+        ? data.errors.map((error) => `Line ${error.line}: ${error.message}`)
+        : [];
+
+      return {
+        compiledLatex: data.compiled_latex || '',
+        errors,
+        data,
+      };
+    } catch {
+      return {
+        compiledLatex: '',
+        errors: ['Failed to preview practice problem.'],
+        data: null,
+      };
+    }
+  }, []);
+
   const previewProblem = useCallback(async (clientId) => {
     const currentProblem = problemsRef.current.find((problem) => problem.clientId === clientId);
 
@@ -207,41 +254,11 @@ export function usePracticeProblems(initialData) {
     );
 
     try {
-      const response = await fetch('/api/problems/preview/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          label: currentProblem.label,
-          source_text: currentProblem.sourceText,
-          source_format: currentProblem.sourceFormat,
-        }),
-      });
-      const data = await response.json().catch(() => ({}));
+      const result = await requestProblemPreview(currentProblem);
 
       if (previewRequestIdsRef.current.get(clientId) !== nextRequestId) {
         return null;
       }
-
-      if (!response.ok) {
-        const errors = flattenProblemErrors(data);
-        setProblems((prev) =>
-          prev.map((problem) =>
-            problem.clientId === clientId
-              ? {
-                  ...problem,
-                  isPreviewing: false,
-                  errors,
-                  compiledLatex: '',
-                }
-              : problem
-          )
-        );
-        return null;
-      }
-
-      const errors = Array.isArray(data.errors)
-        ? data.errors.map((error) => `Line ${error.line}: ${error.message}`)
-        : [];
 
       setProblems((prev) =>
         prev.map((problem) =>
@@ -249,15 +266,15 @@ export function usePracticeProblems(initialData) {
             ? {
                 ...problem,
                 isPreviewing: false,
-                errors,
-                compiledLatex: data.compiled_latex || '',
-                isDirty: errors.length > 0 ? problem.isDirty : false,
+                errors: result.errors,
+                compiledLatex: result.compiledLatex,
+                isDirty: result.errors.length > 0 ? problem.isDirty : false,
               }
             : problem
         )
       );
 
-      return data;
+      return result.data;
     } catch {
       if (previewRequestIdsRef.current.get(clientId) !== nextRequestId) {
         return null;
@@ -277,7 +294,62 @@ export function usePracticeProblems(initialData) {
       );
       return null;
     }
-  }, [clearProblemPreview]);
+  }, [clearProblemPreview, requestProblemPreview]);
+
+  const validateProblemsForSave = useCallback(async () => {
+    const orderedProblems = problemsRef.current.map((problem, index) => ({
+      ...problem,
+      order: index + 1,
+    }));
+
+    const problemsWithLocalErrors = orderedProblems.map((problem) => {
+      const errors = getSaveValidationErrors(problem);
+
+      return errors.length > 0
+        ? {
+            ...problem,
+            errors,
+            compiledLatex: '',
+            isPreviewing: false,
+          }
+        : problem;
+    });
+
+    if (problemsWithLocalErrors.some((problem) => problem.errors.length > 0)) {
+      setProblems(problemsWithLocalErrors);
+      throw new Error('Add problem source or delete incomplete practice problem blocks before saving.');
+    }
+
+    const validatedProblems = await Promise.all(
+      orderedProblems.map(async (problem) => {
+        if (!problem.sourceText.trim() || (!problem.isDirty && problem.compiledLatex)) {
+          return problem;
+        }
+
+        const result = await requestProblemPreview(problem);
+
+        return {
+          ...problem,
+          compiledLatex: result.compiledLatex,
+          errors: result.errors,
+          isPreviewing: false,
+          isDirty: result.errors.length > 0 ? problem.isDirty : false,
+        };
+      })
+    );
+
+    setProblems(validatedProblems);
+
+    const blockingProblem = validatedProblems.find(
+      (problem) => problem.errors.length > 0 || (problem.sourceText.trim() && !problem.compiledLatex)
+    );
+
+    if (blockingProblem) {
+      throw new Error('Fix practice problem errors before saving.');
+    }
+
+    return validatedProblems;
+  }, [requestProblemPreview]);
 
   const serializeProblems = useCallback(
     () =>
@@ -397,6 +469,7 @@ export function usePracticeProblems(initialData) {
     clearProblems,
     clearProblemPreview,
     previewProblem,
+    validateProblemsForSave,
     serializeProblems,
     syncProblems,
   };

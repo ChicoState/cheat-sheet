@@ -314,15 +314,21 @@ const FormulaSelection = ({
   </div>
 );
 
-function SortableProblemBlock({ problem, onChange, onRemove, onPreview, onClearPreview }) {
+function SortableProblemBlock({ problem, onChange, onRemove, onPreview, onClearPreview, disabled = false }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
     id: problem.clientId,
     data: { type: 'problem' },
   });
 
   useEffect(() => {
+    if (disabled) {
+      return undefined;
+    }
+
     if (!problem.sourceText.trim()) {
-      onClearPreview(problem.clientId);
+      if (!problem.errors?.length) {
+        onClearPreview(problem.clientId);
+      }
       return undefined;
     }
 
@@ -333,7 +339,7 @@ function SortableProblemBlock({ problem, onChange, onRemove, onPreview, onClearP
     return () => {
       window.clearTimeout(timer);
     };
-  }, [problem.clientId, problem.label, problem.sourceText, onPreview, onClearPreview]);
+  }, [problem.clientId, problem.label, problem.sourceText, problem.errors?.length, onPreview, onClearPreview, disabled]);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -347,13 +353,13 @@ function SortableProblemBlock({ problem, onChange, onRemove, onPreview, onClearP
     <div ref={setNodeRef} style={style} className="practice-problem-card">
       <div className="practice-problem-card-header">
         <div className="practice-problem-card-title">
-          <span className="drag-handle" {...attributes} {...listeners}>⋮⋮</span>
+          <span className="drag-handle" {...(disabled ? {} : attributes)} {...(disabled ? {} : listeners)}>⋮⋮</span>
           <div>
             <strong>{problem.label?.trim() || 'Untitled problem block'}</strong>
             <div className="practice-problem-card-subtitle">Drag to set block order in the saved PDF</div>
           </div>
         </div>
-        <button type="button" className="class-group-btn remove" onClick={() => onRemove(problem.clientId)}>
+        <button type="button" className="class-group-btn remove" onClick={() => onRemove(problem.clientId)} disabled={disabled}>
           Delete
         </button>
       </div>
@@ -368,6 +374,7 @@ function SortableProblemBlock({ problem, onChange, onRemove, onPreview, onClearP
             onChange={(event) => onChange(problem.clientId, 'label', event.target.value)}
             placeholder="Quadratic factoring"
             className="input-field practice-problem-input"
+            disabled={disabled}
           />
         </div>
 
@@ -381,6 +388,7 @@ function SortableProblemBlock({ problem, onChange, onRemove, onPreview, onClearP
             className="practice-problem-textarea"
             rows={9}
             spellCheck="false"
+            disabled={disabled}
           />
         </div>
       </div>
@@ -414,13 +422,17 @@ function SortableProblemBlock({ problem, onChange, onRemove, onPreview, onClearP
   );
 }
 
-function PracticeProblemEditor({ problems, onAddProblem, onChangeProblem, onRemoveProblem, onReorderProblems, onPreviewProblem, onClearPreview }) {
+function PracticeProblemEditor({ problems, onAddProblem, onChangeProblem, onRemoveProblem, onReorderProblems, onPreviewProblem, onClearPreview, disabled = false }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   const handleDragEnd = ({ active, over }) => {
+    if (disabled) {
+      return;
+    }
+
     if (!over || active.id === over.id) {
       return;
     }
@@ -442,7 +454,7 @@ function PracticeProblemEditor({ problems, onAddProblem, onChangeProblem, onRemo
             Author problems in <code>simple_v1</code>, drag them into order, and save to include them in the compiled PDF preview.
           </p>
         </div>
-        <button type="button" className="btn primary" onClick={onAddProblem}>Add problem block</button>
+        <button type="button" className="btn primary" onClick={onAddProblem} disabled={disabled}>Add problem block</button>
       </div>
 
       <details className="practice-problem-help">
@@ -466,6 +478,7 @@ function PracticeProblemEditor({ problems, onAddProblem, onChangeProblem, onRemo
                   onRemove={onRemoveProblem}
                   onPreview={onPreviewProblem}
                   onClearPreview={onClearPreview}
+                  disabled={disabled}
                 />
               ))}
             </div>
@@ -661,19 +674,19 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
   );
 };
 
-const ActionToolbar = ({ handleDownloadTex, handleDownloadPDF, isLoading, isSaving, canDownloadPDF, handleClear }) => (
+const ActionToolbar = ({ handleDownloadTex, handleDownloadPDF, isLoading, isSaving, isSubmitting, canDownloadPDF, handleClear }) => (
   <div className="actions">
-    <button type="submit" className="btn primary" disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Progress'}</button>
-    <button type="button" onClick={handleDownloadTex} className="btn download">Download .tex</button>
+    <button type="submit" className="btn primary" disabled={isSaving || isSubmitting}>{isSaving ? 'Saving...' : isSubmitting ? 'Validating...' : 'Save Progress'}</button>
+    <button type="button" onClick={handleDownloadTex} className="btn download" disabled={isSubmitting}>Download .tex</button>
     <button
       type="button"
       onClick={handleDownloadPDF}
       className="btn download"
-      disabled={isLoading || !canDownloadPDF}
+      disabled={isLoading || isSubmitting || !canDownloadPDF}
     >
       {isLoading ? 'Compiling...' : 'Download PDF'}
     </button>
-    <button type="button" onClick={handleClear} className="btn clear">Clear</button>
+    <button type="button" onClick={handleClear} className="btn clear" disabled={isSubmitting}>Clear</button>
   </div>
 );
 
@@ -745,6 +758,7 @@ const LayoutOptions = ({ columns, setColumns, fontSize, setFontSize, spacing, se
 );
 
 const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) => {
+  const [isSubmittingProblems, setIsSubmittingProblems] = useState(false);
   const {
     classesData,
     selectedClasses,
@@ -771,7 +785,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
     clearProblems,
     clearProblemPreview,
     previewProblem,
-    serializeProblems,
+    validateProblemsForSave,
     syncProblems,
   } = usePracticeProblems(initialData);
 
@@ -817,7 +831,15 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
 
   const handleSave = async (e) => {
     e.preventDefault();
+
+    if (isSaving || isSubmittingProblems) {
+      return;
+    }
+
+    setIsSubmittingProblems(true);
+
     try {
+      const validatedProblems = await validateProblemsForSave();
       const basePayload = {
         title,
         content,
@@ -826,7 +848,14 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
         spacing,
         margins,
         selectedFormulas: getSelectedFormulasList(),
-        practiceProblems: serializeProblems(),
+        practiceProblems: validatedProblems.map((problem, index) => ({
+          id: problem.id,
+          label: problem.label,
+          source_text: problem.sourceText,
+          source_format: problem.sourceFormat,
+          compiled_latex: problem.compiledLatex,
+          order: problem.order ?? index + 1,
+        })),
       };
 
       const persistedSheet = await onSave(basePayload, { showFeedback: false });
@@ -850,7 +879,14 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
       alert('Progress saved!');
     } catch (error) {
       console.error('Failed to save practice problems', error);
-      alert(`Failed to save progress: ${error.message}`);
+      const message = error?.message || 'Failed to save progress.';
+      const isValidationError = [
+        'Add problem source or delete incomplete practice problem blocks before saving.',
+        'Fix practice problem errors before saving.',
+      ].includes(message);
+      alert(isValidationError ? message : `Failed to save progress: ${message}`);
+    } finally {
+      setIsSubmittingProblems(false);
     }
   };
 
@@ -905,6 +941,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
           onReorderProblems={reorderProblems}
           onPreviewProblem={previewProblem}
           onClearPreview={clearProblemPreview}
+          disabled={isSubmittingProblems || isSaving}
         />
       </div>
 
@@ -970,6 +1007,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
           handleDownloadPDF={() => handleDownloadPDF(initialData?.id)}
           isLoading={isLoading}
           isSaving={isSaving}
+          isSubmitting={isSubmittingProblems}
           canDownloadPDF={Boolean(content || initialData?.id)}
           handleClear={handleClear}
         />
