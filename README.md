@@ -26,7 +26,7 @@ A full-stack web application for generating LaTeX-based cheat sheets. Users sele
 ### Database Features
 - **Templates**: Save and manage reusable LaTeX templates
 - **Cheat Sheets**: Save and load your cheat sheet projects
-- **Practice Problems**: Add practice problems to your sheets
+- **Practice Problems**: Add compiler-backed practice-problem blocks with live validation and compiled previews
 
 ## Tech Stack
 
@@ -90,6 +90,7 @@ A full-stack web application for generating LaTeX-based cheat sheets. Users sele
 | GET/PUT/PATCH/DELETE | `/api/cheatsheets/{id}/` | Retrieve/update/delete cheat sheet |
 | GET/POST | `/api/problems/` | List/create practice problems |
 | GET/PUT/PATCH/DELETE | `/api/problems/{id}/` | Retrieve/update/delete problem |
+| POST | `/api/problems/preview/` | Validate and preview a `simple_v1` practice-problem block |
 
 ### Available Formula Classes
 

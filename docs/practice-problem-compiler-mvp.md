@@ -34,10 +34,11 @@ Let users author practice problems in a simple indented syntax, keep the origina
 1. User creates a practice-problem block.
 2. User enters a block label, such as `Quadratic factoring`.
 3. User writes source text in the simple syntax.
-4. Frontend saves the block through `/api/problems/`.
-5. Backend validates and compiles the block into LaTeX.
-6. Drag reorder changes block `order`.
-7. Cheat sheet PDF uses compiled block LaTeX in that saved order.
+4. Frontend can request a live preview while the user edits.
+5. Frontend saves the block through `/api/problems/`.
+6. Backend validates and compiles the block into LaTeX.
+7. Drag reorder changes block `order`.
+8. Cheat sheet PDF uses compiled block LaTeX in that saved order.
 
 ## Data model changes
 
@@ -107,7 +108,13 @@ def compile_math_expression(expression: str) -> str:
 - store `compiled_latex`
 - expose read-only `compiled_latex`
 
-For MVP, no separate parse-preview endpoint is required.
+The original MVP did not require a separate parse-preview endpoint.
+
+The current implementation now includes `POST /api/problems/preview/` so the frontend can:
+
+- run backend-authoritative validation while the user edits
+- render a compiled block preview before save
+- reuse the same line-aware compiler errors shown during create/update
 
 ## Rendering behavior
 
