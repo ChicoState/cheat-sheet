@@ -3,6 +3,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useFormulas } from '../hooks/formulas';
+import { usePracticeProblems } from '../hooks/practiceProblems';
 import { useLatex } from '../hooks/latex';
 import { Document, Page, pdfjs } from 'react-pdf';
 
@@ -313,6 +314,133 @@ const FormulaSelection = ({
   </div>
 );
 
+function SortableProblemBlock({ problem, onChange, onRemove }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
+    id: problem.clientId,
+    data: { type: 'problem' },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    opacity: isDragging ? 0.8 : 1,
+    zIndex: isDragging ? 1000 : 'auto',
+    position: 'relative',
+    boxShadow: isDragging ? '0 4px 12px rgba(0,0,0,0.15)' : 'none',
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="practice-problem-card">
+      <div className="practice-problem-card-header">
+        <div className="practice-problem-card-title">
+          <span className="drag-handle" {...attributes} {...listeners}>⋮⋮</span>
+          <div>
+            <strong>{problem.label?.trim() || 'Untitled problem block'}</strong>
+            <div className="practice-problem-card-subtitle">Drag to set block order in the saved PDF</div>
+          </div>
+        </div>
+        <button type="button" className="class-group-btn remove" onClick={() => onRemove(problem.clientId)}>
+          Delete
+        </button>
+      </div>
+
+      <div className="practice-problem-fields">
+        <div className="practice-problem-field">
+          <label htmlFor={`problem-label-${problem.clientId}`}>Block label</label>
+          <input
+            id={`problem-label-${problem.clientId}`}
+            type="text"
+            value={problem.label}
+            onChange={(event) => onChange(problem.clientId, 'label', event.target.value)}
+            placeholder="Quadratic factoring"
+            className="input-field practice-problem-input"
+          />
+        </div>
+
+        <div className="practice-problem-field">
+          <label htmlFor={`problem-source-${problem.clientId}`}>Problem source</label>
+          <textarea
+            id={`problem-source-${problem.clientId}`}
+            value={problem.sourceText}
+            onChange={(event) => onChange(problem.clientId, 'sourceText', event.target.value)}
+            placeholder={"problem:\n    text: Solve for x\n    math: x^2 - 5x + 6 = 0\n\nsteps:\n    text: Factor the trinomial\n    math: x^2 - 5x + 6 = (x - 2)(x - 3)"}
+            className="practice-problem-textarea"
+            rows={9}
+            spellCheck="false"
+          />
+        </div>
+      </div>
+
+      {problem.errors?.length > 0 && (
+        <div className="practice-problem-errors">
+          {problem.errors.map((error) => (
+            <div key={error}>{error}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PracticeProblemEditor({ problems, onAddProblem, onChangeProblem, onRemoveProblem, onReorderProblems }) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = ({ active, over }) => {
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = problems.findIndex((problem) => problem.clientId === active.id);
+    const newIndex = problems.findIndex((problem) => problem.clientId === over.id);
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      onReorderProblems(oldIndex, newIndex);
+    }
+  };
+
+  return (
+    <div className="practice-problem-section">
+      <div className="practice-problem-section-header">
+        <div>
+          <label className="practice-problem-section-label">Practice problem blocks</label>
+          <p className="practice-problem-section-copy">
+            Author problems in <code>simple_v1</code>, drag them into order, and save to include them in the compiled PDF preview.
+          </p>
+        </div>
+        <button type="button" className="btn primary" onClick={onAddProblem}>Add problem block</button>
+      </div>
+
+      <details className="practice-problem-help">
+        <summary>Syntax help</summary>
+        <pre>{`problem:\n    text: Solve for x\n    math: x^2 - 5x + 6 = 0\n\nsteps:\n    text: Factor the trinomial\n    math: x^2 - 5x + 6 = (x - 2)(x - 3)\n    text: Therefore x = 2 or x = 3`}</pre>
+      </details>
+
+      {problems.length === 0 ? (
+        <div className="practice-problem-empty">
+          No practice problems yet. Add a block to start writing compiler-backed problems.
+        </div>
+      ) : (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={problems.map((problem) => problem.clientId)} strategy={verticalListSortingStrategy}>
+            <div className="practice-problem-list">
+              {problems.map((problem) => (
+                <SortableProblemBlock
+                  key={problem.clientId}
+                  problem={problem}
+                  onChange={onChangeProblem}
+                  onRemove={onRemoveProblem}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
+    </div>
+  );
+}
+
 const COMPILE_ERROR_LINE_REGEX = /document\.tex:(\d+):/g;
 
 const escapeHtml = (value = '') => value
@@ -498,7 +626,7 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
   );
 };
 
-const ActionToolbar = ({ handleDownloadTex, handleDownloadPDF, isLoading, isSaving, content, handleClear }) => (
+const ActionToolbar = ({ handleDownloadTex, handleDownloadPDF, isLoading, isSaving, canDownloadPDF, handleClear }) => (
   <div className="actions">
     <button type="submit" className="btn primary" disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Progress'}</button>
     <button type="button" onClick={handleDownloadTex} className="btn download">Download .tex</button>
@@ -506,7 +634,7 @@ const ActionToolbar = ({ handleDownloadTex, handleDownloadPDF, isLoading, isSavi
       type="button"
       onClick={handleDownloadPDF}
       className="btn download"
-      disabled={isLoading || !content}
+      disabled={isLoading || !canDownloadPDF}
     >
       {isLoading ? 'Compiling...' : 'Download PDF'}
     </button>
@@ -600,6 +728,17 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
   } = useFormulas(initialData);
 
   const {
+    problems,
+    addProblem,
+    updateProblem,
+    removeProblem,
+    reorderProblems,
+    clearProblems,
+    serializeProblems,
+    syncProblems,
+  } = usePracticeProblems(initialData);
+
+  const {
     title,
     setTitle,
     content,
@@ -624,6 +763,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
     goForward,
     handleGenerateSheet,
     handleCompileOnly,
+    compileSavedSheet,
     handleDownloadPDF,
     handleDownloadTex,
     clearLatex
@@ -640,21 +780,48 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
 
   const handleSave = async (e) => {
     e.preventDefault();
-    await onSave({
-      title,
-      content,
-      columns,
-      fontSize,
-      spacing,
-      margins,
-      selectedFormulas: getSelectedFormulasList(),
-    });
+    try {
+      const basePayload = {
+        title,
+        content,
+        columns,
+        fontSize,
+        spacing,
+        margins,
+        selectedFormulas: getSelectedFormulasList(),
+        practiceProblems: serializeProblems(),
+      };
+
+      const persistedSheet = await onSave(basePayload, { showFeedback: false });
+      const persistedProblems = await syncProblems(persistedSheet.id);
+      await onSave(
+        {
+          ...basePayload,
+          id: persistedSheet.id,
+          practiceProblems: persistedProblems.map((problem) => ({
+            id: problem.id,
+            label: problem.label,
+            source_text: problem.sourceText,
+            source_format: problem.sourceFormat,
+            compiled_latex: problem.compiledLatex,
+            order: problem.order,
+          })),
+        },
+        { persistOnly: true }
+      );
+      await compileSavedSheet(persistedSheet.id);
+      alert('Progress saved!');
+    } catch (error) {
+      console.error('Failed to save practice problems', error);
+      alert(`Failed to save progress: ${error.message}`);
+    }
   };
 
   const handleClear = () => {
     if (window.confirm('Are you sure you want to clear everything? This cannot be undone.')) {
       clearLatex();
       clearSelections();
+      clearProblems();
       onReset?.();
     }
   };
@@ -691,6 +858,14 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
           onReorderFormula={reorderFormula}
           onRemoveClass={removeClassFromOrder}
           onRemoveFormula={removeSingleFormula}
+        />
+
+        <PracticeProblemEditor
+          problems={problems}
+          onAddProblem={addProblem}
+          onChangeProblem={updateProblem}
+          onRemoveProblem={removeProblem}
+          onReorderProblems={reorderProblems}
         />
       </div>
 
@@ -753,10 +928,10 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
 
         <ActionToolbar
           handleDownloadTex={handleDownloadTex}
-          handleDownloadPDF={handleDownloadPDF}
+          handleDownloadPDF={() => handleDownloadPDF(initialData?.id)}
           isLoading={isLoading}
           isSaving={isSaving}
-          content={content}
+          canDownloadPDF={Boolean(content || initialData?.id)}
           handleClear={handleClear}
         />
       </div>
