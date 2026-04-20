@@ -1,14 +1,24 @@
-from rest_framework.decorators import api_view, action
-from rest_framework.response import Response
-from rest_framework import status, viewsets
-from django.http import FileResponse
-from django.shortcuts import get_object_or_404
+from typing import cast
+
+import os
 import subprocess
 import tempfile
-import os
+
+from django.http import FileResponse
+from django.shortcuts import get_object_or_404
+from rest_framework.decorators import api_view, action
+from rest_framework import status, viewsets
+from rest_framework.response import Response
+
+from api.services.practice_problem_compiler import compile_source
 
 from .models import Template, CheatSheet, PracticeProblem
-from .serializers import TemplateSerializer, CheatSheetSerializer, PracticeProblemSerializer
+from .serializers import (
+    TemplateSerializer,
+    CheatSheetSerializer,
+    PracticeProblemSerializer,
+    PracticeProblemPreviewSerializer,
+)
 from .formula_data import get_formula_data, get_classes_with_details, get_special_class_formula, is_special_class
 from .latex_utils import build_latex_for_formulas, LATEX_HEADER, LATEX_FOOTER
 
@@ -237,3 +247,30 @@ class PracticeProblemViewSet(viewsets.ModelViewSet):
         if cheat_sheet_id:
             queryset = queryset.filter(cheat_sheet=cheat_sheet_id)
         return queryset
+
+    @action(detail=False, methods=['post'], url_path='preview')
+    def preview(self, request):
+        serializer = PracticeProblemPreviewSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        validated_data = cast(dict[str, str], serializer.validated_data)
+        label = validated_data.get("label", "")
+        source_format = validated_data["source_format"]
+        source_text = validated_data["source_text"]
+        result = compile_source(source_text, label=label)
+
+        return Response(
+            {
+                "source_format": source_format,
+                "compiled_latex": result.compiled_latex,
+                "errors": [
+                    {
+                        "line": error.line,
+                        "column": error.column,
+                        "message": error.message,
+                    }
+                    for error in result.errors
+                ],
+                "is_valid": result.is_valid,
+            }
+        )

@@ -343,6 +343,61 @@ class TestPracticeProblemAPI:
         assert "source_text" in resp.json()
         assert "Line 4" in resp.json()["source_text"][0]
 
+    def test_preview_simple_v1_problem_compiles_source(self, api_client):
+        resp = api_client.post(
+            "/api/problems/preview/",
+            {
+                "label": "Quadratic factoring",
+                "source_format": "simple_v1",
+                "source_text": (
+                    "problem:\n"
+                    "    text: Solve for x\n"
+                    "    math: x^2 - 5x + 6 = 0\n\n"
+                    "steps:\n"
+                    "    text: Factor the trinomial\n"
+                    "    math: x^2 - 5x + 6 = (x - 2)(x - 3)"
+                ),
+            },
+            format="json",
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["is_valid"] is True
+        assert data["errors"] == []
+        assert "\\subsection*{Quadratic factoring}" in data["compiled_latex"]
+
+    def test_preview_simple_v1_problem_returns_line_aware_errors(self, api_client):
+        resp = api_client.post(
+            "/api/problems/preview/",
+            {
+                "label": "Broken block",
+                "source_format": "simple_v1",
+                "source_text": "problem:\n    text: Solve for x\n\nanswer:\n    math: x = 2",
+            },
+            format="json",
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["is_valid"] is False
+        assert data["compiled_latex"] == ""
+        assert data["errors"][0]["line"] == 4
+        assert "Unknown top-level key 'answer'" in data["errors"][0]["message"]
+
+    def test_preview_rejects_unsupported_source_format(self, api_client):
+        resp = api_client.post(
+            "/api/problems/preview/",
+            {
+                "source_format": "latex_legacy",
+                "source_text": "problem:\n    text: Preview me",
+            },
+            format="json",
+        )
+
+        assert resp.status_code == 400
+        assert "source_format" in resp.json()
+
     def test_filter_problems_by_sheet(self, api_client, sample_problem, sample_sheet):
         resp = api_client.get(f"/api/problems/?cheat_sheet={sample_sheet.id}")
         assert resp.status_code == 200

@@ -100,6 +100,20 @@ class PracticeProblemSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class PracticeProblemPreviewSerializer(serializers.Serializer):
+    label = serializers.CharField(required=False, allow_blank=True, default="")
+    source_format = serializers.CharField(required=False, default="simple_v1")
+    source_text = serializers.CharField()
+
+    def validate(self, attrs):
+        if attrs.get("source_format") != "simple_v1":
+            raise serializers.ValidationError(
+                {"source_format": ["Preview currently supports only 'simple_v1'."]}
+            )
+
+        return attrs
+
+
 class CheatSheetSerializer(serializers.ModelSerializer):
     problems = PracticeProblemSerializer(many=True, read_only=True)
     full_latex = serializers.SerializerMethodField()
