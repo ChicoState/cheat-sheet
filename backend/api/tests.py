@@ -42,6 +42,7 @@ def sample_sheet(db, sample_template):
 def sample_problem(db, sample_sheet):
     return PracticeProblem.objects.create(
         cheat_sheet=sample_sheet,
+        source_format="latex_legacy",
         question_latex="What is $2 + 2$?",
         answer_latex="$4$",
         order=1,
@@ -274,7 +275,7 @@ class TestCreateFromTemplate:
 
 @pytest.mark.django_db
 class TestPracticeProblemAPI:
-    def test_create_problem(self, api_client, sample_sheet):
+    def test_create_problem_rejects_legacy_latex_fields(self, api_client, sample_sheet):
         resp = api_client.post(
             "/api/problems/",
             {
@@ -285,12 +286,128 @@ class TestPracticeProblemAPI:
             },
             format="json",
         )
+        assert resp.status_code == 400
+        assert "question_latex" in resp.json()
+
+    def test_update_problem_rejects_legacy_latex_fields(self, api_client, sample_problem):
+        resp = api_client.patch(
+            f"/api/problems/{sample_problem.id}/",
+            {"question_latex": "Changed raw latex"},
+            format="json",
+        )
+
+        assert resp.status_code == 400
+        assert "question_latex" in resp.json()
+
+    def test_create_simple_v1_problem_compiles_source(self, api_client, sample_sheet):
+        resp = api_client.post(
+            "/api/problems/",
+            {
+                "cheat_sheet": sample_sheet.id,
+                "label": "Quadratic factoring",
+                "source_format": "simple_v1",
+                "source_text": (
+                    "problem:\n"
+                    "    text: Solve for x\n"
+                    "    math: x^2 - 5x + 6 = 0\n\n"
+                    "steps:\n"
+                    "    text: Factor the trinomial\n"
+                    "    math: x^2 - 5x + 6 = (x - 2)(x - 3)"
+                ),
+                "order": 1,
+            },
+            format="json",
+        )
+
         assert resp.status_code == 201
+        data = resp.json()
+        assert data["source_format"] == "simple_v1"
+        assert "\\subsection*{Quadratic factoring}" in data["compiled_latex"]
+        assert data["question_latex"] == ""
+        assert data["answer_latex"] == ""
+
+    def test_create_simple_v1_problem_returns_line_aware_validation_errors(self, api_client, sample_sheet):
+        resp = api_client.post(
+            "/api/problems/",
+            {
+                "cheat_sheet": sample_sheet.id,
+                "label": "Broken block",
+                "source_format": "simple_v1",
+                "source_text": "problem:\n    text: Solve for x\n\nanswer:\n    math: x = 2",
+                "order": 1,
+            },
+            format="json",
+        )
+
+        assert resp.status_code == 400
+        assert "source_text" in resp.json()
+        assert "Line 4" in resp.json()["source_text"][0]
+
+    def test_preview_simple_v1_problem_compiles_source(self, api_client):
+        resp = api_client.post(
+            "/api/problems/preview/",
+            {
+                "label": "Quadratic factoring",
+                "source_format": "simple_v1",
+                "source_text": (
+                    "problem:\n"
+                    "    text: Solve for x\n"
+                    "    math: x^2 - 5x + 6 = 0\n\n"
+                    "steps:\n"
+                    "    text: Factor the trinomial\n"
+                    "    math: x^2 - 5x + 6 = (x - 2)(x - 3)"
+                ),
+            },
+            format="json",
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["is_valid"] is True
+        assert data["errors"] == []
+        assert "\\subsection*{Quadratic factoring}" in data["compiled_latex"]
+
+    def test_preview_simple_v1_problem_returns_line_aware_errors(self, api_client):
+        resp = api_client.post(
+            "/api/problems/preview/",
+            {
+                "label": "Broken block",
+                "source_format": "simple_v1",
+                "source_text": "problem:\n    text: Solve for x\n\nanswer:\n    math: x = 2",
+            },
+            format="json",
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["is_valid"] is False
+        assert data["compiled_latex"] == ""
+        assert data["errors"][0]["line"] == 4
+        assert "Unknown top-level key 'answer'" in data["errors"][0]["message"]
+
+    def test_preview_rejects_unsupported_source_format(self, api_client):
+        resp = api_client.post(
+            "/api/problems/preview/",
+            {
+                "source_format": "latex_legacy",
+                "source_text": "problem:\n    text: Preview me",
+            },
+            format="json",
+        )
+
+        assert resp.status_code == 400
+        assert "source_format" in resp.json()
 
     def test_filter_problems_by_sheet(self, api_client, sample_problem, sample_sheet):
         resp = api_client.get(f"/api/problems/?cheat_sheet={sample_sheet.id}")
         assert resp.status_code == 200
         assert len(resp.json()) >= 1
+
+    def test_list_problem_preserves_legacy_source_format(self, api_client, sample_problem, sample_sheet):
+        resp = api_client.get(f"/api/problems/?cheat_sheet={sample_sheet.id}")
+
+        assert resp.status_code == 200
+        assert resp.json()[0]["source_format"] == "latex_legacy"
 
 
 @pytest.mark.django_db

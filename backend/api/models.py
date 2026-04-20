@@ -39,12 +39,10 @@ class CheatSheet(models.Model):
 
         section_lines = ["\\section*{Practice Problems}"]
         for problem in problems:
-            section_lines.append(
-                f"\\textbf{{Problem {problem.order}:}} {problem.question_latex}"
-            )
-            if problem.answer_latex:
-                section_lines.append(f"\\textbf{{Answer:}} {problem.answer_latex}")
-            section_lines.append("")
+            rendered_latex = problem.get_rendered_latex()
+            if rendered_latex:
+                section_lines.append(rendered_latex)
+                section_lines.append("")
 
         return "\n".join(section_lines).rstrip()
 
@@ -132,7 +130,11 @@ class PracticeProblem(models.Model):
     cheat_sheet = models.ForeignKey(
         CheatSheet, on_delete=models.CASCADE, related_name="problems"
     )
-    question_latex = models.TextField()
+    label = models.CharField(max_length=120, blank=True, default="")
+    source_format = models.CharField(max_length=20, default="simple_v1")
+    source_text = models.TextField(blank=True, default="")
+    compiled_latex = models.TextField(blank=True, default="")
+    question_latex = models.TextField(blank=True, default="")
     answer_latex = models.TextField(blank=True, default="")
     order = models.IntegerField(default=0)
 
@@ -141,3 +143,12 @@ class PracticeProblem(models.Model):
 
     def __str__(self):
         return f"Problem {self.order} - {self.cheat_sheet.title}"
+
+    def get_rendered_latex(self):
+        if self.compiled_latex:
+            return self.compiled_latex.strip()
+
+        lines = [f"\\textbf{{Problem {self.order}:}} {self.question_latex}"]
+        if self.answer_latex:
+            lines.append(f"\\textbf{{Answer:}} {self.answer_latex}")
+        return "\n".join(lines).rstrip()

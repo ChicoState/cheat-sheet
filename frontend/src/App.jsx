@@ -10,6 +10,7 @@ const DEFAULT_SHEET = {
   spacing: 'large',
   margins: '0.25in',
   selectedFormulas: [],
+  practiceProblems: [],
 };
 
 function App() {
@@ -59,17 +60,19 @@ function App() {
     }
   }, []);
 
-  const handleSave = async (data, showFeedback = true) => {
+  const handleSave = async (data, options = {}) => {
+    const { showFeedback = true, persistOnly = false } = options;
     const nextSheet = {
       ...cheatSheet,
       ...data,
       selectedFormulas: data.selectedFormulas ?? cheatSheet.selectedFormulas ?? [],
+      practiceProblems: data.practiceProblems ?? cheatSheet.practiceProblems ?? [],
     };
 
     setCheatSheet(nextSheet);
     localStorage.setItem('currentCheatSheet', JSON.stringify(nextSheet));
 
-    if (!showFeedback) {
+    if (persistOnly) {
       return nextSheet;
     }
 
@@ -102,15 +105,20 @@ function App() {
         content: savedSheet.latex_content ?? nextSheet.content,
         fontSize: savedSheet.font_size ?? nextSheet.fontSize,
         selectedFormulas: savedSheet.selected_formulas ?? nextSheet.selectedFormulas,
+        practiceProblems: savedSheet.problems ?? nextSheet.practiceProblems,
       };
 
       setCheatSheet(persistedSheet);
       localStorage.setItem('currentCheatSheet', JSON.stringify(persistedSheet));
-      alert('Progress saved!');
+      if (showFeedback) {
+        alert('Progress saved!');
+      }
       return persistedSheet;
     } catch (error) {
       console.error('Failed to save cheat sheet', error);
-      alert(`Failed to save progress: ${error.message}`);
+      if (showFeedback) {
+        alert(`Failed to save progress: ${error.message}`);
+      }
       throw error;
     } finally {
       setIsSaving(false);

@@ -26,7 +26,7 @@ A full-stack web application for generating LaTeX-based cheat sheets. Users sele
 ### Database Features
 - **Templates**: Save and manage reusable LaTeX templates
 - **Cheat Sheets**: Save and load your cheat sheet projects
-- **Practice Problems**: Add practice problems to your sheets
+- **Practice Problems**: Add compiler-backed practice-problem blocks with live validation and compiled previews
 
 ## Tech Stack
 
@@ -35,7 +35,7 @@ A full-stack web application for generating LaTeX-based cheat sheets. Users sele
 | Frontend | React 18 + Vite |
 | Backend | Django 6 + Django REST Framework |
 | LaTeX Engine | Tectonic |
-| Database | SQLite (dev) / PostgreSQL (Docker/prod) |
+| Database | PostgreSQL 15 |
 | Container | Docker Compose |
 
 ## Project Structure
@@ -90,6 +90,7 @@ A full-stack web application for generating LaTeX-based cheat sheets. Users sele
 | GET/PUT/PATCH/DELETE | `/api/cheatsheets/{id}/` | Retrieve/update/delete cheat sheet |
 | GET/POST | `/api/problems/` | List/create practice problems |
 | GET/PUT/PATCH/DELETE | `/api/problems/{id}/` | Retrieve/update/delete problem |
+| POST | `/api/problems/preview/` | Validate and preview a `simple_v1` practice-problem block |
 
 ### Available Formula Classes
 
@@ -110,18 +111,29 @@ A full-stack web application for generating LaTeX-based cheat sheets. Users sele
 
 - Python 3.13+
 - Node.js 20+
+- PostgreSQL 15+ (or Docker)
 - Tectonic (for PDF compilation)
 
 ### Backend Setup
+
+Start PostgreSQL before running Django locally. The quickest option is:
+
+```bash
+docker compose up -d db
+```
 
 ```bash
 cd backend 
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
+cp .env.example .env
 python manage.py migrate
 python manage.py runserver
 ```
+
+`backend/.env.example` is preconfigured for a PostgreSQL instance on `localhost:5432`.
+If you want to run Postgres in Docker while keeping the backend local, start it with `docker compose up -d db`.
 
 The API will be available at `http://localhost:8000/api/`.
 
@@ -142,18 +154,22 @@ docker compose up --build
 ```
 
 This builds and starts the Django backend, React frontend, and PostgreSQL database.
+The database is also exposed on `localhost:5432` for local backend/test runs.
 
 ## Running Tests
 
 ### Backend (pytest)
 
 ```bash
+docker compose up -d db
 cd backend
 pytest                      # Run all tests
 pytest -v                   # Run with verbose output
 pytest -k "test_name"        # Run tests matching pattern
 pytest api/tests.py          # Run specific test file
 ```
+
+Tests now run against PostgreSQL using the connection configured in `backend/.env`.
 
 ### Frontend (ESLint)
 

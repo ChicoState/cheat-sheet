@@ -158,6 +158,45 @@ export function useLatex(initialData) {
     setPdfBlob(pdfBlobUrlRef.current);
   }, []);
 
+  const compileSavedSheet = useCallback(async (cheatSheetId) => {
+    if (!cheatSheetId) {
+      throw new Error('Save the cheat sheet first.');
+    }
+
+    if (isCompilingRef.current) return;
+
+    isCompilingRef.current = true;
+    setIsCompiling(true);
+    setCompileError(null);
+
+    try {
+      const response = await fetch('/api/compile/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cheat_sheet_id: cheatSheetId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(formatCompileError(errorData));
+      }
+
+      const blob = await response.blob();
+      if (pdfBlobUrlRef.current) {
+        URL.revokeObjectURL(pdfBlobUrlRef.current);
+      }
+
+      pdfBlobUrlRef.current = URL.createObjectURL(blob);
+      setPdfBlob(pdfBlobUrlRef.current);
+    } catch (error) {
+      setCompileError(error.message);
+      throw error;
+    } finally {
+      setIsCompiling(false);
+      isCompilingRef.current = false;
+    }
+  }, []);
+
   const handleCompileOnly = useCallback(async () => {
     if (isCompilingRef.current) return;
     
@@ -256,13 +295,17 @@ export function useLatex(initialData) {
     }
   };
 
-  const handleDownloadPDF = async () => {
+  const handleDownloadPDF = async (cheatSheetId = null) => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/compile/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify(
+          cheatSheetId
+            ? { cheat_sheet_id: cheatSheetId }
+            : { content }
+        ),
       });
       if (!response.ok) throw new Error('Failed to compile LaTeX');
       const blob = await response.blob();
@@ -344,6 +387,7 @@ export function useLatex(initialData) {
     handleGenerateSheet,
     handlePreview,
     handleCompileOnly,
+    compileSavedSheet,
     handleDownloadPDF,
     handleDownloadTex,
     clearLatex

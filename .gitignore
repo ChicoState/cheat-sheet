@@ -46,6 +46,7 @@ session-*.md
 .env.*
 frontend/.env
 backend/.env
+!backend/.env.example
 
 # Ignore all SQLite DBs, not just the default
 *.sqlite3
@@ -65,4 +66,3 @@ backend/coverage/
 
 # OpenCode/Sisyphus
 .sisyphus/
-

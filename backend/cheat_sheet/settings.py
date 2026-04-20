@@ -1,15 +1,22 @@
-"""
-Django settings for cheat_sheet project.
-"""
+"""Django settings for cheat_sheet project."""
 
-from pathlib import Path
 import os
-from dotenv import load_dotenv
-from django.core.exceptions import ImproperlyConfigured
+from pathlib import Path
+
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
+
+DEFAULT_DATABASE_URL = (
+    f"postgresql://{os.getenv('POSTGRES_USER', 'cheatsheet_user')}:"
+    f"{os.getenv('POSTGRES_PASSWORD', 'cheatsheet_pass')}@"
+    f"{os.getenv('POSTGRES_HOST', 'localhost')}:"
+    f"{os.getenv('POSTGRES_PORT', '5432')}/"
+    f"{os.getenv('POSTGRES_DB', 'cheatsheet_db')}"
+)
 
 DEBUG = os.getenv("DJANGO_DEBUG", "True") == "True"
 
@@ -80,10 +87,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "cheat_sheet.wsgi.application"
 
-# Database — uses DATABASE_URL env var, falls back to SQLite for local dev
+# Database — uses DATABASE_URL when provided and defaults to local PostgreSQL
 DATABASES = {
     "default": dj_database_url.config(
-        default="sqlite:///" + str(BASE_DIR / "db.sqlite3"),
+        default=DEFAULT_DATABASE_URL,
         conn_max_age=600,
     )
 }

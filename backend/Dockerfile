@@ -35,4 +35,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "until pg_isready -h db -U cheatsheet_user; do sleep 2; done && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
+CMD ["sh", "-c", "export PGPASSWORD=${POSTGRES_PASSWORD:-cheatsheet_pass}; until pg_isready -h ${POSTGRES_HOST:-db} -p ${POSTGRES_PORT:-5432} -U ${POSTGRES_USER:-cheatsheet_user} -d ${POSTGRES_DB:-cheatsheet_db}; do sleep 2; done && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
