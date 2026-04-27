@@ -80,7 +80,7 @@ A full-stack web application for generating LaTeX-based cheat sheets. Users sele
 This repository includes a lightweight static project page in `docs/` for GitHub Pages.
 
 - Source: `docs/index.html` and `docs/styles.css`
-- Deployment: `.github/workflows/pages.yml`
+- Deployment: GitHub Pages publishing from `main:/docs`
 - Purpose: project overview only
 
 The hosted static page does not run the full app by itself. The full experience still requires the React frontend and Django backend running locally or in Docker.
@@ -163,7 +163,7 @@ The frontend will be available at `http://localhost:5173/`.
 
 ### Static Project Page
 
-If GitHub Pages is enabled for this repository, the static overview page is deployed from the `docs/` directory through the Pages workflow.
+If GitHub Pages is enabled for this repository, the static overview page is published from the `docs/` directory on the `main` branch.
 
 For local preview, open `docs/index.html` directly in a browser.
 
