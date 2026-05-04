@@ -149,6 +149,12 @@ export const SUBJECT_VIDEOS = {
       channel: "Mario's Math Tutoring",
       topic: "Sequences and Series",
     },
+    {
+      title: "Understanding Matrices and Matrix Notation",
+      videoId: "y6bVhgmy2rw",
+      channel: "Professor Dave Explains",
+      topic: "Matrices"
+    },
   ],
   "GEOMETRY": [
     {
