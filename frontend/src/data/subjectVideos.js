@@ -253,10 +253,31 @@ export const SUBJECT_VIDEOS = {
       title: "Trig Identities",
       videoId: "m1OitPmkydY",
       channel: "The Organic Chemistry Tutor",
-      topic: "Trigonometry Fundemental Identities"
+      topic: "Fundemental Identities"
     },
     {
-
+      title: "Double Angle Identities & Formulas of Sin, Cos & Tan - Trigonometry",
+      videoId: "SE5SBTgrwH8",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Angle Sum and Multiple-Angle Identities"
+    },
+    {
+      title: "Formulas for Trigonometric Functions: Sum/Difference, Double/Half-Angle, Prod-to-Sum/Sum-to-Prod",
+      videoId: "0cB4MLhaCk0",
+      channel: "Professor Dave Explains",
+      topic: "Angle Sum and Multiple-Angle Identities"
+    },
+    {
+      title: "Product To Sum Identities and Sum To Product Formulas - Trigonometry",
+      videoId: "8Prc7VGt40w",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Product and Power Identities"
+    },
+    {
+      title: "Power Reducing Formulas - Trigonometric Identities",
+      videoId: "56XzcYWUr_8",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Product and Power Identities"
     },
   ],
   "PRECALCULUS": [
