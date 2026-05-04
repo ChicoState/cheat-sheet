@@ -279,6 +279,18 @@ export const SUBJECT_VIDEOS = {
       channel: "The Organic Chemistry Tutor",
       topic: "Product and Power Identities"
     },
+    {
+      title: "Evaluating Inverse Trigonometric Functions",
+      videoId: "jt7p-mCC0ng",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Inverse Trig Identities"
+    },
+    {
+      title: "Trigonometry - Real Life Applications",
+      videoId: "sCyQ9DcDp2E",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Applications"
+    },
   ],
   "PRECALCULUS": [
     {
