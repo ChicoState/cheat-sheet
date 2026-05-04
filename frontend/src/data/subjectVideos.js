@@ -175,6 +175,15 @@ export const SUBJECT_VIDEOS = {
       channel: "The Organic Chemistry Tutor",
       topic: "Triangles"
     },
+    {
+      title: "Pythagorean Theorem",
+      videoId: "d8EA5TxGzcY",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Pythagorean Theorem"
+    },
+    {
+
+    },
   ],
   "TRIGONOMETRY": [
     {
