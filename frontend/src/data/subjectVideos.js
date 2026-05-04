@@ -163,6 +163,18 @@ export const SUBJECT_VIDEOS = {
       channel: "Professor Dave Explains",
       topic: "Angle Relationships"
     },
+    {
+      title: "Parallel Lines Cut by a Transversal - Finding Angle Measures",
+      videoId: "3Ex7SpsA9MI",
+      channel: "Mario's Math Tutoring",
+      topic: "Parallel lines and Traversals"
+    },
+    {
+      title: "Triangles",
+      videoId: "DdAwGinauoI",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Triangles"
+    },
   ],
   "TRIGONOMETRY": [
     {
