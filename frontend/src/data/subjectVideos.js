@@ -158,9 +158,9 @@ export const SUBJECT_VIDEOS = {
   ],
   "GEOMETRY": [
     {
-      title: "Geometry Introduction",
-      videoId: "302sBERMVwY",
-      channel: "Professor Leonard",
+      title: "Types of Angles and Angle Relationships",
+      videoId: "dA94zyaLuhk",
+      channel: "Professor Dave Explains",
       topic: "Angle Relationships"
     },
   ],
