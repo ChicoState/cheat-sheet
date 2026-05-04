@@ -294,10 +294,34 @@ export const SUBJECT_VIDEOS = {
   ],
   "PRECALCULUS": [
     {
-      title: "Full Precalculus Course",
-      videoId: "eI4an8aSsgw",
-      channel: "Professor Leonard",
+      title: "Functions and Graphs | Precalculus",
+      videoId: "kvU9sOzT2mk",
+      channel: "The Organic Chemistry Tutor",
       topic: "Functions and Graphs"
+    },
+    {
+      title: "Conic Sections: Hyperbolas, Ellipses, Parabolas, Circles (How to Graph)",
+      videoId: "b7gJuUN-1GU",
+      channel: "Mario's Math Tutoring",
+      topic: "Conic Sections"
+    },
+    {
+      title: "Arithmetic Sequences and Arithmetic Series - Basic Introduction",
+      videoId: "XZJdyPkCxuE",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Sequences, Series, and Binomial Theorem"
+    },
+    {
+      title: "Binomial Theorem Expansion, Pascal's Triangle, Finding Terms & Coefficients, Combinations, Algebra 2",
+      videoId: "s19dWIHficY",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Sequences, Series, and Binomial Theorem"
+    },
+    {
+      title: "Polar Equations to Rectangular Equations, Precalculus, Examples and Practice Problems",
+      videoId: "flTz_pSzVFI",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Polar and Complex Polar"
     },
   ],
   "CALCULUS I": [
