@@ -250,6 +250,12 @@ export const SUBJECT_VIDEOS = {
       topic: "Special Triangles and Basic Trig Relationships"
     },
     {
+      title: "Trig Identities",
+      videoId: "m1OitPmkydY",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Trigonometry Fundemental Identities"
+    },
+    {
 
     },
   ],
