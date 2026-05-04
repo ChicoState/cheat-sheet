@@ -195,6 +195,15 @@ export const SUBJECT_VIDEOS = {
     },
     {
       title: "Quadrilaterals - Geometry",
+      videoId: "ogcH3eM5beM",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Quadrilaterals"
+    },
+    {
+      title: "Polygons",
+      videoId: "E_-3ulbtcLk",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Polygons"
     },
   ],
   "TRIGONOMETRY": [
