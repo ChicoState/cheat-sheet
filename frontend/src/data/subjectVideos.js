@@ -182,7 +182,19 @@ export const SUBJECT_VIDEOS = {
       topic: "Pythagorean Theorem"
     },
     {
-
+      title: "Triangle Congruence Theorems, Two Column Proofs, SSS, SAS, ASA, AAS Postulates, Geometry Problems",
+      videoId: "jWHOF6cFbpw",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Similar and Congruent Triangles"
+    },
+    {
+      title: "Similar Triangles",
+      videoId: "YiFwvAFk-xs",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Similar and Congruent Triangles"
+    },
+    {
+      title: "Quadrilaterals - Geometry",
     },
   ],
   "TRIGONOMETRY": [
