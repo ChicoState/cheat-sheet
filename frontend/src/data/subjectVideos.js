@@ -238,10 +238,19 @@ export const SUBJECT_VIDEOS = {
   ],
   "TRIGONOMETRY": [
     {
-      title: "Right Triangle Trigonometry",
-      videoId: "yBw67Fb31Cs",
-      channel: "Professor Leonard",
-      topic: "Right Triangle Trigonometry"
+      title: "30-60-90 Triangles - Special Right Triangle Trigonometry",
+      videoId: "yJMGIKCVO-s",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Special Triangles and Basic Trig Relationships"
+    },
+    {
+      title: "Trigonometry For Beginners!",
+      videoId: "PUB0TaZ7bhA",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Special Triangles and Basic Trig Relationships"
+    },
+    {
+
     },
   ],
   "PRECALCULUS": [
