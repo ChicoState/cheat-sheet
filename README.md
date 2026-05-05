@@ -52,11 +52,15 @@ The repository includes:
 - Multi-class selection across subjects from pre-algebra through calculus
 - Category-based formula picking without multi-select keyboard shortcuts
 - Drag-and-drop ordering for formulas and grouped sections
-- Generated LaTeX editing in the browser
-- Live PDF preview alongside the editor
+- Collapsible left-rail sections to keep long subject lists manageable
+- Generated LaTeX editing in the browser with side-by-side preview
+- Resizable left rail, LaTeX split, and right video rail
+- Live PDF preview with fit-width, fit-height, button zoom, and wheel zoom
 - PDF compilation through the backend using Tectonic
 - Download support for both `.tex` and compiled `.pdf`
 - Local autosave to preserve in-progress work
+- Automatic save on successful compile, including compile history snapshots per document
+- Subject video rail with inline YouTube resources and direct fallback links
 
 ### Layout and formatting
 
@@ -80,7 +84,7 @@ The hosted project page does not run the full application by itself. The full ex
 
 | Layer | Technology |
 | --- | --- |
-| Frontend | React 18, Vite 6, react-pdf, dnd-kit |
+| Frontend | React 18, Vite 6, react-pdf, dnd-kit, lucide-react, framer-motion |
 | Backend | Django 6, Django REST Framework |
 | PDF pipeline | Tectonic |
 | Database | SQLite in development, PostgreSQL in Docker |
@@ -94,7 +98,8 @@ Frontend (React + Vite)
   ├─ Formula selection UI
   ├─ Layout controls
   ├─ LaTeX editor
-  └─ PDF preview
+  ├─ Resizable editor / preview workspace
+  └─ PDF preview + resource rail
          │
          ▼
 Backend (Django + DRF)
@@ -158,6 +163,8 @@ npm install
 npm run dev
 ```
 
+The editor stores your active draft in local storage. Successful compiles also update the current draft snapshot automatically, so leaving the page or logging in later should keep your in-progress document available.
+
 Frontend app:
 
 ```text
@@ -169,6 +176,8 @@ http://localhost:5173/
 ```bash
 docker compose up --build
 ```
+
+The frontend container now re-runs `npm ci` on startup when `package-lock.json` changes, so newly added frontend dependencies are picked up without manually deleting the mounted `node_modules` volume.
 
 ## Deployments
 
@@ -239,7 +248,8 @@ pytest -v
 
 ```bash
 cd frontend
-npx eslint src/
+npm run lint
+npm test -- --run
 npm run build
 ```
 
