@@ -5,11 +5,14 @@ Run with: pytest  (from the backend/ directory)
 
 import pytest
 from unittest.mock import patch
+from urllib.error import HTTPError
+from io import BytesIO
 from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIClient
 from api.latex_utils import LATEX_HEADER, build_dynamic_header, build_latex_for_formulas, normalize_latex_layout
 from api.models import Template, CheatSheet, PracticeProblem
+from api.views import get_youtube_http_error_message
 
 
 @pytest.fixture
@@ -573,6 +576,45 @@ class TestYouTubeResourcesAPI:
         assert response.data['resources'] == []
         assert response.data['errors']
 
+    def test_youtube_http_error_message_includes_google_reason(self):
+        payload = (
+            b'{"error":{"message":"API has not been used in project",'
+            b'"errors":[{"reason":"accessNotConfigured",'
+            b'"message":"YouTube Data API v3 has not been used"}]}}'
+        )
+        error = HTTPError(
+            'https://www.googleapis.com/youtube/v3/search',
+            403,
+            'Forbidden',
+            hdrs=None,
+            fp=BytesIO(payload),
+        )
+
+        message = get_youtube_http_error_message(error)
+
+        assert '403: accessNotConfigured' in message
+        assert 'YouTube Data API v3 has not been used' in message
+
+    def test_youtube_http_error_message_strips_html(self):
+        payload = (
+            b'{"error":{"message":"quota hit",'
+            b'"errors":[{"reason":"quotaExceeded",'
+            b'"message":"The request exceeded <a href=\\"/youtube/v3/getting-started#quota\\">quota</a>."}]}}'
+        )
+        error = HTTPError(
+            'https://www.googleapis.com/youtube/v3/search',
+            403,
+            'Forbidden',
+            hdrs=None,
+            fp=BytesIO(payload),
+        )
+
+        message = get_youtube_http_error_message(error)
+
+        assert '<a' not in message
+        assert 'quotaExceeded' in message
+        assert 'quota.' in message
+
 
 @pytest.mark.django_db
 class TestCheatSheetAPI:
@@ -595,7 +637,7 @@ class TestCheatSheetAPI:
         assert resp.status_code == 201
         assert resp.json()["title"] == "Brand New Sheet"
         assert "full_latex" in resp.json()
-        assert resp.json()["spacing"] == "large"
+        assert resp.json()["spacing"] == "small"
 
     def test_retrieve_cheatsheet_has_full_latex(self, auth_client, sample_sheet):
         resp = auth_client.get(f"/api/cheatsheets/{sample_sheet.id}/")
@@ -904,7 +946,7 @@ class TestGenerateSheetEndpoint:
         )
         assert resp.status_code == 200
         tex = resp.json()["tex_code"]
-        assert "\\setlength{\\baselineskip}{10.2pt}" in tex
+        assert "\\setlength{\\baselineskip}{9.2pt}" in tex
 
     def test_generate_sheet_with_custom_font_size(self, auth_client):
         """Custom pt body sizes should be accepted."""
@@ -932,7 +974,7 @@ class TestGenerateSheetEndpoint:
         )
         assert resp.status_code == 200
         tex = resp.json()["tex_code"]
-        assert "\\setlength{\\baselineskip}{10.6pt}" in tex
+        assert "\\setlength{\\baselineskip}{9.6pt}" in tex
         assert "\\vspace{0.6pt}" in tex
 
     def test_generate_sheet_invalid_font_size_defaults(self, auth_client):
@@ -947,7 +989,7 @@ class TestGenerateSheetEndpoint:
         )
         assert resp.status_code == 200
         tex = resp.json()["tex_code"]
-        assert "\\documentclass[10pt" in tex
+        assert "\\documentclass[9pt" in tex
 
     def test_generate_sheet_invalid_margins_defaults(self, auth_client):
         """Invalid margins should be replaced with default."""
@@ -961,10 +1003,10 @@ class TestGenerateSheetEndpoint:
         )
         assert resp.status_code == 200
         tex = resp.json()["tex_code"]
-        assert "margin=0.25in" in tex
+        assert "margin=0.15in" in tex
 
     def test_generate_sheet_invalid_spacing_defaults(self, auth_client):
-        """Invalid spacing should be replaced with default (large preset)."""
+        """Invalid spacing should be replaced with default (small preset)."""
         resp = auth_client.post(
             "/api/generate-sheet/",
             {
@@ -977,7 +1019,7 @@ class TestGenerateSheetEndpoint:
         tex = resp.json()["tex_code"]
         assert "\\usepackage{titlesec}" not in tex
         assert "\\titleformat{" not in tex
-        assert "\\setlength{\\baselineskip}{11.2pt}" in tex
+        assert "\\setlength{\\baselineskip}{9.4pt}" in tex
 
     def test_generate_sheet_10pt_uses_plain_text_headings(self, auth_client):
         """Generated sheets should use plain bold text headings instead of LaTeX section commands."""

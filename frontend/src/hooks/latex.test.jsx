@@ -41,10 +41,10 @@ describe('useLatex hook', () => {
 
     expect(result.current.title).toBe('');
     expect(result.current.content).toBe('');
-    expect(result.current.columns).toBe(2);
-    expect(result.current.fontSize).toBe('10pt');
-    expect(result.current.spacing).toBe('large');
-    expect(result.current.margins).toBe('0.25in');
+    expect(result.current.columns).toBe(4);
+    expect(result.current.fontSize).toBe('9pt');
+    expect(result.current.spacing).toBe('small');
+    expect(result.current.margins).toBe('0.15in');
     expect(result.current.pdfBlob).toBeNull();
     expect(result.current.compileError).toBeNull();
   });

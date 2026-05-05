@@ -19,6 +19,17 @@ const DEFAULT_PANEL_LAYOUT = {
   latexWidth: 430,
 };
 
+const LEFT_PANEL_MIN_WIDTH = 220;
+const LEFT_PANEL_MAX_WIDTH = 420;
+const RIGHT_PANEL_MIN_WIDTH = 240;
+const RIGHT_PANEL_MAX_WIDTH = 420;
+const LATEX_PANEL_MIN_WIDTH = 320;
+const LATEX_PANEL_MAX_WIDTH = 760;
+const RESIZER_WIDTH = 10;
+const MIN_CENTER_WIDTH = 360;
+const MIN_PREVIEW_WIDTH = 260;
+const DEFAULT_PDF_ZOOM = 0.85;
+
 function loadPanelLayout() {
   try {
     const saved = localStorage.getItem(PANEL_LAYOUT_STORAGE_KEY);
@@ -534,13 +545,13 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
   );
 };
 
-const PdfPreview = ({ pdfBlob, compileError, isCompiling, onPrint }) => {
+const PdfPreview = ({ pdfBlob, compileError, isCompiling }) => {
   const [numPages, setNumPages] = useState(null);
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(null);
   const [containerHeight, setContainerHeight] = useState(null);
-  const [zoom, setZoom] = useState(1);
-  const [viewMode, setViewMode] = useState('width');
+  const [zoom, setZoom] = useState(DEFAULT_PDF_ZOOM);
+  const [viewMode, setViewMode] = useState('custom');
 
   const clampZoom = (value) => Math.min(2, Math.max(0.5, value));
 
@@ -556,7 +567,7 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, onPrint }) => {
 
   const handleResetZoom = () => {
     setViewMode('custom');
-    setZoom(1);
+    setZoom(DEFAULT_PDF_ZOOM);
   };
 
   const handleFitToWidth = () => {
@@ -596,9 +607,6 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, onPrint }) => {
       <div className="pdf-preview-toolbar">
         <span className="pdf-toolbar-note">Use the controls to adjust the preview.</span>
         <div className="pdf-zoom-controls" role="toolbar" aria-label="PDF zoom controls">
-          <button type="button" className="pdf-zoom-btn pdf-zoom-fit" onClick={onPrint} disabled={!pdfBlob}>
-            Print
-          </button>
           <button type="button" className="pdf-zoom-btn pdf-zoom-fit" onClick={handleFitToWidth}>
             Fit width
           </button>
@@ -853,6 +861,9 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const [rightPanelVisible, setRightPanelVisible] = useState(true);
   const [panelLayout, setPanelLayout] = useState(() => loadPanelLayout());
   const lastAutoSavedPdfRef = useRef(null);
+  const appBodyRef = useRef(null);
+  const centerPanelRef = useRef(null);
+  const hasAutoOpenedLatexRef = useRef(false);
   const snapshots = useMemo(() => [...(initialData?.compileHistory || [])].reverse(), [initialData?.compileHistory]);
   const selectedVideoTopics = useMemo(() => (
     classesData.flatMap((cls) => (
@@ -899,6 +910,13 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   }, [panelLayout]);
 
   useEffect(() => {
+    if (!pdfBlob || hasAutoOpenedLatexRef.current) return;
+
+    hasAutoOpenedLatexRef.current = true;
+    setShowLatex(true);
+  }, [pdfBlob]);
+
+  useEffect(() => {
     if (!pdfBlob || compileError || lastAutoSavedPdfRef.current === pdfBlob) {
       return;
     }
@@ -933,6 +951,28 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
 
     const startX = event.clientX;
     const startLayout = panelLayout;
+    const bodyWidth = appBodyRef.current?.clientWidth || window.innerWidth;
+    const centerWidth = centerPanelRef.current?.clientWidth || 0;
+    const leftReserve = leftPanelVisible ? RESIZER_WIDTH : 0;
+    const rightReserve = rightPanelVisible ? RESIZER_WIDTH : 0;
+    const maxLeftWidth = Math.max(
+      LEFT_PANEL_MIN_WIDTH,
+      Math.min(
+        LEFT_PANEL_MAX_WIDTH,
+        bodyWidth - (rightPanelVisible ? startLayout.rightWidth + rightReserve : 0) - leftReserve - MIN_CENTER_WIDTH,
+      ),
+    );
+    const maxRightWidth = Math.max(
+      RIGHT_PANEL_MIN_WIDTH,
+      Math.min(
+        RIGHT_PANEL_MAX_WIDTH,
+        bodyWidth - (leftPanelVisible ? startLayout.leftWidth + leftReserve : 0) - rightReserve - MIN_CENTER_WIDTH,
+      ),
+    );
+    const maxLatexWidth = Math.max(
+      LATEX_PANEL_MIN_WIDTH,
+      Math.min(LATEX_PANEL_MAX_WIDTH, centerWidth - RESIZER_WIDTH - MIN_PREVIEW_WIDTH),
+    );
 
     const handlePointerMove = (moveEvent) => {
       const deltaX = moveEvent.clientX - startX;
@@ -941,20 +981,20 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
         if (panel === 'left') {
           return {
             ...startLayout,
-            leftWidth: clampPanelWidth(startLayout.leftWidth + deltaX, 220, 420),
+            leftWidth: clampPanelWidth(startLayout.leftWidth + deltaX, LEFT_PANEL_MIN_WIDTH, maxLeftWidth),
           };
         }
 
         if (panel === 'right') {
           return {
             ...startLayout,
-            rightWidth: clampPanelWidth(startLayout.rightWidth - deltaX, 240, 420),
+            rightWidth: clampPanelWidth(startLayout.rightWidth - deltaX, RIGHT_PANEL_MIN_WIDTH, maxRightWidth),
           };
         }
 
         return {
           ...startLayout,
-          latexWidth: clampPanelWidth(startLayout.latexWidth + deltaX, 320, 760),
+          latexWidth: clampPanelWidth(startLayout.latexWidth + deltaX, LATEX_PANEL_MIN_WIDTH, maxLatexWidth),
         };
       });
     };
@@ -968,7 +1008,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     document.body.classList.add('is-resizing-panels');
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
-  }, [panelLayout]);
+  }, [leftPanelVisible, panelLayout, rightPanelVisible]);
 
   const appBodyGridTemplate = [
     leftPanelVisible ? `${panelLayout.leftWidth}px` : '0px',
@@ -978,7 +1018,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     rightPanelVisible ? `${panelLayout.rightWidth}px` : '0px',
   ].join(' ');
 
-  const workspaceSplitTemplate = `${panelLayout.latexWidth}px 10px minmax(0, 1fr)`;
+  const workspaceSplitTemplate = `minmax(${LATEX_PANEL_MIN_WIDTH}px, ${panelLayout.latexWidth}px) 10px minmax(${MIN_PREVIEW_WIDTH}px, 1fr)`;
 
   const handleToggleClass = (className) => {
     toggleClass(className);
@@ -1012,7 +1052,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     <>
       <div className="app-shell">
 
-       <div className="app-body" style={{ '--app-body-columns': appBodyGridTemplate }}>
+       <div className="app-body" ref={appBodyRef} style={{ '--app-body-columns': appBodyGridTemplate }}>
 
           {/* ══ LEFT PANEL ══ */}
           {leftPanelVisible && (
@@ -1097,7 +1137,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
               {pdfBlob && (
                 <div className="btn-download-row">
                   <button type="button" onClick={handlePrintPDF} className="btn-dl">Print</button>
-                  <button type="button" onClick={handleDownloadPDF} className="btn-dl">PDF</button>
+                  <button type="button" onClick={handleDownloadPDF} className="btn-dl">Download PDF</button>
                   <button type="button" onClick={handleDownloadTex} className="btn-dl">.tex</button>
                 </div>
               )}
@@ -1133,7 +1173,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
             <div className="panel-resizer-slot panel-resizer-left" aria-hidden="true" />
           )}
           {/* ══ CENTER PANEL — PDF main focus ══ */}
-          <main className="center-panel">
+          <main className="center-panel" ref={centerPanelRef}>
             <div className="workspace-topbar">
               <div className="workspace-topbar-group">
                 <button
@@ -1152,14 +1192,15 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                 >
                   Snapshots {snapshots.length ? `(${snapshots.length})` : ''}
                 </button>
-                <button
-                  type="button"
-                  className="btn-toggle-panel"
-                  onClick={() => setRightPanelVisible((value) => !value)}
-                  title={rightPanelVisible ? 'Hide videos' : 'Show videos'}
-                >
-                  {rightPanelVisible ? 'Hide videos' : 'Show videos'}
-                </button>
+                {content && (
+                  <button
+                    type="button"
+                    className="btn-toggle-latex btn-toggle-latex-prominent"
+                    onClick={() => setShowLatex(v => !v)}
+                  >
+                    {showLatex ? 'Hide LaTeX editor' : 'Show LaTeX editor'}
+                  </button>
+                )}
               </div>
 
               <div className="workspace-topbar-group workspace-topbar-group-end">
@@ -1187,15 +1228,14 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                 >
                   {isSaving ? 'Saving…' : 'Save'}
                 </button>
-                {content && (
-                  <button
-                    type="button"
-                    className="btn-toggle-latex"
-                    onClick={() => setShowLatex(v => !v)}
-                  >
-                    {showLatex ? 'Hide LaTeX' : 'Show LaTeX'}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="btn-toggle-panel btn-toggle-videos"
+                  onClick={() => setRightPanelVisible((value) => !value)}
+                  title={rightPanelVisible ? 'Hide videos' : 'Show videos'}
+                >
+                  {rightPanelVisible ? 'Hide videos' : 'Show videos'}
+                </button>
               </div>
             </div>
 
@@ -1228,7 +1268,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                    />
                    <div className="workspace-split-pane workspace-split-pane-preview">
                      {pdfBlob || compileError || isCompiling ? (
-                       <PdfPreview pdfBlob={pdfBlob} compileError={compileError} isCompiling={isCompiling} onPrint={handlePrintPDF} />
+                       <PdfPreview pdfBlob={pdfBlob} compileError={compileError} isCompiling={isCompiling} />
                      ) : (
                        <div className="pdf-placeholder">
                          <span>📄</span>
@@ -1242,7 +1282,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                ) : (
                  <>
                    {pdfBlob || compileError || isCompiling ? (
-                     <PdfPreview pdfBlob={pdfBlob} compileError={compileError} isCompiling={isCompiling} onPrint={handlePrintPDF} />
+                     <PdfPreview pdfBlob={pdfBlob} compileError={compileError} isCompiling={isCompiling} />
                    ) : (
                      <div className="pdf-placeholder">
                        <span>📄</span>

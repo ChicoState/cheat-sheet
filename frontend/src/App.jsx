@@ -22,10 +22,10 @@ const getNextUntitledTitle = () => {
 const createDefaultSheet = () => ({
   title: getNextUntitledTitle(),
   content: '',
-  columns: 2,
-  fontSize: '10pt',
-  spacing: 'large',
-  margins: '0.25in',
+  columns: 4,
+  fontSize: '9pt',
+  spacing: 'small',
+  margins: '0.15in',
   selectedFormulas: [],
   compileHistory: [],
 });

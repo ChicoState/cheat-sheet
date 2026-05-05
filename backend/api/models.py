@@ -24,10 +24,10 @@ class CheatSheet(models.Model):
         Template, on_delete=models.SET_NULL, null=True, blank=True
     )
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="cheat_sheets")
-    columns = models.IntegerField(default=2)
-    margins = models.CharField(max_length=20, default="0.5in")
-    font_size = models.CharField(max_length=10, default="10pt")
-    spacing = models.CharField(max_length=10, default="large")
+    columns = models.IntegerField(default=4)
+    margins = models.CharField(max_length=20, default="0.15in")
+    font_size = models.CharField(max_length=10, default="9pt")
+    spacing = models.CharField(max_length=10, default="small")
     # Stores selected formulas with user-defined order: [{"class": "...", "category": "...", "name": "..."}]
     selected_formulas = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

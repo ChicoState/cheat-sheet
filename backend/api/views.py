@@ -10,6 +10,8 @@ import subprocess
 import tempfile
 import os
 import json
+import re
+from html import unescape
 from urllib.parse import urlencode
 from urllib.request import urlopen
 from urllib.error import HTTPError, URLError
@@ -30,6 +32,10 @@ YOUTUBE_TOPIC_SET = None
 VALID_FONT_SIZES = {"8pt", "9pt", "10pt", "11pt", "12pt"}
 VALID_SPACING = {"tiny", "small", "medium", "large"}
 VALID_MARGINS = {"0.15in", "0.25in", "0.5in", "0.75in", "1in", "1.5in", "2in"}
+DEFAULT_COLUMNS = 4
+DEFAULT_FONT_SIZE = "9pt"
+DEFAULT_SPACING = "small"
+DEFAULT_MARGINS = "0.15in"
 
 
 def is_valid_custom_pt(value, min_value, max_value):
@@ -54,22 +60,53 @@ def validate_layout_params(columns, font_size, margins, spacing):
     try:
         columns = max(1, min(5, int(columns)))
     except (TypeError, ValueError):
-        columns = 2
+        columns = DEFAULT_COLUMNS
     
     if font_size not in VALID_FONT_SIZES and not is_valid_custom_pt(font_size, 6, 18):
-        font_size = "10pt"
+        font_size = DEFAULT_FONT_SIZE
     
     if margins not in VALID_MARGINS:
-        margins = "0.25in"
+        margins = DEFAULT_MARGINS
     
     if spacing not in VALID_SPACING and not is_valid_custom_pt(spacing, 0, 6):
-        spacing = "large"
+        spacing = DEFAULT_SPACING
     
     return columns, font_size, margins, spacing
 
 
 def build_youtube_search_query(class_name, category_name):
     return f"{class_name} {category_name} formula tutorial"
+
+
+def clean_youtube_error_message(value):
+    text = unescape(str(value or ""))
+    text = re.sub(r"<[^>]+>", "", text)
+    return " ".join(text.split())
+
+
+def get_youtube_http_error_message(exc):
+    detail = ""
+
+    try:
+        payload = json.loads(exc.read().decode("utf-8"))
+        error = payload.get("error") or {}
+        errors = error.get("errors") or []
+        first_error = errors[0] if errors else {}
+        reason = clean_youtube_error_message(first_error.get("reason") or error.get("status"))
+        message = clean_youtube_error_message(first_error.get("message") or error.get("message"))
+        detail = ": ".join(part for part in [reason, message] if part)
+    except (AttributeError, json.JSONDecodeError, UnicodeDecodeError):
+        detail = ""
+
+    status_detail = f"{exc.code}: {detail}" if detail else str(exc.code)
+
+    if exc.code == 403:
+        return (
+            f"YouTube search failed ({status_detail}). "
+            "Check the YouTube Data API v3 status, API key restrictions, and quota."
+        )
+
+    return f"YouTube search failed ({status_detail})"
 
 
 def fetch_top_youtube_video(class_name, category_name, api_key):
@@ -90,11 +127,7 @@ def fetch_top_youtube_video(class_name, category_name, api_key):
         with urlopen(url, timeout=4) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
-        if exc.code == 403:
-            raise RuntimeError(
-                "YouTube search failed (403). Check the API key, quota, and YouTube Data API access."
-            ) from exc
-        raise RuntimeError(f"YouTube search failed ({exc.code})") from exc
+        raise RuntimeError(get_youtube_http_error_message(exc)) from exc
     except URLError as exc:
         raise RuntimeError("YouTube search is unavailable") from exc
 
@@ -169,16 +202,16 @@ def get_classes(request):
 def generate_sheet(request):
     """
     POST /api/generate-sheet/
-    Accepts { "formulas": [...], "columns": 2, "font_size": "10pt", "margins": "0.25in", "spacing": "large" }
+    Accepts { "formulas": [...], "columns": 4, "font_size": "9pt", "margins": "0.15in", "spacing": "small" }
     Each formula: { "class": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula" }
     Or for special classes (like UNIT CIRCLE): { "class": "UNIT CIRCLE", "name": "Unit Circle (Key Angles)" }
     Returns { "tex_code": "..." }
     """
     selected = request.data.get("formulas", [])
-    columns = request.data.get("columns", 2)
-    font_size = request.data.get("font_size", "10pt")
-    margins = request.data.get("margins", "0.25in")
-    spacing = request.data.get("spacing", "large")
+    columns = request.data.get("columns", DEFAULT_COLUMNS)
+    font_size = request.data.get("font_size", DEFAULT_FONT_SIZE)
+    margins = request.data.get("margins", DEFAULT_MARGINS)
+    spacing = request.data.get("spacing", DEFAULT_SPACING)
     
     columns, font_size, margins, spacing = validate_layout_params(columns, font_size, margins, spacing)
     
@@ -247,10 +280,10 @@ def compile_latex(request):
     content = request.data.get("content", "")
     cheat_sheet_id = request.data.get("cheat_sheet_id")
     normalize_only = is_truthy(request.data.get("normalize_only"))
-    columns = request.data.get("columns", 2)
-    font_size = request.data.get("font_size", "10pt")
-    margins = request.data.get("margins", "0.25in")
-    spacing = request.data.get("spacing", "large")
+    columns = request.data.get("columns", DEFAULT_COLUMNS)
+    font_size = request.data.get("font_size", DEFAULT_FONT_SIZE)
+    margins = request.data.get("margins", DEFAULT_MARGINS)
+    spacing = request.data.get("spacing", DEFAULT_SPACING)
     columns, font_size, margins, spacing = validate_layout_params(columns, font_size, margins, spacing)
     
     # If cheat_sheet_id is provided, get content from the cheat sheet

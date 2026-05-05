@@ -5,10 +5,10 @@ const STORAGE_KEY = 'cheatSheetLatex';
 const SAVE_DEBOUNCE_MS = 500;
 const AUTO_COMPILE_DEBOUNCE_MS = 450;
 const DEFAULT_LAYOUT = {
-  columns: 2,
-  fontSize: '10pt',
-  spacing: 'large',
-  margins: '0.25in',
+  columns: 4,
+  fontSize: '9pt',
+  spacing: 'small',
+  margins: '0.15in',
 };
 
 function loadLatexStorage() {
@@ -69,10 +69,10 @@ export function useLatex(initialData) {
   const [title, setTitle] = useState(initialData?.title ?? '');
   const [content, setContent] = useState(initialData?.content ?? '');
   const [contentModified, setContentModified] = useState(false);
-  const [columns, setColumns] = useState(initialData?.columns ?? 2);
-  const [fontSize, setFontSize] = useState(initialData?.fontSize ?? '10pt');
-  const [spacing, setSpacing] = useState(initialData?.spacing ?? 'large');
-  const [margins, setMargins] = useState(initialData?.margins ?? '0.25in');
+  const [columns, setColumns] = useState(initialData?.columns ?? DEFAULT_LAYOUT.columns);
+  const [fontSize, setFontSize] = useState(initialData?.fontSize ?? DEFAULT_LAYOUT.fontSize);
+  const [spacing, setSpacing] = useState(initialData?.spacing ?? DEFAULT_LAYOUT.spacing);
+  const [margins, setMargins] = useState(initialData?.margins ?? DEFAULT_LAYOUT.margins);
   const [pdfBlob, setPdfBlob] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isCompiling, setIsCompiling] = useState(false);
@@ -88,10 +88,10 @@ export function useLatex(initialData) {
   const autoCompileTimerRef = useRef(null);
   const hasRestoredPreviewRef = useRef(false);
   const lastCompiledLayoutRef = useRef({
-    columns: initialData?.columns ?? 2,
-    fontSize: initialData?.fontSize ?? '10pt',
-    spacing: initialData?.spacing ?? 'large',
-    margins: initialData?.margins ?? '0.25in',
+    columns: initialData?.columns ?? DEFAULT_LAYOUT.columns,
+    fontSize: initialData?.fontSize ?? DEFAULT_LAYOUT.fontSize,
+    spacing: initialData?.spacing ?? DEFAULT_LAYOUT.spacing,
+    margins: initialData?.margins ?? DEFAULT_LAYOUT.margins,
   });
 
   // Revoke the object URL when the component unmounts to prevent memory leaks
@@ -150,29 +150,29 @@ export function useLatex(initialData) {
       initialLoaded.current = true;
       setTitle(saved.title ?? '');
       setContent(saved.content ?? '');
-      setColumns(saved.columns ?? 2);
-      setFontSize(saved.fontSize ?? '10pt');
-      setSpacing(saved.spacing ?? 'large');
-      setMargins(saved.margins ?? '0.25in');
+      setColumns(saved.columns ?? DEFAULT_LAYOUT.columns);
+      setFontSize(saved.fontSize ?? DEFAULT_LAYOUT.fontSize);
+      setSpacing(saved.spacing ?? DEFAULT_LAYOUT.spacing);
+      setMargins(saved.margins ?? DEFAULT_LAYOUT.margins);
       lastCompiledLayoutRef.current = {
-        columns: saved.columns ?? 2,
-        fontSize: saved.fontSize ?? '10pt',
-        spacing: saved.spacing ?? 'large',
-        margins: saved.margins ?? '0.25in',
+        columns: saved.columns ?? DEFAULT_LAYOUT.columns,
+        fontSize: saved.fontSize ?? DEFAULT_LAYOUT.fontSize,
+        spacing: saved.spacing ?? DEFAULT_LAYOUT.spacing,
+        margins: saved.margins ?? DEFAULT_LAYOUT.margins,
       };
     } else if (initialData) {
       initialLoaded.current = true;
       setTitle(initialData.title ?? '');
       setContent(initialData.content ?? '');
-      setColumns(initialData.columns ?? 2);
-      setFontSize(initialData.fontSize ?? '10pt');
-      setSpacing(initialData.spacing ?? 'large');
-      setMargins(initialData.margins ?? '0.25in');
+      setColumns(initialData.columns ?? DEFAULT_LAYOUT.columns);
+      setFontSize(initialData.fontSize ?? DEFAULT_LAYOUT.fontSize);
+      setSpacing(initialData.spacing ?? DEFAULT_LAYOUT.spacing);
+      setMargins(initialData.margins ?? DEFAULT_LAYOUT.margins);
       lastCompiledLayoutRef.current = {
-        columns: initialData.columns ?? 2,
-        fontSize: initialData.fontSize ?? '10pt',
-        spacing: initialData.spacing ?? 'large',
-        margins: initialData.margins ?? '0.25in',
+        columns: initialData.columns ?? DEFAULT_LAYOUT.columns,
+        fontSize: initialData.fontSize ?? DEFAULT_LAYOUT.fontSize,
+        spacing: initialData.spacing ?? DEFAULT_LAYOUT.spacing,
+        margins: initialData.margins ?? DEFAULT_LAYOUT.margins,
       };
     }
   }, [initialData]);
