@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.db import models
 
-from .latex_utils import get_body_font_command, get_document_class
+from .latex_utils import get_body_font_command, get_document_class, get_spacing_values
 
 class Template(models.Model):
     name = models.CharField(max_length=200)
@@ -27,6 +27,7 @@ class CheatSheet(models.Model):
     columns = models.IntegerField(default=2)
     margins = models.CharField(max_length=20, default="0.5in")
     font_size = models.CharField(max_length=10, default="10pt")
+    spacing = models.CharField(max_length=10, default="large")
     # Stores selected formulas with user-defined order: [{"class": "...", "category": "...", "name": "..."}]
     selected_formulas = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -87,12 +88,15 @@ class CheatSheet(models.Model):
             
         # Build document header
         document_class, document_class_size = get_document_class(self.font_size)
+        spacing_values = get_spacing_values(self.spacing, self.font_size)
         header = [
             f"\\documentclass[{document_class_size}]{{{document_class}}}",
             "\\usepackage[utf8]{inputenc}",
             "\\usepackage{amsmath, amssymb}",
             "\\usepackage{adjustbox}",
             f"\\usepackage[a4paper, margin={self.margins}]{{geometry}}",
+            f"\\setlength{{\\baselineskip}}{{{spacing_values['baseline_skip']}}}",
+            f"\\setlength{{\\parskip}}{{{spacing_values['paragraph_skip']}}}",
         ]
             
         # Add multicolumn support if needed

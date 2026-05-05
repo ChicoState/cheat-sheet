@@ -107,8 +107,8 @@ The main editor is a three-region workspace:
 ### Study resources
 
 - backend-proxied YouTube search so the API key never reaches the browser
-- root-level `YOUTUBE_API_KEY` support through Django env loading
-- error handling for missing key, empty results, and upstream failures
+- repo-root `YOUTUBE_API_KEY` support for local runs and Docker Compose passthrough
+- request validation and error handling for missing key, invalid topics, empty results, and upstream failures
 
 ## Tech stack
 
@@ -187,7 +187,7 @@ Backend (Django + DRF)
 
 ### Environment
 
-The backend reads both:
+The backend reads both, with `/backend/.env` taking precedence over repo-root defaults:
 
 - `/.env`
 - `/backend/.env`
@@ -197,6 +197,8 @@ For YouTube suggestions, add this in the repo-root `.env`:
 ```dotenv
 YOUTUBE_API_KEY=your_key_here
 ```
+
+Docker Compose passes `YOUTUBE_API_KEY` into the backend container from the repo-root `.env` (or from your shell environment), so the same key works in local Django runs and containers without mounting the whole root `.env` file into the container.
 
 ### Backend setup
 

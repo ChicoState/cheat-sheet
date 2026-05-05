@@ -4,10 +4,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreateCheatSheet from './CreateCheatSheet';
 import { useFormulas } from '../hooks/formulas';
 import { useLatex } from '../hooks/latex';
+import { useYouTubeResources } from '../hooks/youtubeResources';
 
 // Mock the dependencies
 vi.mock('../hooks/formulas');
 vi.mock('../hooks/latex');
+vi.mock('../hooks/youtubeResources');
 vi.mock('react-pdf', () => ({
   Document: ({ children }) => <div data-testid="mock-document">{children}</div>,
   Page: () => <div data-testid="mock-page" />,
@@ -74,6 +76,7 @@ describe('CreateCheatSheet Component', () => {
     vi.clearAllMocks();
     useFormulas.mockReturnValue(mockUseFormulas);
     useLatex.mockReturnValue(mockUseLatex);
+    useYouTubeResources.mockReturnValue({ resources: [], isLoading: false, error: '' });
   });
 
   it('renders correctly with default state', () => {
@@ -145,6 +148,30 @@ describe('CreateCheatSheet Component', () => {
     fireEvent.click(checkbox);
     
     expect(mockDataWithClass.toggleClass).toHaveBeenCalledWith('Calculus I');
+  });
+
+  it('renders video cards as accessible buttons', () => {
+    useFormulas.mockReturnValue({
+      ...mockUseFormulas,
+      classesData: [
+        {
+          name: 'Math 101',
+          categories: [{ name: 'Algebra', formulas: [] }],
+        },
+      ],
+      selectedClasses: { 'Math 101': true },
+      selectedCategories: { 'Math 101:Algebra': true },
+      hasSelectedClasses: true,
+    });
+    useYouTubeResources.mockReturnValue({
+      resources: [{ className: 'Math 101', category: 'Algebra', title: 'Algebra Video', channel: 'YouTube', videoId: 'abc123', thumbnailUrl: '' }],
+      isLoading: false,
+      error: '',
+    });
+
+    render(<CreateCheatSheet onSave={vi.fn()} onReset={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: /open algebra video/i })).toBeInTheDocument();
   });
 
   it('handles clearing data correctly', () => {

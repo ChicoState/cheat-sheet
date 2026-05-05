@@ -1213,7 +1213,7 @@ label {
 }
 
 .class-group-header .drag-handle {
-  color: rgba(255, 255, 255, 0.82);
+  color: color-mix(in srgb, var(--text) 72%, transparent);
 }
 
 .formula-name {
@@ -2263,6 +2263,13 @@ right panel - youtube resources
   border-color: var(--primary);
   box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
+}
+
+.video-card-sm:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 70%, white 30%);
+  outline-offset: 2px;
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
 }
 
 .video-thumb-sm {

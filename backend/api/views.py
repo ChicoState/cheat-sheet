@@ -20,6 +20,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .formula_data import get_formula_data, get_classes_with_details, get_special_class_formula, is_special_class
 from .latex_utils import build_latex_for_formulas, normalize_latex_layout
 
+YOUTUBE_MAX_TOPICS = 12
+YOUTUBE_TOPIC_SET = None
+
 # ------------------------------------------------------------------
 # Whitelist validation for layout parameters
 # ------------------------------------------------------------------
@@ -114,6 +117,20 @@ def fetch_top_youtube_video(class_name, category_name, api_key):
         "videoId": ((item.get("id") or {}).get("videoId")) or "",
         "thumbnailUrl": thumbnail.get("url") or "",
     }
+
+
+def get_valid_youtube_topics():
+    global YOUTUBE_TOPIC_SET
+    if YOUTUBE_TOPIC_SET is None:
+        topic_pairs = set()
+        for class_data in get_classes_with_details():
+            class_name = class_data.get("name")
+            for category in class_data.get("categories") or []:
+                category_name = category.get("name")
+                if class_name and category_name:
+                    topic_pairs.add((class_name, category_name))
+        YOUTUBE_TOPIC_SET = topic_pairs
+    return YOUTUBE_TOPIC_SET
 
 # ------------------------------------------------------------------
 # API endpoints
@@ -235,6 +252,10 @@ def compile_latex(request):
     # If cheat_sheet_id is provided, get content from the cheat sheet
     if cheat_sheet_id:
         cheatsheet = get_object_or_404(CheatSheet, pk=cheat_sheet_id, user=request.user)
+        columns = cheatsheet.columns
+        font_size = cheatsheet.font_size
+        margins = cheatsheet.margins
+        spacing = cheatsheet.spacing
         content = cheatsheet.build_full_latex()
     
     if not content:
@@ -289,6 +310,8 @@ def youtube_resources(request):
     topics = request.data.get("topics", [])
     if not isinstance(topics, list):
         return Response({"error": "topics must be a list"}, status=400)
+    if len(topics) > YOUTUBE_MAX_TOPICS:
+        return Response({"error": f"topics must be {YOUTUBE_MAX_TOPICS} items or fewer"}, status=400)
 
     api_key = os.getenv("YOUTUBE_API_KEY", "").strip()
     if not api_key:
@@ -302,11 +325,14 @@ def youtube_resources(request):
 
     seen = set()
     sanitized_topics = []
+    valid_topics = get_valid_youtube_topics()
     for topic in topics:
         class_name = str((topic or {}).get("className") or "").strip()
         category = str((topic or {}).get("category") or "").strip()
         if not class_name or not category:
             continue
+        if (class_name, category) not in valid_topics:
+            return Response({"error": "Invalid topic requested"}, status=400)
         lookup_key = (class_name, category)
         if lookup_key in seen:
             continue

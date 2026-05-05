@@ -18,6 +18,7 @@ services:
       - ./backend/.env.docker
     environment:
       - DATABASE_URL=postgres://cheatsheet_user:cheatsheet_pass@db:5432/cheatsheet_db
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
     volumes:
       - ./backend:/app
     depends_on:

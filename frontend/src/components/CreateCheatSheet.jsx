@@ -1233,10 +1233,12 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                         </p>
                       ) : (
                         videos.map((v) => (
-                          <div 
+                          <button 
                             key={`${v.className}:${v.category}:${v.videoId}`}
+                            type="button"
                             className="video-card-sm"
                             onClick={() => setModalVideo(v)}
+                            aria-label={`Open ${v.title}`}
                           >
                             <div className="video-thumb-sm">
                               <img src={getThumbnail(v)} alt={v.title} loading = "lazy" />
@@ -1247,7 +1249,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                                 <div className="v-title">{v.title}</div>
                               <div className="v-channel">{v.channel}</div>
                             </div>
-                          </div>
+                          </button>
                         ))
                       )}
                     </div>

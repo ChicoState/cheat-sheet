@@ -10,7 +10,7 @@ import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR.parent / ".env")
-load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR / ".env", override=True)
 
 DEBUG = os.getenv("DJANGO_DEBUG", "True") == "True"
 

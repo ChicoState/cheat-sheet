@@ -4,6 +4,7 @@ Run with: pytest  (from the backend/ directory)
 """
 
 import pytest
+from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIClient
@@ -201,6 +202,18 @@ class TestCheatSheetModel(TestCase):
 
         assert "\\documentclass[10pt]{article}" in full
         assert "\\fontsize{10.5pt}{11.3pt}\\selectfont" in full
+
+    def test_build_full_latex_includes_saved_spacing(self):
+        sheet = CheatSheet.objects.create(
+            title="Spaced",
+            latex_content="Content",
+            spacing="tiny",
+            user=self.user,
+        )
+
+        full = sheet.build_full_latex()
+
+        assert "\\setlength{\\parskip}{0pt}" in full
 
     def test_static_latex_header_includes_adjustbox(self):
         assert "\\usepackage{adjustbox}" in LATEX_HEADER
@@ -507,6 +520,61 @@ class TestTemplateAPI:
 
 
 @pytest.mark.django_db
+class TestYouTubeResourcesAPI:
+    @patch('api.views.fetch_top_youtube_video')
+    def test_youtube_resources_configured(self, mock_fetch, api_client, monkeypatch):
+        mock_fetch.return_value = {
+            'className': 'ALGEBRA I',
+            'category': 'Linear Equations',
+            'title': 'Algebra walkthrough',
+            'channel': 'YouTube',
+            'description': '',
+            'videoId': 'abc123',
+            'thumbnailUrl': 'https://example.com/thumb.jpg',
+        }
+        monkeypatch.setenv('YOUTUBE_API_KEY', 'test-key')
+
+        response = api_client.post('/api/youtube-resources/', {'topics': [{'className': 'ALGEBRA I', 'category': 'Linear Equations'}]}, format='json')
+
+        assert response.status_code == 200
+        assert response.data['configured'] is True
+        assert len(response.data['resources']) == 1
+
+    def test_youtube_resources_missing_key(self, api_client, monkeypatch):
+        monkeypatch.delenv('YOUTUBE_API_KEY', raising=False)
+
+        response = api_client.post('/api/youtube-resources/', {'topics': [{'className': 'ALGEBRA I', 'category': 'Linear Equations'}]}, format='json')
+
+        assert response.status_code == 200
+        assert response.data['configured'] is False
+
+    def test_youtube_resources_invalid_payload(self, api_client, monkeypatch):
+        monkeypatch.setenv('YOUTUBE_API_KEY', 'test-key')
+
+        response = api_client.post('/api/youtube-resources/', {'topics': 'nope'}, format='json')
+
+        assert response.status_code == 400
+
+    def test_youtube_resources_invalid_topic(self, api_client, monkeypatch):
+        monkeypatch.setenv('YOUTUBE_API_KEY', 'test-key')
+
+        response = api_client.post('/api/youtube-resources/', {'topics': [{'className': 'ALGEBRA I', 'category': 'Not Real'}]}, format='json')
+
+        assert response.status_code == 400
+
+    @patch('api.views.fetch_top_youtube_video', side_effect=RuntimeError('YouTube search failed'))
+    def test_youtube_resources_upstream_failure(self, _mock_fetch, api_client, monkeypatch):
+        monkeypatch.setenv('YOUTUBE_API_KEY', 'test-key')
+
+        response = api_client.post('/api/youtube-resources/', {'topics': [{'className': 'ALGEBRA I', 'category': 'Linear Equations'}]}, format='json')
+
+        assert response.status_code == 200
+        assert response.data['configured'] is True
+        assert response.data['resources'] == []
+        assert response.data['errors']
+
+
+@pytest.mark.django_db
 class TestCheatSheetAPI:
     def test_list_cheatsheets(self, auth_client, sample_sheet):
         resp = auth_client.get("/api/cheatsheets/")
@@ -527,6 +595,7 @@ class TestCheatSheetAPI:
         assert resp.status_code == 201
         assert resp.json()["title"] == "Brand New Sheet"
         assert "full_latex" in resp.json()
+        assert resp.json()["spacing"] == "large"
 
     def test_retrieve_cheatsheet_has_full_latex(self, auth_client, sample_sheet):
         resp = auth_client.get(f"/api/cheatsheets/{sample_sheet.id}/")
@@ -537,12 +606,13 @@ class TestCheatSheetAPI:
     def test_update_cheatsheet(self, auth_client, sample_sheet):
         resp = auth_client.patch(
             f"/api/cheatsheets/{sample_sheet.id}/",
-            {"margins": "0.25in", "columns": 3},
+            {"margins": "0.25in", "columns": 3, "spacing": "small"},
             format="json",
         )
         assert resp.status_code == 200
         assert resp.json()["margins"] == "0.25in"
         assert resp.json()["columns"] == 3
+        assert resp.json()["spacing"] == "small"
 
     def test_delete_cheatsheet(self, auth_client, sample_sheet):
         resp = auth_client.delete(f"/api/cheatsheets/{sample_sheet.id}/")
@@ -607,6 +677,20 @@ class TestCheatSheetAccessControl:
             format="json",
         )
         assert resp.status_code == 404
+
+    def test_compile_sheet_uses_saved_spacing_layout(self, auth_client, sample_sheet):
+        sample_sheet.spacing = "tiny"
+        sample_sheet.save(update_fields=["spacing"])
+
+        resp = auth_client.post(
+            "/api/compile/",
+            {"cheat_sheet_id": sample_sheet.id, "normalize_only": True, "spacing": "large"},
+            format="json",
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["layout"]["spacing"] == "tiny"
+        assert "\\setlength{\\parskip}{0pt}" in resp.json()["tex_code"]
 
 
 @pytest.mark.django_db

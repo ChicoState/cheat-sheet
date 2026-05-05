@@ -222,6 +222,7 @@ function App() {
           columns: nextSheet.columns,
           margins: nextSheet.margins,
           font_size: nextSheet.fontSize,
+          spacing: nextSheet.spacing,
           selected_formulas: nextSheet.selectedFormulas,
         }),
       });
@@ -240,6 +241,7 @@ function App() {
             id: savedSheet.id,
             content: savedSheet.latex_content ?? nextSheet.content,
             fontSize: savedSheet.font_size ?? nextSheet.fontSize,
+            spacing: savedSheet.spacing ?? nextSheet.spacing,
             selectedFormulas: savedSheet.selected_formulas ?? nextSheet.selectedFormulas,
           }));
       }
@@ -256,6 +258,7 @@ function App() {
         id: savedSheet.id,
         content: savedSheet.latex_content ?? nextSheet.content,
         fontSize: savedSheet.font_size ?? nextSheet.fontSize,
+        spacing: savedSheet.spacing ?? nextSheet.spacing,
         selectedFormulas: savedSheet.selected_formulas ?? nextSheet.selectedFormulas,
       };
 
@@ -292,6 +295,7 @@ function App() {
       columns: sheet.columns,
       margins: sheet.margins,
       fontSize: sheet.font_size,
+      spacing: sheet.spacing,
       selectedFormulas: sheet.selected_formulas || [],
       compileHistory: getStoredCompileHistory(sheet.id),
     };
