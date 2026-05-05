@@ -69,6 +69,35 @@ describe('useLatex hook', () => {
     expect(result.current.margins).toBe('0.5in');
   });
 
+  test('treats persisted generated sheets as safe to regenerate', () => {
+    const { result } = renderHook(() => useLatex({
+      content: '\\documentclass{article}',
+      contentSource: 'generated',
+      selectedFormulas: [{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }],
+    }), { wrapper });
+
+    expect(result.current.canRegenerateFromSelections).toBe(true);
+  });
+
+  test('treats legacy non-empty sheets as manual without trusted provenance', () => {
+    const { result } = renderHook(() => useLatex({
+      content: '\\documentclass{article}',
+      selectedFormulas: [{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }],
+    }), { wrapper });
+
+    expect(result.current.canRegenerateFromSelections).toBe(false);
+  });
+
+  test('restores saved manual provenance when provided', () => {
+    const { result } = renderHook(() => useLatex({
+      content: '\\documentclass{article}',
+      contentSource: 'manual',
+      selectedFormulas: [{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }],
+    }), { wrapper });
+
+    expect(result.current.canRegenerateFromSelections).toBe(false);
+  });
+
   test('loads from local storage if available and initial content is null', () => {
     mockLocalStorage.setItem('cheatSheetLatex', JSON.stringify({
       title: 'Storage Title',
@@ -91,6 +120,28 @@ describe('useLatex hook', () => {
     expect(result.current.content).toBe('New latex content');
     expect(result.current.contentModified).toBe(true);
     expect(result.current.compileError).toBeNull();
+  });
+
+  test('manual edits remain protected from selection regeneration after compile', async () => {
+    const { result } = renderHook(() => useLatex(), { wrapper });
+
+    act(() => {
+      result.current.handleContentChange('\\documentclass{article}\n% custom manual edit');
+    });
+
+    expect(result.current.canRegenerateFromSelections).toBe(false);
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      blob: async () => new Blob(['fake pdf data'])
+    });
+
+    await act(async () => {
+      await result.current.handleCompileOnly([{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }]);
+    });
+
+    expect(result.current.contentModified).toBe(false);
+    expect(result.current.canRegenerateFromSelections).toBe(false);
   });
 
   test('history goBack and goForward work correctly', async () => {

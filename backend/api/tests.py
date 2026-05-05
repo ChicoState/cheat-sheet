@@ -48,6 +48,7 @@ def sample_sheet(db, sample_template, auth_client):
         template=sample_template,
         user=auth_client.handler._force_user,  # the user force_authenticate() set
         latex_content="Some content here",
+        content_source="manual",
         margins="0.75in",
         columns=2,
         font_size="10pt",
@@ -675,6 +676,7 @@ class TestCheatSheetAPI:
             {
                 "title": "Brand New Sheet",
                 "latex_content": "Hello",
+                "content_source": "manual",
                 "margins": "1in",
                 "columns": 1,
                 "font_size": "12pt",
@@ -683,8 +685,23 @@ class TestCheatSheetAPI:
         )
         assert resp.status_code == 201
         assert resp.json()["title"] == "Brand New Sheet"
+        assert resp.json()["content_source"] == "manual"
         assert "full_latex" in resp.json()
         assert resp.json()["spacing"] == "small"
+
+    def test_create_cheatsheet_infers_manual_content_source_for_legacy_payload(self, auth_client):
+        resp = auth_client.post(
+            "/api/cheatsheets/",
+            {
+                "title": "Generated Sheet",
+                "latex_content": "Generated LaTeX",
+                "selected_formulas": [{"class": "ALGEBRA I", "category": "Linear Equations", "name": "Slope"}],
+            },
+            format="json",
+        )
+
+        assert resp.status_code == 201
+        assert resp.json()["content_source"] == "manual"
 
     def test_retrieve_cheatsheet_has_full_latex(self, auth_client, sample_sheet):
         resp = auth_client.get(f"/api/cheatsheets/{sample_sheet.id}/")
@@ -695,13 +712,14 @@ class TestCheatSheetAPI:
     def test_update_cheatsheet(self, auth_client, sample_sheet):
         resp = auth_client.patch(
             f"/api/cheatsheets/{sample_sheet.id}/",
-            {"margins": "0.25in", "columns": 3, "spacing": "small"},
+            {"margins": "0.25in", "columns": 3, "spacing": "small", "content_source": "generated"},
             format="json",
         )
         assert resp.status_code == 200
         assert resp.json()["margins"] == "0.25in"
         assert resp.json()["columns"] == 3
         assert resp.json()["spacing"] == "small"
+        assert resp.json()["content_source"] == "generated"
 
     def test_delete_cheatsheet(self, auth_client, sample_sheet):
         resp = auth_client.delete(f"/api/cheatsheets/{sample_sheet.id}/")

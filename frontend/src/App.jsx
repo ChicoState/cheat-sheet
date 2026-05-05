@@ -12,6 +12,7 @@ import CreateCheatSheet from './components/CreateCheatSheet';
 const CURRENT_SHEET_STORAGE_KEY = 'currentCheatSheet';
 const UNTITLED_COUNTER_STORAGE_KEY = 'untitledSheetCounter';
 const COMPILE_HISTORY_STORAGE_PREFIX = 'cheatSheetCompileHistory';
+const CONTENT_SOURCE_STORAGE_PREFIX = 'cheatSheetContentSource';
 
 const getNextUntitledTitle = () => {
   const currentValue = Number(localStorage.getItem(UNTITLED_COUNTER_STORAGE_KEY) || '0');
@@ -23,6 +24,7 @@ const getNextUntitledTitle = () => {
 const createDefaultSheet = () => ({
   title: getNextUntitledTitle(),
   content: '',
+  contentSource: 'empty',
   columns: 4,
   fontSize: '9pt',
   spacing: 'small',
@@ -30,6 +32,11 @@ const createDefaultSheet = () => ({
   selectedFormulas: [],
   compileHistory: [],
 });
+
+const inferContentSource = ({ content = '' } = {}) => {
+  if (!content?.trim()) return 'empty';
+  return 'manual';
+};
 
 const sameFormulas = (left = [], right = []) => JSON.stringify(left) === JSON.stringify(right);
 
@@ -39,6 +46,7 @@ const sameSnapshot = (left, right) => {
   return (
     left.title === right.title
     && left.content === right.content
+    && left.contentSource === right.contentSource
     && left.columns === right.columns
     && left.fontSize === right.fontSize
     && left.spacing === right.spacing
@@ -51,6 +59,7 @@ const buildRestoredSheet = (baseSheet, snapshot) => ({
   ...baseSheet,
   title: snapshot.title ?? baseSheet.title,
   content: snapshot.content ?? '',
+  contentSource: snapshot.contentSource ?? baseSheet.contentSource ?? 'generated',
   columns: snapshot.columns ?? baseSheet.columns,
   fontSize: snapshot.fontSize ?? baseSheet.fontSize,
   spacing: snapshot.spacing ?? baseSheet.spacing,
@@ -72,6 +81,7 @@ const loadStoredSheet = () => {
 };
 
 const getCompileHistoryStorageKey = (sheetId) => `${COMPILE_HISTORY_STORAGE_PREFIX}:${sheetId}`;
+const getContentSourceStorageKey = (sheetId) => `${CONTENT_SOURCE_STORAGE_PREFIX}:${sheetId}`;
 
 const getStoredCompileHistory = (sheetId) => {
   if (!sheetId) return [];
@@ -97,6 +107,17 @@ const getStoredCompileHistory = (sheetId) => {
 const saveStoredCompileHistory = (sheetId, compileHistory = []) => {
   if (!sheetId) return;
   localStorage.setItem(getCompileHistoryStorageKey(sheetId), JSON.stringify(compileHistory));
+};
+
+const getStoredContentSource = (sheetId) => {
+  if (!sheetId) return null;
+  const savedSource = localStorage.getItem(getContentSourceStorageKey(sheetId));
+  return ['generated', 'manual', 'empty'].includes(savedSource) ? savedSource : null;
+};
+
+const saveStoredContentSource = (sheetId, contentSource) => {
+  if (!sheetId || !['generated', 'manual', 'empty'].includes(contentSource)) return;
+  localStorage.setItem(getContentSourceStorageKey(sheetId), contentSource);
 };
 
 const isTestEnv = Boolean(
@@ -184,6 +205,7 @@ function App() {
 
   const handleSave = async (data, showFeedback = true) => {
     const currentSheet = cheatSheetRef.current;
+    const nextContentSource = data.contentSource ?? currentSheet.contentSource ?? inferContentSource(data);
     const previousHistory = Array.isArray(currentSheet.compileHistory) ? currentSheet.compileHistory : [];
     const latestSnapshot = previousHistory[previousHistory.length - 1];
     const nextHistory = data.compileSnapshot
@@ -194,6 +216,7 @@ function App() {
     const nextSheet = {
       ...currentSheet,
       ...data,
+      contentSource: nextContentSource,
       selectedFormulas: data.selectedFormulas ?? currentSheet.selectedFormulas ?? [],
       compileHistory: nextHistory,
     };
@@ -203,6 +226,7 @@ function App() {
     setCheatSheet(nextSheet);
     localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(nextSheet));
     saveStoredCompileHistory(nextSheet.id, nextHistory);
+    saveStoredContentSource(nextSheet.id, nextSheet.contentSource);
 
     if (!showFeedback) {
       return nextSheet;
@@ -236,6 +260,7 @@ function App() {
         body: JSON.stringify({
           title: nextSheet.title,
           latex_content: nextSheet.content,
+          content_source: nextSheet.contentSource,
           columns: nextSheet.columns,
           margins: nextSheet.margins,
           font_size: nextSheet.fontSize,
@@ -257,6 +282,7 @@ function App() {
             ...nextSheet,
             id: savedSheet.id,
             content: savedSheet.latex_content ?? nextSheet.content,
+            contentSource: savedSheet.content_source ?? nextSheet.contentSource,
             fontSize: savedSheet.font_size ?? nextSheet.fontSize,
             spacing: savedSheet.spacing ?? nextSheet.spacing,
             selectedFormulas: savedSheet.selected_formulas ?? nextSheet.selectedFormulas,
@@ -274,6 +300,7 @@ function App() {
         ...nextSheet,
         id: savedSheet.id,
         content: savedSheet.latex_content ?? nextSheet.content,
+        contentSource: savedSheet.content_source ?? nextSheet.contentSource,
         fontSize: savedSheet.font_size ?? nextSheet.fontSize,
         spacing: savedSheet.spacing ?? nextSheet.spacing,
         selectedFormulas: savedSheet.selected_formulas ?? nextSheet.selectedFormulas,
@@ -283,6 +310,7 @@ function App() {
       setCheatSheet(persistedSheet);
       localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(persistedSheet));
       saveStoredCompileHistory(persistedSheet.id, persistedSheet.compileHistory);
+      saveStoredContentSource(persistedSheet.id, persistedSheet.contentSource);
       alert('Progress saved!');
       return persistedSheet;
     } catch (error) {
@@ -298,15 +326,20 @@ function App() {
   };
 
   const handleEditSheet = (sheet) => {
+    const selectedFormulas = sheet.selected_formulas || [];
     const editSheet = {
       id: sheet.id,
       title: sheet.title,
       content: sheet.latex_content,
+      contentSource: sheet.content_source ?? getStoredContentSource(sheet.id) ?? inferContentSource({
+        content: sheet.latex_content,
+        selectedFormulas,
+      }),
       columns: sheet.columns,
       margins: sheet.margins,
       fontSize: sheet.font_size,
       spacing: sheet.spacing,
-      selectedFormulas: sheet.selected_formulas || [],
+      selectedFormulas,
       compileHistory: getStoredCompileHistory(sheet.id),
     };
     setCheatSheet(editSheet);

@@ -18,8 +18,19 @@ class Template(models.Model):
 
 
 class CheatSheet(models.Model):
+    CONTENT_SOURCE_CHOICES = [
+        ("empty", "Empty"),
+        ("generated", "Generated"),
+        ("manual", "Manual"),
+    ]
+
     title = models.CharField(max_length=200)
     latex_content = models.TextField(blank=True, default="")
+    content_source = models.CharField(
+        max_length=20,
+        choices=CONTENT_SOURCE_CHOICES,
+        default="empty",
+    )
     template = models.ForeignKey(
         Template, on_delete=models.SET_NULL, null=True, blank=True
     )

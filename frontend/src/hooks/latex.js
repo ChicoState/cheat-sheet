@@ -12,6 +12,15 @@ const DEFAULT_LAYOUT = {
   margins: '0.15in',
 };
 
+function getInitialContentSource(data) {
+  if (['generated', 'manual', 'empty'].includes(data?.contentSource)) {
+    return data.contentSource;
+  }
+
+  if (!data?.content?.trim()) return 'empty';
+  return 'manual';
+}
+
 function loadLatexStorage() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -70,6 +79,7 @@ export function useLatex(initialData) {
   const [title, setTitle] = useState(initialData?.title ?? '');
   const [content, setContent] = useState(initialData?.content ?? '');
   const [contentModified, setContentModified] = useState(false);
+  const [contentSource, setContentSource] = useState(() => getInitialContentSource(initialData));
   const [columns, setColumns] = useState(initialData?.columns ?? DEFAULT_LAYOUT.columns);
   const [fontSize, setFontSize] = useState(initialData?.fontSize ?? DEFAULT_LAYOUT.fontSize);
   const [spacing, setSpacing] = useState(initialData?.spacing ?? DEFAULT_LAYOUT.spacing);
@@ -119,6 +129,7 @@ export function useLatex(initialData) {
       const newIndex = historyIndex - 1;
       setHistoryIndex(newIndex);
       setContent(history[newIndex]?.content || '');
+      setContentSource('manual');
       setCompileError(null);
       setContentModified(true);
     }
@@ -129,6 +140,7 @@ export function useLatex(initialData) {
       const newIndex = historyIndex + 1;
       setHistoryIndex(newIndex);
       setContent(history[newIndex]?.content || '');
+      setContentSource('manual');
       setCompileError(null);
       setContentModified(true);
     }
@@ -155,6 +167,7 @@ export function useLatex(initialData) {
       initialLoaded.current = true;
       setTitle(saved.title ?? '');
       setContent(saved.content ?? '');
+      setContentSource(getInitialContentSource(saved));
       setColumns(saved.columns ?? DEFAULT_LAYOUT.columns);
       setFontSize(saved.fontSize ?? DEFAULT_LAYOUT.fontSize);
       setSpacing(saved.spacing ?? DEFAULT_LAYOUT.spacing);
@@ -169,6 +182,7 @@ export function useLatex(initialData) {
       initialLoaded.current = true;
       setTitle(initialData.title ?? '');
       setContent(initialData.content ?? '');
+      setContentSource(getInitialContentSource(initialData));
       setColumns(initialData.columns ?? DEFAULT_LAYOUT.columns);
       setFontSize(initialData.fontSize ?? DEFAULT_LAYOUT.fontSize);
       setSpacing(initialData.spacing ?? DEFAULT_LAYOUT.spacing);
@@ -184,6 +198,7 @@ export function useLatex(initialData) {
 
   const handleContentChange = useCallback((newContent) => {
     setContent(newContent);
+    setContentSource(newContent.trim() ? 'manual' : 'empty');
     setCompileError(null);
     setContentModified(true);
   }, []);
@@ -193,12 +208,12 @@ export function useLatex(initialData) {
   useEffect(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      saveLatexStorage({ title, content, columns, fontSize, spacing, margins });
+      saveLatexStorage({ title, content, contentSource, columns, fontSize, spacing, margins });
     }, SAVE_DEBOUNCE_MS);
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [title, content, columns, fontSize, spacing, margins]);
+  }, [title, content, contentSource, columns, fontSize, spacing, margins]);
 
   const compileLatexContent = useCallback(async (latexContent, layoutOptions = {}) => {
     const response = await fetch('/api/compile/', {
@@ -276,6 +291,7 @@ export function useLatex(initialData) {
     lastCompiledLayoutRef.current.fontSize !== fontSize ||
     lastCompiledLayoutRef.current.spacing !== spacing ||
     lastCompiledLayoutRef.current.margins !== margins;
+  const canRegenerateFromSelections = !content.trim() || contentSource === 'generated';
 
   const handleCompileOnly = useCallback(async (selectedList = []) => {
     clearAutoCompileTimer();
@@ -299,6 +315,7 @@ export function useLatex(initialData) {
         if (content) saveToHistory(generatedContent);
         contentToCompile = generatedContent;
         setContent(generatedContent);
+        setContentSource('generated');
       }
 
       if (hasContent && hasLayoutChanges) {
@@ -362,6 +379,7 @@ export function useLatex(initialData) {
           const data = await response.json();
           contentToCompile = data.tex_code;
           setContent(data.tex_code);
+          setContentSource('generated');
           if (content) saveToHistory(data.tex_code);
         }
       } catch (e) {
@@ -417,6 +435,7 @@ export function useLatex(initialData) {
       const generatedContent = await generateLatexContent(selectedList);
       if (content) saveToHistory(generatedContent);
       setContent(generatedContent);
+      setContentSource('generated');
       setContentModified(false);
       setPdfBlob(null);
       handlePreview(generatedContent, null);
@@ -535,6 +554,7 @@ export function useLatex(initialData) {
     clearAutoCompileTimer();
     setTitle(initialData?.title ?? '');
     setContent('');
+    setContentSource('empty');
     setContentModified(false);
     setColumns(initialData?.columns ?? DEFAULT_LAYOUT.columns);
     setFontSize(initialData?.fontSize ?? DEFAULT_LAYOUT.fontSize);
@@ -563,6 +583,8 @@ export function useLatex(initialData) {
     content,
     setContent,
     contentModified,
+    contentSource,
+    canRegenerateFromSelections,
     hasLayoutChanges,
     handleContentChange,
     columns,

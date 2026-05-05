@@ -47,6 +47,8 @@ describe('CreateCheatSheet Component', () => {
     setTitle: vi.fn(),
     content: '',
     contentModified: false,
+    contentSource: 'empty',
+    canRegenerateFromSelections: true,
     hasLayoutChanges: false,
     handleContentChange: vi.fn(),
     columns: 4,
@@ -164,6 +166,33 @@ describe('CreateCheatSheet Component', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Compile PDF/i }));
 
+    expect(handleCompileOnlyMock).toHaveBeenCalledWith(selectedFormulas);
+  });
+
+  it('does not overwrite compiled manual LaTeX on later compile clicks', () => {
+    const handleCompileOnlyMock = vi.fn();
+    const handlePreviewMock = vi.fn();
+    const selectedFormulas = [{ name: 'test' }];
+
+    useLatex.mockReturnValue({
+      ...mockUseLatex,
+      content: '\\documentclass{article}\n% user edit',
+      contentModified: false,
+      canRegenerateFromSelections: false,
+      handleCompileOnly: handleCompileOnlyMock,
+      handlePreview: handlePreviewMock,
+    });
+    useFormulas.mockReturnValue({
+      ...mockUseFormulas,
+      selectedCount: 1,
+      getSelectedFormulasList: vi.fn().mockReturnValue(selectedFormulas),
+    });
+
+    render(<CreateCheatSheet onSave={vi.fn()} onReset={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Compile PDF/i }));
+
+    expect(handlePreviewMock).not.toHaveBeenCalled();
     expect(handleCompileOnlyMock).toHaveBeenCalledWith(selectedFormulas);
   });
 

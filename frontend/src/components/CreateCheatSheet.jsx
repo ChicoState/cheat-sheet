@@ -1001,6 +1001,8 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     setTitle,
     content,
     contentModified,
+    contentSource,
+    canRegenerateFromSelections,
     hasLayoutChanges,
     handleContentChange,
     columns,
@@ -1196,6 +1198,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     onSave({
       title,
       content,
+      contentSource,
       columns,
       fontSize,
       spacing,
@@ -1204,6 +1207,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       compileSnapshot: {
         title,
         content,
+        contentSource,
         columns,
         fontSize,
         spacing,
@@ -1214,7 +1218,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     }, false).catch((error) => {
       console.error('Failed to autosave compiled sheet', error);
     });
-  }, [columns, compileError, content, fontSize, getSelectedFormulasList, margins, onSave, pdfBlob, spacing, title]);
+  }, [columns, compileError, content, contentSource, fontSize, getSelectedFormulasList, margins, onSave, pdfBlob, spacing, title]);
 
   const startResize = useCallback((panel) => (event) => {
     event.preventDefault();
@@ -1315,7 +1319,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     }
 
     const selectedFormulas = getSelectedFormulasList();
-    if (!contentModified && selectedFormulas.length > 0) {
+    if (!contentModified && canRegenerateFromSelections && selectedFormulas.length > 0) {
       handlePreview(null, { formulas: selectedFormulas, columns, fontSize, spacing });
       return;
     }
@@ -1328,6 +1332,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     await onSave({
       title,
       content,
+      contentSource,
       columns,
       fontSize,
       spacing,
