@@ -109,9 +109,6 @@ describe('useFormulas hook', () => {
       result.current.toggleClass('Algebra'); // adds 3 formulas
     });
 
-    const initialOrder = result.current.groupedFormulas[0].formulas.map(f => f.name);
-    // initialOrder = ['Slope Formula', 'Intercept Form', 'Quadratic Formula']
-
     act(() => {
       // Move 'Quadratic Formula' (index 2) to 'Slope Formula' (index 0)
       result.current.reorderFormula('Algebra', 2, 0);

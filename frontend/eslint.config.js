@@ -52,5 +52,20 @@ export default [
         process: 'readonly'
       }
     }
+  },
+  {
+    files: ['src/**/*test.{js,jsx}', 'src/setupTests.js'],
+    languageOptions: {
+      globals: {
+        global: 'readonly',
+        vi: 'readonly',
+        describe: 'readonly',
+        it: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly'
+      }
+    }
   }
 ];

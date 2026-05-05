@@ -1,6 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { useLatex } from './latex';
 import AuthContext from '../context/AuthContext';
+import { vi } from 'vitest';
 
 // Mock localStorage
 const mockLocalStorage = (() => {
@@ -19,6 +20,9 @@ global.URL.revokeObjectURL = vi.fn();
 
 // Mock fetch
 global.fetch = vi.fn();
+
+// Mock alert for jsdom
+window.alert = vi.fn();
 
 describe('useLatex hook', () => {
   beforeEach(() => {
@@ -125,9 +129,13 @@ describe('useLatex hook', () => {
 
   test('handleCompileOnly handles successful compilation', async () => {
     const { result } = renderHook(() => useLatex(), { wrapper });
+    const selectedFormulas = [{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }];
 
-    // Mock normalize and compile fetch responses
     global.fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ tex_code: 'generated content' })
+      })
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ tex_code: 'normalized content' })
@@ -138,10 +146,10 @@ describe('useLatex hook', () => {
       });
 
     await act(async () => {
-      await result.current.handleCompileOnly();
+      await result.current.handleCompileOnly(selectedFormulas);
     });
 
-    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
     expect(result.current.content).toBe('normalized content');
     expect(result.current.pdfBlob).toBe('blob:test-url');
     expect(result.current.compileError).toBeNull();
@@ -149,14 +157,20 @@ describe('useLatex hook', () => {
 
   test('handleCompileOnly handles errors', async () => {
     const { result } = renderHook(() => useLatex(), { wrapper });
+    const selectedFormulas = [{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }];
 
-    global.fetch.mockResolvedValueOnce({
+    global.fetch
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ tex_code: 'generated content' })
+    })
+    .mockResolvedValueOnce({
       ok: false,
       json: async () => ({ details: 'Syntax error on line 1' })
     });
 
     await act(async () => {
-      await result.current.handleCompileOnly();
+      await result.current.handleCompileOnly(selectedFormulas);
     });
 
     expect(result.current.compileError).toContain('Syntax error');
