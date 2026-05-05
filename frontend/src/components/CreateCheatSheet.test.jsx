@@ -85,6 +85,7 @@ describe('CreateCheatSheet Component', () => {
     // Check initial text
     expect(screen.getByText(/Select a subject, pick categories, then compile/i)).toBeInTheDocument();
     expect(screen.getByText(/Your PDF will appear here/i)).toBeInTheDocument();
+    expect(screen.getByText(/Compile will generate the first draft if the editor is still empty/i)).toBeInTheDocument();
   });
 
   it('handles generating a cheat sheet', () => {
@@ -103,6 +104,24 @@ describe('CreateCheatSheet Component', () => {
     fireEvent.click(generateBtn);
     
     expect(handleGenerateSheetMock).toHaveBeenCalled();
+  });
+
+  it('passes selected formulas into compile', () => {
+    const handleCompileOnlyMock = vi.fn();
+    const selectedFormulas = [{ name: 'test' }];
+
+    useLatex.mockReturnValue({ ...mockUseLatex, handleCompileOnly: handleCompileOnlyMock });
+    useFormulas.mockReturnValue({
+      ...mockUseFormulas,
+      selectedCount: 1,
+      getSelectedFormulasList: vi.fn().mockReturnValue(selectedFormulas),
+    });
+
+    render(<CreateCheatSheet onSave={vi.fn()} onReset={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Compile PDF/i }));
+
+    expect(handleCompileOnlyMock).toHaveBeenCalledWith(selectedFormulas);
   });
 
   it('can open youtube resources when class is selected', () => {

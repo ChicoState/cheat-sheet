@@ -209,22 +209,58 @@ export function useLatex(initialData) {
     return data.tex_code || latexContent;
   }, [authTokens]);
 
+  const generateLatexContent = useCallback(async (selectedList) => {
+    const response = await fetch('/api/generate-sheet/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        formulas: selectedList,
+        columns,
+        font_size: fontSize,
+        spacing,
+        margins,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to generate sheet');
+    }
+
+    const data = await response.json();
+    return data.tex_code;
+  }, [columns, fontSize, spacing, margins]);
+
   const hasLayoutChanges =
     lastCompiledLayoutRef.current.columns !== columns ||
     lastCompiledLayoutRef.current.fontSize !== fontSize ||
     lastCompiledLayoutRef.current.spacing !== spacing ||
     lastCompiledLayoutRef.current.margins !== margins;
 
-  const handleCompileOnly = useCallback(async () => {
+  const handleCompileOnly = useCallback(async (selectedList = []) => {
     clearAutoCompileTimer();
     if (isCompilingRef.current) return;
+
+    const hasContent = content.trim().length > 0;
+    if (!hasContent && selectedList.length === 0) {
+      alert('Select formulas first or generate a sheet before compiling.');
+      return;
+    }
     
     isCompilingRef.current = true;
     setIsCompiling(true);
     setCompileError(null);
 
     try {
-      const normalizedContent = await normalizeLatexContent(content, {
+      let contentToCompile = content;
+
+      if (!hasContent) {
+        const generatedContent = await generateLatexContent(selectedList);
+        if (content) saveToHistory(generatedContent);
+        setContent(generatedContent);
+        contentToCompile = generatedContent;
+      }
+
+      const normalizedContent = await normalizeLatexContent(contentToCompile, {
         columns,
         font_size: fontSize,
         spacing,
@@ -245,7 +281,7 @@ export function useLatex(initialData) {
       setIsCompiling(false);
       isCompilingRef.current = false;
     }
-  }, [clearAutoCompileTimer, columns, compileLatexContent, content, fontSize, margins, normalizeLatexContent, spacing]);
+  }, [clearAutoCompileTimer, columns, compileLatexContent, content, fontSize, generateLatexContent, margins, normalizeLatexContent, saveToHistory, spacing]);
 
   useEffect(() => {
     if (!initialLoaded.current) return;
@@ -325,24 +361,12 @@ export function useLatex(initialData) {
     isGeneratingRef.current = true;
     setIsGenerating(true);
     try {
-      const response = await fetch('/api/generate-sheet/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          formulas: selectedList,
-          columns: columns,
-          font_size: fontSize,
-          spacing: spacing,
-          margins: margins
-        }),
-      });
-      if (!response.ok) throw new Error('Failed to generate sheet');
-        const data = await response.json();
-        if (content) saveToHistory(data.tex_code);
-        setContent(data.tex_code);
-        setContentModified(false);
-        setPdfBlob(null);
-        handlePreview(data.tex_code, null);
+      const generatedContent = await generateLatexContent(selectedList);
+      if (content) saveToHistory(generatedContent);
+      setContent(generatedContent);
+      setContentModified(false);
+      setPdfBlob(null);
+      handlePreview(generatedContent, null);
     } catch (error) {
       console.error('Error generating sheet:', error);
       alert('Failed to generate LaTeX. Is the backend running?');

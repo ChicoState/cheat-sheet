@@ -674,7 +674,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
     toggleClass(className);
   };
   const handleCompileClick = () => {
-    handleCompileOnly();
+    handleCompileOnly(getSelectedFormulasList());
   };
 
   const handleGenerate = () => {
@@ -872,6 +872,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                   <span>📄</span>
                 <p>Select a subject, pick categories, then compile</p>
                 <p>Your PDF will appear here</p>
+                <p>Compile will generate the first draft if the editor is still empty.</p>
               </div>
               )}
               </>
