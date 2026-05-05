@@ -1481,6 +1481,63 @@ pdf main focus - center panel
   min-height: 0;
 }
 
+.pdf-preview-shell {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pdf-preview-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pdf-zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--panel-bg) 88%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.pdf-zoom-btn {
+  border: 1px solid transparent;
+  background: var(--box-bg);
+  color: var(--text);
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.65rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pdf-zoom-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.pdf-zoom-readout,
+.pdf-zoom-fit {
+  min-width: 5.5rem;
+}
+
+.pdf-preview-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .pdf-placeholder {
   flex: 1;
   display: flex;

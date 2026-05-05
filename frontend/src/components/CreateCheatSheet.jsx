@@ -450,6 +450,34 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
   const [numPages, setNumPages] = useState(null);
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(null);
+  const [zoom, setZoom] = useState(1);
+  const [fitToWidth, setFitToWidth] = useState(true);
+
+  const clampZoom = (value) => Math.min(2, Math.max(0.5, value));
+
+  const handleZoomOut = () => {
+    setFitToWidth(false);
+    setZoom((currentZoom) => clampZoom(currentZoom - 0.15));
+  };
+
+  const handleZoomIn = () => {
+    setFitToWidth(false);
+    setZoom((currentZoom) => clampZoom(currentZoom + 0.15));
+  };
+
+  const handleResetZoom = () => {
+    setFitToWidth(false);
+    setZoom(1);
+  };
+
+  const handleFitToWidth = () => {
+    setFitToWidth(true);
+    setZoom(1);
+  };
+
+  const pageWidth = containerWidth
+    ? Math.max(240, Math.round(containerWidth * (fitToWidth ? 1 : zoom)))
+    : undefined;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -465,11 +493,27 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
   }, []);
 
   return (
-    <div 
-      ref={containerRef}
-      style={{ width: '100%', height: '100%', overflow: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center'}}
-
-    >
+    <div className="pdf-preview-shell">
+      <div className="pdf-preview-toolbar">
+        <div className="pdf-zoom-controls" role="toolbar" aria-label="PDF zoom controls">
+          <button type="button" className="pdf-zoom-btn" onClick={handleZoomOut} aria-label="Zoom out">
+            −
+          </button>
+          <button type="button" className="pdf-zoom-btn pdf-zoom-readout" onClick={handleResetZoom}>
+            {fitToWidth ? 'Fit width' : `${Math.round(zoom * 100)}%`}
+          </button>
+          <button type="button" className="pdf-zoom-btn" onClick={handleZoomIn} aria-label="Zoom in">
+            +
+          </button>
+          <button type="button" className="pdf-zoom-btn pdf-zoom-fit" onClick={handleFitToWidth}>
+            Fit width
+          </button>
+        </div>
+      </div>
+      <div
+        ref={containerRef}
+        className="pdf-preview-scroll"
+      >
       {compileError ? (
         <div style={{ padding: '20px', color: '#ff4444', backgroundColor: '#331111', borderRadius: '4px', border: '1px solid #ff4444', whiteSpace: 'prewrap', fontFamily: 'monospace', fontSize: '12px', overflowX: 'auto', width: '100%', boxSizing: 'border-box'}}>
           <strong>Compilation: Error:</strong><br /><br />
@@ -489,7 +533,7 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
                   className="pdf-page"
-                  width={containerWidth ? containerWidth: undefined}
+                  width={pageWidth}
                   />
 
               ))}
@@ -499,6 +543,7 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
           Generate a cheat sheet to see your PDF!
           </div>
       )}
+      </div>
     </div>
   );
 };
