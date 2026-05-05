@@ -10,4 +10,4 @@ RUN chmod +x ./scripts/dev-entrypoint.sh
 
 EXPOSE 5173
 
-CMD ["./scripts/dev-entrypoint.sh"]
+CMD ["sh", "./scripts/dev-entrypoint.sh"]
