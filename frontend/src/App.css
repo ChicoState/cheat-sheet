@@ -247,7 +247,7 @@ body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: var(--bg);
   color: var(--text);
-  line-height: 1.5;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color var(--transition-slow), color var(--transition-slow);
@@ -264,17 +264,17 @@ body {
    TYPOGRAPHY
    ========================================================================== */
 h1, h2, h3, h4, h5, h6 {
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-weight: 550;
+  letter-spacing: -0.025em;
   color: var(--text);
   margin: 0;
 }
 
 label {
-  font-size: 0.875rem;
+  font-size: 0.84rem;
   font-weight: 500;
   color: var(--text);
-  letter-spacing: 0.01em;
+  letter-spacing: 0.005em;
 }
 
 /* ==========================================================================
@@ -305,8 +305,69 @@ label {
 .create-cheat-sheet h2 {
   margin-top: 0;
   margin-bottom: var(--space-lg);
-  font-size: 1.25rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   color: var(--text);
+}
+
+.panel-label {
+  display: block;
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.panel-label-spaced {
+  margin-top: 0.95rem;
+}
+
+.subtle-copy,
+.pdf-state-message,
+.selection-count-copy,
+.right-panel-empty,
+.inline-note {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.inline-note {
+  margin: 0 0 0 0.5rem;
+}
+
+.selection-count-copy {
+  margin-top: 0.5rem;
+}
+
+.pdf-state-message {
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.pdf-state-error {
+  color: #fca5a5;
+}
+
+.right-panel-empty-subtle {
+  padding: 0.25rem 0;
+}
+
+.compile-error-box {
+  padding: 1rem;
+  color: #fca5a5;
+  background: rgba(127, 29, 29, 0.22);
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  border-radius: 10px;
+  white-space: pre-wrap;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.75rem;
+  overflow-x: auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* ==========================================================================
@@ -903,7 +964,7 @@ label {
 
 .layout-control label {
   font-weight: 500;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   color: var(--text);
 }
 
@@ -923,9 +984,9 @@ label {
 .class-category-label {
   display: block;
   font-weight: 600;
-  font-size: 0.8125rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
   margin-bottom: var(--space-sm);
 }
@@ -938,7 +999,7 @@ label {
 
 .select-all-label {
   display: block;
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   color: var(--primary);
   margin-bottom: var(--space-sm);
   cursor: pointer;
@@ -1120,9 +1181,9 @@ label {
 }
 
 .reorder-instructions {
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.7rem;
   font-style: italic;
 }
 
@@ -1262,7 +1323,7 @@ THREE COLUMN LAYOUT
 }
 
 .app-header {
-  padding: 0.6rem 1rem;
+  padding: 0.55rem 0.95rem;
   background: color-mix(in srgb, var(--panel-bg) 94%, var(--bg) 6%);
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -1277,14 +1338,14 @@ THREE COLUMN LAYOUT
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   width: 100%;
-  gap: 0.65rem;
+  gap: 0.6rem;
 }
 
 .app-header-nav,
 .app-header-actions {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   min-width: 0;
 }
 
@@ -1299,14 +1360,14 @@ THREE COLUMN LAYOUT
 
 .app-header-brand h1 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.96rem;
   font-weight: 600;
   letter-spacing: -0.025em;
 }
 
 .app-header-brand p {
   margin: 0.125rem 0 0;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
 }
 
@@ -1321,7 +1382,7 @@ THREE COLUMN LAYOUT
   background: var(--card-bg);
   color: var(--text);
   font: inherit;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 500;
   letter-spacing: 0.01em;
   text-decoration: none;
@@ -1365,6 +1426,7 @@ THREE COLUMN LAYOUT
   width: auto;
   min-width: 9.25rem;
   padding-right: 1.9rem;
+  font-size: 0.8rem;
 }
 
 .app-header input:focus {
@@ -1771,6 +1833,12 @@ center panel - latex drawer
   flex-shrink: 0;
 }
 
+.workspace-topbar .btn-toggle-panel,
+.workspace-topbar .btn-toggle-latex {
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+}
+
 .workspace-topbar-group {
   display: flex;
   align-items: center;
@@ -1872,9 +1940,9 @@ right panel - youtube resources
 .right-panel-header {
   padding: 0.7rem 0.85rem;
   font-weight: 600;
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   border-bottom: 1px solid var(--border);
   color: var(--text-muted);
   flex-shrink: 0;
@@ -1960,15 +2028,15 @@ right panel - youtube resources
 }
 
 .v-title {
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-size: 0.68rem;
+  font-weight: 500;
   color: var(--text);
   line-height: 1.3;
   margin-bottom: 0.2rem;
 }
 
 .v-channel {
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   color: var(--text-muted);
 }
 
@@ -2084,10 +2152,10 @@ three - column responsive
 }
 
 .subject-video-label {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.07rem;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
   padding: 0.35rem 0.2rem;
   margin-bottom: 0.35rem;

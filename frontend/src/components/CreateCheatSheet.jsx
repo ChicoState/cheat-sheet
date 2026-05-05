@@ -72,7 +72,6 @@ function SortableClassGroup({ group, isCollapsed, onToggleCollapse, onRemoveClas
           <span className="collapse-icon">{isCollapsed ? '▶' : '▼'}</span>
           <span 
             className="class-group-title" 
-            style={{ fontWeight: 'bold', marginLeft: '0.5rem' }}
           >
             {group.class} ({group.formulas.length})
           </span>
@@ -159,10 +158,10 @@ function FormulaReorderPanel({ groupedFormulas, onReorderClass, onReorderFormula
 
   return (
     <div className="formula-reorder-panel">
-      <label style={{ fontWeight: 'bold', marginTop: '1rem', marginBottom: '0.5rem', display: 'block' }}>
+      <label className="panel-label panel-label-spaced">
         Drag to reorder formulas (top appears first in PDF)
       </label>
-      <div className="reorder-instructions">
+      <div className="reorder-instructions subtle-copy">
         <span>Click the bar to collapse. Click and hold to move.</span>
       </div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -200,7 +199,7 @@ const FormulaSelection = ({
   onRemoveFormula
 }) => (
   <div className="formula-selection">
-    <label style={{ fontWeight: 'bold', marginBottom: '0.5rem', display: 'block' }}>
+    <label className="panel-label">
       Select classes
     </label>
     
@@ -225,7 +224,7 @@ const FormulaSelection = ({
 
     {hasSelectedClasses && (
       <div className="category-dropdowns">
-        <label style={{ fontWeight: 'bold', marginTop: '1rem', marginBottom: '0.5rem', display: 'block' }}>
+        <label className="panel-label panel-label-spaced">
           Select sections
         </label>
         
@@ -237,7 +236,7 @@ const FormulaSelection = ({
           if (isSpecialClass) {
             return (
               <div key={cls.name} className="class-category-section">
-                <p style={{ fontSize: '0.9rem', color: '#666', marginLeft: '0.5rem' }}>
+                <p className="inline-note">
                   ✓ {cls.name} selected - all formulas included
                 </p>
               </div>
@@ -307,7 +306,7 @@ const FormulaSelection = ({
     </button>
 
     {selectedCount > 0 && (
-      <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem' }}>
+      <p className="subtle-copy selection-count-copy">
         {selectedCount} formula(s) will be included
       </p>
     )}
@@ -515,7 +514,7 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
         className="pdf-preview-scroll"
       >
       {compileError ? (
-        <div style={{ padding: '20px', color: '#ff4444', backgroundColor: '#331111', borderRadius: '4px', border: '1px solid #ff4444', whiteSpace: 'prewrap', fontFamily: 'monospace', fontSize: '12px', overflowX: 'auto', width: '100%', boxSizing: 'border-box'}}>
+        <div className="compile-error-box">
           <strong>Compilation: Error:</strong><br /><br />
           {compileError}
         </div>
@@ -523,8 +522,8 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
           <Document
             file={pdfBlob}
             onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-            loading={<div style={{ padding: '2rem', color: '#666', textAlign: 'center'}}>Loading PDF...</div>}
-            error={<div style={{ padding: '2rem', color: '#ff4444', textAlign: 'center'}}>Failed to load PDF.</div>}
+            loading={<div className="pdf-state-message">Loading PDF...</div>}
+            error={<div className="pdf-state-message pdf-state-error">Failed to load PDF.</div>}
             >
               {Array.from(new Array(numPages), (_, index) => (
                 <Page 
@@ -539,7 +538,7 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
               ))}
           </Document>
       ) : (
-        <div style={{ padding: '20px', color: '#666', textAlign: 'center' }}>
+        <div className="pdf-state-message">
           Generate a cheat sheet to see your PDF!
           </div>
       )}
@@ -557,7 +556,7 @@ const LayoutOptions = ({ columns, setColumns, fontSize, setFontSize, spacing, se
 
   return (
   <div className="layout-options">
-    <label style={{ fontWeight: 'bold', marginBottom: '0.5rem', display: 'block' }}>
+    <label className="panel-label">
       Layout Options
     </label>
     <div className="layout-controls">
@@ -930,7 +929,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                     <div key={cls} className="subject-video-group">
                       <div className="subject-video-label">{cls}</div>
                       {videos.length == 0 ? (
-                        <p className="right-panel-empty" style={{ fontSize: '0.72rem', padding: '0.25rem 0' }}>
+                        <p className="right-panel-empty right-panel-empty-subtle">
                           No videos added yet.
                         </p>
                       ) : (
