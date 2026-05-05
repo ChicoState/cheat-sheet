@@ -3,16 +3,18 @@ import { useEffect, useMemo, useState } from 'react';
 const YOUTUBE_TOPIC_LIMIT = 12;
 const REQUEST_DEBOUNCE_MS = 350;
 
-export function useYouTubeResources(selectedTopics) {
+export function useYouTubeResources(searchRequest) {
   const [resources, setResources] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const limitedTopics = useMemo(() => selectedTopics.slice(0, YOUTUBE_TOPIC_LIMIT), [selectedTopics]);
+  const requestKey = searchRequest?.key || 0;
+  const searchTopics = useMemo(() => searchRequest?.topics || [], [searchRequest]);
+  const limitedTopics = useMemo(() => searchTopics.slice(0, YOUTUBE_TOPIC_LIMIT), [searchTopics]);
   const requestBody = useMemo(() => JSON.stringify({ topics: limitedTopics }), [limitedTopics]);
 
   useEffect(() => {
-    if (!limitedTopics.length) {
+    if (!requestKey || !limitedTopics.length) {
       setResources([]);
       setIsLoading(false);
       setError('');
@@ -24,6 +26,7 @@ export function useYouTubeResources(selectedTopics) {
     async function loadResources() {
       setIsLoading(true);
       setError('');
+      setResources([]);
 
       try {
         const response = await fetch('/api/youtube-resources/', {
@@ -68,7 +71,7 @@ export function useYouTubeResources(selectedTopics) {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [limitedTopics, requestBody]);
+  }, [limitedTopics, requestBody, requestKey]);
 
-  return { resources, isLoading, error };
+  return { resources, isLoading, error, topicLimit: YOUTUBE_TOPIC_LIMIT };
 }

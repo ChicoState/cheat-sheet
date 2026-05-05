@@ -23,6 +23,8 @@ from .formula_data import get_formula_data, get_classes_with_details, get_specia
 from .latex_utils import build_latex_for_formulas, normalize_latex_layout
 
 YOUTUBE_MAX_TOPICS = 12
+YOUTUBE_SEARCH_RESULT_LIMIT = 5
+YOUTUBE_MIN_VIEW_COUNT = 10_000
 YOUTUBE_TOPIC_SET = None
 
 # ------------------------------------------------------------------
@@ -109,12 +111,30 @@ def get_youtube_http_error_message(exc):
     return f"YouTube search failed ({status_detail})"
 
 
+def fetch_youtube_json(url):
+    with urlopen(url, timeout=4) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def get_youtube_video_id(item):
+    raw_id = item.get("id") or {}
+    return raw_id.get("videoId") if isinstance(raw_id, dict) else raw_id
+
+
+def get_youtube_view_count(item):
+    try:
+        return int((item.get("statistics") or {}).get("viewCount") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 def fetch_top_youtube_video(class_name, category_name, api_key):
     params = urlencode(
         {
             "part": "snippet",
             "type": "video",
-            "maxResults": 1,
+            "maxResults": YOUTUBE_SEARCH_RESULT_LIMIT,
+            "order": "relevance",
             "safeSearch": "strict",
             "videoEmbeddable": "true",
             "q": build_youtube_search_query(class_name, category_name),
@@ -124,8 +144,7 @@ def fetch_top_youtube_video(class_name, category_name, api_key):
     url = f"https://www.googleapis.com/youtube/v3/search?{params}"
 
     try:
-        with urlopen(url, timeout=4) as response:
-            payload = json.loads(response.read().decode("utf-8"))
+        payload = fetch_youtube_json(url)
     except HTTPError as exc:
         raise RuntimeError(get_youtube_http_error_message(exc)) from exc
     except URLError as exc:
@@ -135,8 +154,44 @@ def fetch_top_youtube_video(class_name, category_name, api_key):
     if not items:
         return None
 
-    item = items[0]
-    snippet = item.get("snippet") or {}
+    video_ids = [video_id for item in items if (video_id := get_youtube_video_id(item))]
+    if not video_ids:
+        return None
+
+    details_params = urlencode(
+        {
+            "part": "snippet,statistics",
+            "id": ",".join(video_ids),
+            "key": api_key,
+        }
+    )
+    details_url = f"https://www.googleapis.com/youtube/v3/videos?{details_params}"
+
+    try:
+        details_payload = fetch_youtube_json(details_url)
+    except HTTPError as exc:
+        raise RuntimeError(get_youtube_http_error_message(exc)) from exc
+    except URLError as exc:
+        raise RuntimeError("YouTube search is unavailable") from exc
+
+    details_by_id = {item.get("id"): item for item in details_payload.get("items", [])}
+    selected_item = None
+    selected_details = None
+
+    for item in items:
+        video_id = get_youtube_video_id(item)
+        details = details_by_id.get(video_id)
+        if details and get_youtube_view_count(details) >= YOUTUBE_MIN_VIEW_COUNT:
+            selected_item = item
+            selected_details = details
+            break
+
+    if selected_item is None:
+        selected_item = items[0]
+        selected_details = details_by_id.get(get_youtube_video_id(selected_item))
+
+    snippet = (selected_details or selected_item).get("snippet") or {}
+    view_count = get_youtube_view_count(selected_details or {})
     thumbnails = snippet.get("thumbnails") or {}
     thumbnail = (
         thumbnails.get("high")
@@ -151,7 +206,8 @@ def fetch_top_youtube_video(class_name, category_name, api_key):
         "title": snippet.get("title") or f"{category_name} walkthrough",
         "channel": snippet.get("channelTitle") or "YouTube",
         "description": snippet.get("description") or "",
-        "videoId": ((item.get("id") or {}).get("videoId")) or "",
+        "videoId": get_youtube_video_id(selected_item) or "",
+        "viewCount": view_count,
         "thumbnailUrl": thumbnail.get("url") or "",
     }
 

@@ -5,6 +5,7 @@ import CreateCheatSheet from './CreateCheatSheet';
 import { useFormulas } from '../hooks/formulas';
 import { useLatex } from '../hooks/latex';
 import { useYouTubeResources } from '../hooks/youtubeResources';
+import { CURATED_SUBJECT_VIDEOS } from '../data/subjectVideos';
 
 // Mock the dependencies
 vi.mock('../hooks/formulas');
@@ -74,9 +75,10 @@ describe('CreateCheatSheet Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    CURATED_SUBJECT_VIDEOS['Math 101'] = [];
     useFormulas.mockReturnValue(mockUseFormulas);
     useLatex.mockReturnValue(mockUseLatex);
-    useYouTubeResources.mockReturnValue({ resources: [], isLoading: false, error: '' });
+    useYouTubeResources.mockReturnValue({ resources: [], isLoading: false, error: '', topicLimit: 12 });
   });
 
   it('renders correctly with default state', () => {
@@ -150,7 +152,11 @@ describe('CreateCheatSheet Component', () => {
     expect(mockDataWithClass.toggleClass).toHaveBeenCalledWith('Calculus I');
   });
 
-  it('renders video cards as accessible buttons', () => {
+  it('shows curated videos before a YouTube search runs', () => {
+    CURATED_SUBJECT_VIDEOS['Math 101'] = [
+      { url: 'https://youtu.be/abc123abc12', title: 'Curated Algebra Video', channel: 'Teacher Tube', topic: 'Algebra' },
+    ];
+
     useFormulas.mockReturnValue({
       ...mockUseFormulas,
       classesData: [
@@ -163,15 +169,37 @@ describe('CreateCheatSheet Component', () => {
       selectedCategories: { 'Math 101:Algebra': true },
       hasSelectedClasses: true,
     });
-    useYouTubeResources.mockReturnValue({
-      resources: [{ className: 'Math 101', category: 'Algebra', title: 'Algebra Video', channel: 'YouTube', videoId: 'abc123', thumbnailUrl: '' }],
-      isLoading: false,
-      error: '',
-    });
 
     render(<CreateCheatSheet onSave={vi.fn()} onReset={vi.fn()} />);
 
-    expect(screen.getAllByRole('button', { name: /open algebra video/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /open curated algebra video/i }).length).toBeGreaterThan(0);
+    expect(useYouTubeResources).toHaveBeenCalledWith(null);
+  });
+
+  it('searches YouTube only when the user asks for more videos', () => {
+    const selectedData = {
+      ...mockUseFormulas,
+      classesData: [
+        {
+          name: 'Math 101',
+          categories: [{ name: 'Algebra', formulas: [] }],
+        },
+      ],
+      selectedClasses: { 'Math 101': true },
+      selectedCategories: { 'Math 101:Algebra': true },
+      hasSelectedClasses: true,
+    };
+    useFormulas.mockReturnValue(selectedData);
+
+    render(<CreateCheatSheet onSave={vi.fn()} onReset={vi.fn()} />);
+
+    expect(useYouTubeResources).toHaveBeenLastCalledWith(null);
+
+    fireEvent.click(screen.getByRole('button', { name: /Search YouTube for more/i }));
+
+    expect(useYouTubeResources).toHaveBeenLastCalledWith(expect.objectContaining({
+      topics: [{ className: 'Math 101', category: 'Algebra' }],
+    }));
   });
 
   it('hides and restores the subjects panel from the toolbar', () => {

@@ -5,6 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useFormulas } from '../hooks/formulas';
 import { useLatex } from '../hooks/latex';
 import { useYouTubeResources } from '../hooks/youtubeResources';
+import { getCuratedVideosForClasses } from '../data/subjectVideos';
 import { Document, Page, pdfjs } from 'react-pdf';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -238,6 +239,14 @@ function FormulaReorderPanel({ groupedFormulas, onReorderClass, onReorderFormula
 
 const UNTITLED_TITLE_REGEX = /^Untitled Sheet \(\d+\)$/;
 
+const formatViewCount = (viewCount) => {
+  const count = Number(viewCount || 0);
+  if (!count) return '';
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(count >= 10_000_000 ? 0 : 1)}M views`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(count >= 10_000 ? 0 : 1)}K views`;
+  return `${count} views`;
+};
+
 const VideoCard = ({ video, onOpen, className = '' }) => (
   <button
     type="button"
@@ -252,7 +261,9 @@ const VideoCard = ({ video, onOpen, className = '' }) => (
     <div className="video-info-sm">
       <div className="video-topic-chip">{video.category}</div>
       <div className="v-title">{video.title}</div>
-      <div className="v-channel">{video.channel}</div>
+      <div className="v-channel">
+        {video.channel}{formatViewCount(video.viewCount) ? ` · ${formatViewCount(video.viewCount)}` : ''}
+      </div>
     </div>
   </button>
 );
@@ -860,11 +871,17 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
   const [rightPanelVisible, setRightPanelVisible] = useState(true);
   const [panelLayout, setPanelLayout] = useState(() => loadPanelLayout());
+  const [videoSearchRequest, setVideoSearchRequest] = useState(null);
+  const pendingPanelLayoutRef = useRef(panelLayout);
   const lastAutoSavedPdfRef = useRef(null);
   const appBodyRef = useRef(null);
   const centerPanelRef = useRef(null);
   const hasAutoOpenedLatexRef = useRef(false);
   const snapshots = useMemo(() => [...(initialData?.compileHistory || [])].reverse(), [initialData?.compileHistory]);
+  const selectedClassNames = useMemo(
+    () => classesData.filter((cls) => selectedClasses[cls.name]).map((cls) => cls.name),
+    [classesData, selectedClasses],
+  );
   const selectedVideoTopics = useMemo(() => (
     classesData.flatMap((cls) => (
       (cls.categories || [])
@@ -872,7 +889,25 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
         .map((category) => ({ className: cls.name, category: category.name }))
     ))
   ), [classesData, selectedCategories]);
-  const { resources: videoResources, isLoading: isLoadingVideos, error: videoError } = useYouTubeResources(selectedVideoTopics);
+  const selectedVideoTopicKey = useMemo(
+    () => selectedVideoTopics.map((topic) => `${topic.className}:${topic.category}`).join('|'),
+    [selectedVideoTopics],
+  );
+  const curatedVideoResources = useMemo(
+    () => getCuratedVideosForClasses(selectedClassNames),
+    [selectedClassNames],
+  );
+  const { resources: searchedVideoResources, isLoading: isLoadingVideos, error: videoError, topicLimit } = useYouTubeResources(videoSearchRequest);
+  const videoResources = useMemo(() => {
+    const seen = new Set();
+
+    return [...curatedVideoResources, ...searchedVideoResources].filter((video) => {
+      const key = video.videoId || `${video.className}:${video.category}:${video.title}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [curatedVideoResources, searchedVideoResources]);
   const videosByClass = useMemo(() => (
     videoResources.reduce((groups, resource) => {
       if (!groups[resource.className]) {
@@ -884,11 +919,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   ), [videoResources]);
   const getEmbedUrl  = (id) => `https://www.youtube.com/embed/${id}?autoplay=1`;
   const getWatchUrl = (id) => `https://www.youtube.com/watch?v=${id}`;
-
-  const selectedClassNames = useMemo(
-    () => classesData.filter((cls) => selectedClasses[cls.name]).map((cls) => cls.name),
-    [classesData, selectedClasses],
-  );
+  const hasSearchedVideos = Boolean(videoSearchRequest?.key);
 
   useEffect(() => {
     const hasCompiledBefore = Boolean(initialData?.compileHistory?.length || pdfBlob || content.trim());
@@ -906,8 +937,17 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   }, [content, initialData?.compileHistory?.length, pdfBlob, selectedClassNames, setTitle, title]);
 
   useEffect(() => {
-    localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(panelLayout));
-  }, [panelLayout]);
+    setVideoSearchRequest(null);
+  }, [selectedVideoTopicKey]);
+
+  const handleSearchMoreVideos = () => {
+    if (!selectedVideoTopics.length) return;
+
+    setVideoSearchRequest({
+      key: Date.now(),
+      topics: selectedVideoTopics,
+    });
+  };
 
   useEffect(() => {
     if (!pdfBlob || hasAutoOpenedLatexRef.current) return;
@@ -951,6 +991,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
 
     const startX = event.clientX;
     const startLayout = panelLayout;
+    pendingPanelLayoutRef.current = startLayout;
     const bodyWidth = appBodyRef.current?.clientWidth || window.innerWidth;
     const centerWidth = centerPanelRef.current?.clientWidth || 0;
     const leftReserve = leftPanelVisible ? RESIZER_WIDTH : 0;
@@ -978,24 +1019,27 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       const deltaX = moveEvent.clientX - startX;
 
       setPanelLayout(() => {
+        let nextLayout;
+
         if (panel === 'left') {
-          return {
+          nextLayout = {
             ...startLayout,
             leftWidth: clampPanelWidth(startLayout.leftWidth + deltaX, LEFT_PANEL_MIN_WIDTH, maxLeftWidth),
           };
-        }
-
-        if (panel === 'right') {
-          return {
+        } else if (panel === 'right') {
+          nextLayout = {
             ...startLayout,
             rightWidth: clampPanelWidth(startLayout.rightWidth - deltaX, RIGHT_PANEL_MIN_WIDTH, maxRightWidth),
           };
+        } else {
+          nextLayout = {
+            ...startLayout,
+            latexWidth: clampPanelWidth(startLayout.latexWidth + deltaX, LATEX_PANEL_MIN_WIDTH, maxLatexWidth),
+          };
         }
 
-        return {
-          ...startLayout,
-          latexWidth: clampPanelWidth(startLayout.latexWidth + deltaX, LATEX_PANEL_MIN_WIDTH, maxLatexWidth),
-        };
+        pendingPanelLayoutRef.current = nextLayout;
+        return nextLayout;
       });
     };
 
@@ -1003,6 +1047,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
       document.body.classList.remove('is-resizing-panels');
+      localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(pendingPanelLayoutRef.current));
     };
 
     document.body.classList.add('is-resizing-panels');
@@ -1080,7 +1125,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                 toggleClass={handleToggleClass}
                 toggleCategory={toggleCategory}
                 videosByClass={videosByClass}
-                videoError={videoError}
+                videoError={hasSearchedVideos ? videoError : ''}
                 isLoadingVideos={isLoadingVideos}
                 selectedCount={selectedCount}
                 hasSelectedClasses={hasSelectedClasses}
@@ -1314,13 +1359,28 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
               </div>
               <div className="right-panel-scroll">
                 {!selectedVideoTopics.length && (
-                  <p className="right-panel-empty">Select one or more sections to load the top matching YouTube walkthrough for each.</p>
+                  <p className="right-panel-empty">Select one or more sections to see curated video picks here.</p>
                 )}
-                {selectedVideoTopics.length > 0 && videoError && !isLoadingVideos && (
+                {selectedVideoTopics.length > 0 && (
+                  <div className="video-search-panel">
+                    <button
+                      type="button"
+                      className="btn-toggle-panel btn-video-search"
+                      onClick={handleSearchMoreVideos}
+                      disabled={isLoadingVideos}
+                    >
+                      {isLoadingVideos ? 'Searching YouTube…' : 'Search YouTube for more'}
+                    </button>
+                    <span className="video-search-hint">
+                      Curated picks show first. Search adds up to {Math.min(selectedVideoTopics.length, topicLimit)} current section result{Math.min(selectedVideoTopics.length, topicLimit) === 1 ? '' : 's'}.
+                    </span>
+                  </div>
+                )}
+                {selectedVideoTopics.length > 0 && hasSearchedVideos && videoError && !isLoadingVideos && (
                   <p className="right-panel-empty">{videoError}</p>
                 )}
-                {selectedVideoTopics.length > 0 && isLoadingVideos && !videoResources.length && !videoError && (
-                  <p className="right-panel-empty right-panel-empty-subtle">Finding video picks…</p>
+                {selectedVideoTopics.length > 0 && isLoadingVideos && !searchedVideoResources.length && !videoError && (
+                  <p className="right-panel-empty right-panel-empty-subtle">Finding more YouTube picks…</p>
                 )}
                 {Object.keys(videosByClass).map((cls) => {
                   const videos = videosByClass[cls] || [];
@@ -1334,7 +1394,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                   );
                 })}
                 {selectedVideoTopics.length > 0 && !isLoadingVideos && !videoError && !videoResources.length && (
-                  <p className="right-panel-empty">No video matches found yet. Try a different section.</p>
+                  <p className="right-panel-empty">No curated videos have been added for this class yet. Paste links into the subject video data file, or search YouTube for more.</p>
                 )}
               </div>
             </aside>

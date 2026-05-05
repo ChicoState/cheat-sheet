@@ -12,7 +12,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 from api.latex_utils import LATEX_HEADER, build_dynamic_header, build_latex_for_formulas, normalize_latex_layout
 from api.models import Template, CheatSheet, PracticeProblem
-from api.views import get_youtube_http_error_message
+from api.views import fetch_top_youtube_video, get_youtube_http_error_message
 
 
 @pytest.fixture
@@ -614,6 +614,28 @@ class TestYouTubeResourcesAPI:
         assert '<a' not in message
         assert 'quotaExceeded' in message
         assert 'quota.' in message
+
+    @patch('api.views.fetch_youtube_json')
+    def test_fetch_top_youtube_video_prefers_first_result_with_enough_views(self, mock_fetch_json):
+        mock_fetch_json.side_effect = [
+            {
+                'items': [
+                    {'id': {'videoId': 'lowviews123'}, 'snippet': {'title': 'Low views', 'channelTitle': 'Small Channel'}},
+                    {'id': {'videoId': 'highviews12'}, 'snippet': {'title': 'High views', 'channelTitle': 'Large Channel'}},
+                ]
+            },
+            {
+                'items': [
+                    {'id': 'lowviews123', 'statistics': {'viewCount': '25'}, 'snippet': {'title': 'Low views', 'channelTitle': 'Small Channel'}},
+                    {'id': 'highviews12', 'statistics': {'viewCount': '25000'}, 'snippet': {'title': 'High views', 'channelTitle': 'Large Channel'}},
+                ]
+            },
+        ]
+
+        video = fetch_top_youtube_video('ALGEBRA I', 'Linear Equations', 'test-key')
+
+        assert video['videoId'] == 'highviews12'
+        assert video['viewCount'] == 25000
 
 
 @pytest.mark.django_db
