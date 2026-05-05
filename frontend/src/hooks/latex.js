@@ -62,6 +62,7 @@ export function useLatex(initialData) {
   const initialLoaded = useRef(false);
   const pdfBlobUrlRef = useRef(null);
   const autoCompileTimerRef = useRef(null);
+  const hasRestoredPreviewRef = useRef(false);
   const lastCompiledLayoutRef = useRef({
     columns: initialData?.columns ?? 2,
     fontSize: initialData?.fontSize ?? '10pt',
@@ -214,6 +215,32 @@ export function useLatex(initialData) {
     return data.tex_code;
   }, [columns, fontSize, spacing, margins]);
 
+  const normalizeLatexContent = useCallback(async (latexContent) => {
+    const response = await fetch('/api/compile/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authTokens ? { 'Authorization': `Bearer ${authTokens.access}` } : {}),
+      },
+      body: JSON.stringify({
+        content: latexContent,
+        columns,
+        font_size: fontSize,
+        spacing,
+        margins,
+        normalize_only: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(formatCompileError(errorData));
+    }
+
+    const data = await response.json();
+    return data.tex_code || latexContent;
+  }, [authTokens, columns, fontSize, margins, spacing]);
+
   const hasLayoutChanges =
     lastCompiledLayoutRef.current.columns !== columns ||
     lastCompiledLayoutRef.current.fontSize !== fontSize ||
@@ -240,8 +267,13 @@ export function useLatex(initialData) {
       if (!hasContent) {
         const generatedContent = await generateLatexContent(selectedList);
         if (content) saveToHistory(generatedContent);
-        setContent(generatedContent);
         contentToCompile = generatedContent;
+        setContent(generatedContent);
+      }
+
+      if (hasContent && hasLayoutChanges) {
+        contentToCompile = await normalizeLatexContent(contentToCompile);
+        setContent(contentToCompile);
       }
 
       await compileLatexContent(contentToCompile, {
@@ -258,7 +290,7 @@ export function useLatex(initialData) {
       setIsCompiling(false);
       isCompilingRef.current = false;
     }
-  }, [clearAutoCompileTimer, columns, compileLatexContent, content, fontSize, generateLatexContent, margins, saveToHistory, spacing]);
+  }, [clearAutoCompileTimer, columns, compileLatexContent, content, fontSize, generateLatexContent, hasLayoutChanges, margins, normalizeLatexContent, saveToHistory, spacing]);
 
   useEffect(() => {
     if (!initialLoaded.current) return;
@@ -311,6 +343,11 @@ export function useLatex(initialData) {
     setIsCompiling(true);
     setCompileError(null);
     try {
+      if ((latexContent || content) && hasLayoutChanges) {
+        contentToCompile = await normalizeLatexContent(contentToCompile);
+        setContent(contentToCompile);
+      }
+
       await compileLatexContent(contentToCompile, {
         columns,
         font_size: fontSize,
@@ -325,7 +362,16 @@ export function useLatex(initialData) {
       setIsCompiling(false);
       isCompilingRef.current = false;
     }
-  }, [clearAutoCompileTimer, columns, compileLatexContent, content, fontSize, margins, saveToHistory, spacing]);
+  }, [clearAutoCompileTimer, columns, compileLatexContent, content, fontSize, hasLayoutChanges, margins, normalizeLatexContent, saveToHistory, spacing]);
+
+  useEffect(() => {
+    if (!initialLoaded.current || hasRestoredPreviewRef.current) return;
+    if (!initialData?.compileHistory?.length) return;
+    if (!content?.trim()) return;
+
+    hasRestoredPreviewRef.current = true;
+    handlePreview(content);
+  }, [content, handlePreview, initialData?.compileHistory?.length]);
 
   const handleGenerateSheet = async (selectedList) => {
     clearAutoCompileTimer();
@@ -357,6 +403,14 @@ export function useLatex(initialData) {
     clearAutoCompileTimer();
     setIsLoading(true);
     try {
+      const normalizedContent = hasLayoutChanges
+        ? await normalizeLatexContent(content)
+        : content;
+
+      if (hasLayoutChanges) {
+        setContent(normalizedContent);
+      }
+
       const response = await fetch('/api/compile/', {
         method: 'POST',
         headers: {
@@ -364,7 +418,7 @@ export function useLatex(initialData) {
           ...(authTokens ? { 'Authorization': `Bearer ${authTokens.access}` } : {})
         },
         body: JSON.stringify({
-          content,
+          content: normalizedContent,
           columns,
           font_size: fontSize,
           spacing,
@@ -389,20 +443,59 @@ export function useLatex(initialData) {
     }
   };
 
-  const handleDownloadTex = () => {
+  const handleDownloadTex = async () => {
     if (!content) {
       alert('No LaTeX code to download. Generate a sheet first.');
       return;
     }
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${title || 'cheat-sheet'}.tex`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+
+    try {
+      const normalizedContent = hasLayoutChanges
+        ? await normalizeLatexContent(content)
+        : content;
+
+      if (hasLayoutChanges) {
+        setContent(normalizedContent);
+      }
+      const blob = new Blob([normalizedContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${title || 'cheat-sheet'}.tex`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generating TeX:', error);
+      alert('Failed to prepare TeX download. Check console for details.');
+    }
+  };
+
+  const handlePrintPDF = () => {
+    if (!pdfBlob) {
+      alert('Compile the PDF before printing.');
+      return;
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.src = pdfBlob;
+
+    iframe.onload = () => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      window.setTimeout(() => {
+        iframe.remove();
+      }, 1000);
+    };
+
+    document.body.appendChild(iframe);
   };
 
   const clearLatex = () => {
@@ -461,6 +554,7 @@ export function useLatex(initialData) {
     handleCompileOnly,
     handleDownloadPDF,
     handleDownloadTex,
+    handlePrintPDF,
     clearLatex
   };
 }

@@ -9,6 +9,10 @@ from django.shortcuts import get_object_or_404
 import subprocess
 import tempfile
 import os
+import json
+from urllib.parse import urlencode
+from urllib.request import urlopen
+from urllib.error import HTTPError, URLError
 
 from .models import Template, CheatSheet, PracticeProblem
 from .serializers import TemplateSerializer, CheatSheetSerializer, PracticeProblemSerializer, UserSerializer, CustomTokenObtainPairSerializer
@@ -59,6 +63,57 @@ def validate_layout_params(columns, font_size, margins, spacing):
         spacing = "large"
     
     return columns, font_size, margins, spacing
+
+
+def build_youtube_search_query(class_name, category_name):
+    return f"{class_name} {category_name} formula tutorial"
+
+
+def fetch_top_youtube_video(class_name, category_name, api_key):
+    params = urlencode(
+        {
+            "part": "snippet",
+            "type": "video",
+            "maxResults": 1,
+            "safeSearch": "strict",
+            "videoEmbeddable": "true",
+            "q": build_youtube_search_query(class_name, category_name),
+            "key": api_key,
+        }
+    )
+    url = f"https://www.googleapis.com/youtube/v3/search?{params}"
+
+    try:
+        with urlopen(url, timeout=8) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        raise RuntimeError("YouTube search failed") from exc
+    except URLError as exc:
+        raise RuntimeError("YouTube search is unavailable") from exc
+
+    items = payload.get("items") or []
+    if not items:
+        return None
+
+    item = items[0]
+    snippet = item.get("snippet") or {}
+    thumbnails = snippet.get("thumbnails") or {}
+    thumbnail = (
+        thumbnails.get("high")
+        or thumbnails.get("medium")
+        or thumbnails.get("default")
+        or {}
+    )
+
+    return {
+        "className": class_name,
+        "category": category_name,
+        "title": snippet.get("title") or f"{category_name} walkthrough",
+        "channel": snippet.get("channelTitle") or "YouTube",
+        "description": snippet.get("description") or "",
+        "videoId": ((item.get("id") or {}).get("videoId")) or "",
+        "thumbnailUrl": thumbnail.get("url") or "",
+    }
 
 # ------------------------------------------------------------------
 # API endpoints
@@ -226,6 +281,57 @@ def compile_latex(request):
             return response
         else:
             return Response({"error": "PDF not generated"}, status=500)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def youtube_resources(request):
+    topics = request.data.get("topics", [])
+    if not isinstance(topics, list):
+        return Response({"error": "topics must be a list"}, status=400)
+
+    api_key = os.getenv("YOUTUBE_API_KEY", "").strip()
+    if not api_key:
+        return Response(
+            {
+                "resources": [],
+                "configured": False,
+                "message": "YOUTUBE_API_KEY is not configured.",
+            }
+        )
+
+    seen = set()
+    sanitized_topics = []
+    for topic in topics:
+        class_name = str((topic or {}).get("className") or "").strip()
+        category = str((topic or {}).get("category") or "").strip()
+        if not class_name or not category:
+            continue
+        lookup_key = (class_name, category)
+        if lookup_key in seen:
+            continue
+        seen.add(lookup_key)
+        sanitized_topics.append({"className": class_name, "category": category})
+
+    resources = []
+    errors = []
+    for topic in sanitized_topics:
+        try:
+            resource = fetch_top_youtube_video(topic["className"], topic["category"], api_key)
+        except RuntimeError as exc:
+            errors.append(str(exc))
+            continue
+
+        if resource and resource["videoId"]:
+            resources.append(resource)
+
+    return Response(
+        {
+            "resources": resources,
+            "configured": True,
+            "errors": errors,
+        }
+    )
 
 
 # ------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react'
+import { useState, useEffect, useContext, useRef } from 'react'
 import { Routes, Route, Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Home, LayoutDashboard, LogIn, LogOut, Palette } from 'lucide-react';
@@ -29,6 +29,55 @@ const createDefaultSheet = () => ({
   selectedFormulas: [],
   compileHistory: [],
 });
+
+const sameFormulas = (left = [], right = []) => JSON.stringify(left) === JSON.stringify(right);
+
+const sameSnapshot = (left, right) => {
+  if (!left || !right) return false;
+
+  return (
+    left.title === right.title
+    && left.content === right.content
+    && left.columns === right.columns
+    && left.fontSize === right.fontSize
+    && left.spacing === right.spacing
+    && left.margins === right.margins
+    && sameFormulas(left.selectedFormulas, right.selectedFormulas)
+  );
+};
+
+const buildRestoredSheet = (baseSheet, snapshot) => ({
+  ...baseSheet,
+  title: snapshot.title ?? baseSheet.title,
+  content: snapshot.content ?? '',
+  columns: snapshot.columns ?? baseSheet.columns,
+  fontSize: snapshot.fontSize ?? baseSheet.fontSize,
+  spacing: snapshot.spacing ?? baseSheet.spacing,
+  margins: snapshot.margins ?? baseSheet.margins,
+  selectedFormulas: snapshot.selectedFormulas ?? [],
+  compileHistory: Array.isArray(baseSheet.compileHistory) ? baseSheet.compileHistory : [],
+});
+
+const loadStoredSheet = () => {
+  const saved = localStorage.getItem(CURRENT_SHEET_STORAGE_KEY);
+  if (!saved) return null;
+
+  try {
+    return JSON.parse(saved);
+  } catch (e) {
+    console.error('Failed to parse sheet', e);
+    return null;
+  }
+};
+
+const getStoredCompileHistory = (sheetId) => {
+  const storedSheet = loadStoredSheet();
+  if (storedSheet?.id !== sheetId) {
+    return [];
+  }
+
+  return Array.isArray(storedSheet.compileHistory) ? storedSheet.compileHistory : [];
+};
 
 const isTestEnv = Boolean(
   import.meta.env?.VITEST
@@ -78,6 +127,8 @@ function App() {
 
   const [editorSessionKey, setEditorSessionKey] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const cheatSheetRef = useRef(cheatSheet);
+  const pendingCreatePromiseRef = useRef(null);
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('theme');
     return normalizeTheme(saved);
@@ -87,6 +138,10 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    cheatSheetRef.current = cheatSheet;
+  }, [cheatSheet]);
 
   
   const { user, authTokens, logoutUser } = useContext(AuthContext);
@@ -101,29 +156,30 @@ function App() {
   };
 
   useEffect(() => {
-    const savedSheet = localStorage.getItem(CURRENT_SHEET_STORAGE_KEY);
+    const savedSheet = loadStoredSheet();
     if (savedSheet) {
-      try {
-        setCheatSheet(JSON.parse(savedSheet));
-      } catch (e) {
-        console.error("Failed to parse sheet", e);
-      }
+      setCheatSheet(savedSheet);
     }
   }, []);
 
   const handleSave = async (data, showFeedback = true) => {
-    const previousHistory = Array.isArray(cheatSheet.compileHistory) ? cheatSheet.compileHistory : [];
+    const currentSheet = cheatSheetRef.current;
+    const previousHistory = Array.isArray(currentSheet.compileHistory) ? currentSheet.compileHistory : [];
+    const latestSnapshot = previousHistory[previousHistory.length - 1];
     const nextHistory = data.compileSnapshot
-      ? [...previousHistory, data.compileSnapshot]
+      ? (sameSnapshot(latestSnapshot, data.compileSnapshot)
+          ? previousHistory
+          : [...previousHistory, data.compileSnapshot])
       : previousHistory;
     const nextSheet = {
-      ...cheatSheet,
+      ...currentSheet,
       ...data,
-      selectedFormulas: data.selectedFormulas ?? cheatSheet.selectedFormulas ?? [],
+      selectedFormulas: data.selectedFormulas ?? currentSheet.selectedFormulas ?? [],
       compileHistory: nextHistory,
     };
     delete nextSheet.compileSnapshot;
 
+    cheatSheetRef.current = nextSheet;
     setCheatSheet(nextSheet);
     localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(nextSheet));
 
@@ -138,8 +194,16 @@ function App() {
     }
 
     try {
-      const sheetId = nextSheet.id;
-      const response = await fetch(sheetId ? `/api/cheatsheets/${sheetId}/` : '/api/cheatsheets/', {
+      let sheetId = nextSheet.id;
+
+      if (!sheetId && pendingCreatePromiseRef.current) {
+        const pendingSheet = await pendingCreatePromiseRef.current.catch(() => null);
+        if (pendingSheet?.id) {
+          sheetId = pendingSheet.id;
+        }
+      }
+
+      const requestPromise = fetch(sheetId ? `/api/cheatsheets/${sheetId}/` : '/api/cheatsheets/', {
         method: sheetId ? 'PATCH' : 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -155,6 +219,25 @@ function App() {
         }),
       });
 
+      if (!sheetId) {
+        pendingCreatePromiseRef.current = requestPromise
+          .then(async (response) => {
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(errorData.detail || errorData.error || 'Failed to save cheat sheet');
+            }
+            return response.clone().json();
+          })
+          .then((savedSheet) => ({
+            ...nextSheet,
+            id: savedSheet.id,
+            content: savedSheet.latex_content ?? nextSheet.content,
+            fontSize: savedSheet.font_size ?? nextSheet.fontSize,
+            selectedFormulas: savedSheet.selected_formulas ?? nextSheet.selectedFormulas,
+          }));
+      }
+      const response = await requestPromise;
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || errorData.error || 'Failed to save cheat sheet');
@@ -169,6 +252,7 @@ function App() {
         selectedFormulas: savedSheet.selected_formulas ?? nextSheet.selectedFormulas,
       };
 
+      cheatSheetRef.current = persistedSheet;
       setCheatSheet(persistedSheet);
       localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(persistedSheet));
       if (showFeedback) {
@@ -184,6 +268,9 @@ function App() {
       }
       throw error;
     } finally {
+      if (pendingCreatePromiseRef.current) {
+        pendingCreatePromiseRef.current = null;
+      }
       if (showFeedback) {
         setIsSaving(false);
       }
@@ -199,11 +286,20 @@ function App() {
       margins: sheet.margins,
       fontSize: sheet.font_size,
       selectedFormulas: sheet.selected_formulas || [],
-      compileHistory: [],
+      compileHistory: getStoredCompileHistory(sheet.id),
     };
     setCheatSheet(editSheet);
     setEditorSessionKey((prev) => prev + 1);
     localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(editSheet));
+    localStorage.removeItem('cheatSheetData');
+    localStorage.removeItem('cheatSheetLatex');
+  };
+
+  const handleRestoreSnapshot = (snapshot) => {
+    const restoredSheet = buildRestoredSheet(cheatSheet, snapshot);
+    setCheatSheet(restoredSheet);
+    setEditorSessionKey((prev) => prev + 1);
+    localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(restoredSheet));
     localStorage.removeItem('cheatSheetData');
     localStorage.removeItem('cheatSheetLatex');
   };
@@ -283,6 +379,7 @@ function App() {
               initialData={cheatSheet} 
               onSave={handleSave} 
               onReset={handleReset}
+              onRestoreSnapshot={handleRestoreSnapshot}
               isSaving={isSaving}
               onCancel={() => {}} 
             />

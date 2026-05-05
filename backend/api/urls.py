@@ -17,6 +17,7 @@ urlpatterns = [
     path("classes/", views.get_classes, name="get-classes"),
     path("generate-sheet/", views.generate_sheet, name="generate-sheet"),
     path("compile/", views.compile_latex, name="compile-latex"),
+    path("youtube-resources/", views.youtube_resources, name="youtube-resources"),
     # Include the router URLs for CRUD operations
     path('', include(router.urls)),
 ]

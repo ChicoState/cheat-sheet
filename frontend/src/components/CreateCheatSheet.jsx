@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
-import { SUBJECT_VIDEOS } from '../data/subjectVideos';
 import { CSS } from '@dnd-kit/utilities';
 import { useFormulas } from '../hooks/formulas';
 import { useLatex } from '../hooks/latex';
+import { useYouTubeResources } from '../hooks/youtubeResources';
 import { Document, Page, pdfjs } from 'react-pdf';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -495,7 +495,7 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
   );
 };
 
-const PdfPreview = ({ pdfBlob, compileError }) => {
+const PdfPreview = ({ pdfBlob, compileError, isCompiling, onPrint }) => {
   const [numPages, setNumPages] = useState(null);
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(null);
@@ -530,14 +530,6 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
     setZoom(1);
   };
 
-  const handleWheelZoom = (event) => {
-    if (!pdfBlob || compileError) return;
-
-    event.preventDefault();
-    setViewMode('custom');
-    setZoom((currentZoom) => clampZoom(currentZoom + (event.deltaY < 0 ? 0.1 : -0.1)));
-  };
-
   const pageWidth = containerWidth && viewMode !== 'height'
     ? Math.max(240, Math.round(containerWidth * (viewMode === 'width' ? 1 : zoom)))
     : undefined;
@@ -563,7 +555,7 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
   return (
     <div className="pdf-preview-shell">
       <div className="pdf-preview-toolbar">
-        <span className="pdf-toolbar-note">Scroll to zoom</span>
+        <span className="pdf-toolbar-note">Use the controls to adjust the preview.</span>
         <div className="pdf-zoom-controls" role="toolbar" aria-label="PDF zoom controls">
           <button type="button" className="pdf-zoom-btn" onClick={handleZoomOut} aria-label="Zoom out">
             −
@@ -580,45 +572,93 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
           <button type="button" className="pdf-zoom-btn pdf-zoom-fit" onClick={handleFitToHeight}>
             Fit height
           </button>
+          <button type="button" className="pdf-zoom-btn pdf-zoom-fit" onClick={onPrint} disabled={!pdfBlob}>
+            Print
+          </button>
         </div>
       </div>
-      <div
-        ref={containerRef}
-        className="pdf-preview-scroll"
-        onWheel={handleWheelZoom}
-      >
-      {compileError ? (
-        <div className="compile-error-box">
-          <strong>Compilation: Error:</strong><br /><br />
-          {compileError}
-        </div>
-      ) : pdfBlob ? (
-          <Document
-            file={pdfBlob}
-            onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-            loading={<div className="pdf-state-message">Loading PDF...</div>}
-            error={<div className="pdf-state-message pdf-state-error">Failed to load PDF.</div>}
-            >
-              {Array.from(new Array(numPages), (_, index) => (
-                <Page 
-                  key={`page_${index + 1}`}
-                  pageNumber={index + 1}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                  className="pdf-page"
-                  width={pageWidth}
-                  height={pageHeight}
-                  />
-
-              ))}
-          </Document>
-      ) : (
-        <div className="pdf-state-message">
-          Compile the PDF to see your preview.
+      <div ref={containerRef} className="pdf-preview-stage">
+        <div className="pdf-preview-scroll">
+        {compileError ? (
+          <div className="compile-error-box">
+            <strong>Compilation: Error:</strong><br /><br />
+            {compileError}
           </div>
-      )}
+        ) : pdfBlob ? (
+            <Document
+              file={pdfBlob}
+              onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+              loading={<div className="pdf-state-message">Loading PDF...</div>}
+              error={<div className="pdf-state-message pdf-state-error">Failed to load PDF.</div>}
+              >
+                {Array.from(new Array(numPages), (_, index) => (
+                  <Page 
+                    key={`page_${index + 1}`}
+                    pageNumber={index + 1}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                    className="pdf-page"
+                    width={pageWidth}
+                    height={pageHeight}
+                    />
+
+                ))}
+            </Document>
+        ) : (
+          <div className="pdf-state-message">
+            Compile the PDF to see your preview.
+            </div>
+        )}
+        </div>
+        {isCompiling && (
+          <div className="pdf-recompile-overlay" aria-live="polite" aria-busy="true">
+            <div className="pdf-recompile-spinner" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+            <strong>Recompiling PDF…</strong>
+            <p>Hang tight — the preview is being refreshed.</p>
+          </div>
+        )}
       </div>
     </div>
+  );
+};
+
+const SnapshotTray = ({ snapshots, onRestore }) => {
+  if (!snapshots.length) {
+    return null;
+  }
+
+  return (
+    <section className="snapshot-tray" aria-label="Compile snapshots">
+      <div className="snapshot-tray-header">
+        <h3>Compile snapshots</h3>
+        <p>Restore an earlier compiled draft, then the preview will rebuild automatically.</p>
+      </div>
+      <div className="snapshot-list">
+        {snapshots.map((snapshot, index) => {
+          const formulaCount = snapshot.selectedFormulas?.length || 0;
+
+          return (
+            <article className="snapshot-card" key={`${snapshot.compiledAt || 'snapshot'}-${index}`}>
+              <div className="snapshot-card-copy">
+                <div className="snapshot-card-title">{snapshot.title || 'Untitled snapshot'}</div>
+                <div className="snapshot-card-meta">
+                  <span>{snapshot.compiledAt ? new Date(snapshot.compiledAt).toLocaleString() : 'Saved compile'}</span>
+                  <span>{formulaCount} formula{formulaCount === 1 ? '' : 's'}</span>
+                  <span>{snapshot.columns || 2} col</span>
+                </div>
+              </div>
+              <button type="button" className="snapshot-restore-btn" onClick={() => onRestore(snapshot)}>
+                Restore
+              </button>
+            </article>
+          );
+        })}
+      </div>
+    </section>
   );
 };
 
@@ -718,7 +758,7 @@ const LayoutOptions = ({ columns, setColumns, fontSize, setFontSize, spacing, se
   );
 };
 
-const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) => {
+const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isSaving = false }) => {
   const {
     classesData,
     selectedClasses,
@@ -761,16 +801,36 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
     handleCompileOnly,
     handleDownloadPDF,
     handleDownloadTex,
+    handlePrintPDF,
     clearLatex
   } = useLatex(initialData);
 
   const [showLatex, setShowLatex] = useState(false);
+  const [showSnapshots, setShowSnapshots] = useState(false);
   const [modalVideo, setModalVideo] = useState(null);
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
   const [rightPanelVisible, setRightPanelVisible] = useState(true);
   const [panelLayout, setPanelLayout] = useState(() => loadPanelLayout());
   const lastAutoSavedPdfRef = useRef(null);
-  const getThumbnail = (id) => `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
+  const snapshots = useMemo(() => [...(initialData?.compileHistory || [])].reverse(), [initialData?.compileHistory]);
+  const selectedVideoTopics = useMemo(() => (
+    classesData.flatMap((cls) => (
+      (cls.categories || [])
+        .filter((category) => selectedCategories[`${cls.name}:${category.name}`])
+        .map((category) => ({ className: cls.name, category: category.name }))
+    ))
+  ), [classesData, selectedCategories]);
+  const { resources: videoResources, isLoading: isLoadingVideos, error: videoError } = useYouTubeResources(selectedVideoTopics);
+  const videosByClass = useMemo(() => (
+    videoResources.reduce((groups, resource) => {
+      if (!groups[resource.className]) {
+        groups[resource.className] = [];
+      }
+      groups[resource.className].push(resource);
+      return groups;
+    }, {})
+  ), [videoResources]);
+  const getThumbnail = (video) => video.thumbnailUrl || `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`;
   const getEmbedUrl  = (id) => `https://www.youtube.com/embed/${id}?autoplay=1`;
   const getWatchUrl = (id) => `https://www.youtube.com/watch?v=${id}`;
 
@@ -892,7 +952,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
     <>
       <div className="app-shell">
 
-       <div className="app-body" style={{ gridTemplateColumns: appBodyGridTemplate }}>
+       <div className="app-body" style={{ '--app-body-columns': appBodyGridTemplate }}>
 
           {/* ══ LEFT PANEL ══ */}
           {leftPanelVisible && (
@@ -972,6 +1032,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
 
               {pdfBlob && (
                 <div className="btn-download-row">
+                  <button type="button" onClick={handlePrintPDF} className="btn-dl">Print</button>
                   <button type="button" onClick={handleDownloadPDF} className="btn-dl">PDF</button>
                   <button type="button" onClick={handleDownloadTex} className="btn-dl">.tex</button>
                 </div>
@@ -1019,9 +1080,41 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                 >
                   {leftPanelVisible ? 'Hide subjects' : 'Show subjects'}
                 </button>
+                <button
+                  type="button"
+                  className="btn-toggle-panel"
+                  onClick={() => setShowSnapshots((value) => !value)}
+                  disabled={!snapshots.length}
+                >
+                  Snapshots {snapshots.length ? `(${snapshots.length})` : ''}
+                </button>
               </div>
 
               <div className="workspace-topbar-group workspace-topbar-group-end">
+                <button
+                  type="button"
+                  className="btn-compile btn-compile-inline"
+                  onClick={handleCompileClick}
+                  disabled={isCompiling}
+                >
+                  {isCompiling ? 'Rebuilding…' : 'Rebuild preview'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-toggle-panel"
+                  onClick={handlePrintPDF}
+                  disabled={!pdfBlob}
+                >
+                  Print
+                </button>
+                <button
+                  type="button"
+                  className="btn-toggle-panel"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                >
+                  {isSaving ? 'Saving…' : 'Save'}
+                </button>
                 {content && (
                   <button
                     type="button"
@@ -1042,9 +1135,19 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
               </div>
             </div>
 
+            {showSnapshots && snapshots.length > 0 && (
+              <SnapshotTray
+                snapshots={snapshots}
+                onRestore={(snapshot) => {
+                  setShowSnapshots(false);
+                  onRestoreSnapshot?.(snapshot);
+                }}
+              />
+            )}
+
              <div className="pdf-container">
                {showLatex ? (
-                 <div className="workspace-split" style={{ gridTemplateColumns: workspaceSplitTemplate }}>
+                 <div className="workspace-split" style={{ '--workspace-split-columns': workspaceSplitTemplate }}>
                    <div className="workspace-split-pane workspace-split-pane-latex">
                      <LatexEditor
                        content={content}
@@ -1060,8 +1163,8 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                      aria-label="Resize LaTeX panel"
                    />
                    <div className="workspace-split-pane workspace-split-pane-preview">
-                     {pdfBlob || compileError ? (
-                       <PdfPreview pdfBlob={pdfBlob} compileError={compileError} />
+                     {pdfBlob || compileError || isCompiling ? (
+                       <PdfPreview pdfBlob={pdfBlob} compileError={compileError} isCompiling={isCompiling} onPrint={handlePrintPDF} />
                      ) : (
                        <div className="pdf-placeholder">
                          <span>📄</span>
@@ -1074,8 +1177,8 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                  </div>
                ) : (
                  <>
-                   {pdfBlob || compileError ? (
-                     <PdfPreview pdfBlob={pdfBlob} compileError={compileError} />
+                   {pdfBlob || compileError || isCompiling ? (
+                     <PdfPreview pdfBlob={pdfBlob} compileError={compileError} isCompiling={isCompiling} onPrint={handlePrintPDF} />
                    ) : (
                      <div className="pdf-placeholder">
                        <span>📄</span>
@@ -1103,16 +1206,24 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
           {rightPanelVisible && (
           <aside className="right-panel">
             <div className="right-panel-header">
-              📺 Check Out These Resources!
+              📺 Video picks for your selected sections
             </div>
             <div className="right-panel-scroll">
-              { Object.keys(selectedClasses).filter(cls => selectedClasses[cls]).length == 0 && (
-                <p className="right-panel-empty">Select a subject to see related videos!</p>
+              {!selectedVideoTopics.length && (
+                <p className="right-panel-empty">Select one or more sections to load the top matching YouTube walkthrough for each.</p>
               )}
-              {Object.keys(selectedClasses)
-                .filter(cls => selectedClasses[cls])
-                .map(cls => {
-                  const videos = SUBJECT_VIDEOS[cls] || [];
+              {selectedVideoTopics.length > 0 && isLoadingVideos && (
+                <div className="video-skeleton-list" aria-hidden="true">
+                  {selectedVideoTopics.map((topic) => (
+                    <div className="video-card-skeleton" key={`${topic.className}:${topic.category}`} />
+                  ))}
+                </div>
+              )}
+              {selectedVideoTopics.length > 0 && videoError && !isLoadingVideos && (
+                <p className="right-panel-empty">{videoError}</p>
+              )}
+              {Object.keys(videosByClass).map((cls) => {
+                  const videos = videosByClass[cls] || [];
                   return (
                     <div key={cls} className="subject-video-group">
                       <div className="subject-video-label">{cls}</div>
@@ -1123,16 +1234,17 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                       ) : (
                         videos.map((v) => (
                           <div 
-                            key={v.videoId}
+                            key={`${v.className}:${v.category}:${v.videoId}`}
                             className="video-card-sm"
                             onClick={() => setModalVideo(v)}
                           >
                             <div className="video-thumb-sm">
-                              <img src={getThumbnail(v.videoId)} alt={v.title} loading = "lazy" />
+                              <img src={getThumbnail(v)} alt={v.title} loading = "lazy" />
                               <div className="play-icon">▶</div>
                             </div>
                             <div className="video-info-sm">
-                              <div className="v-title">{v.title}</div>
+                              <div className="video-topic-chip">{v.category}</div>
+                                <div className="v-title">{v.title}</div>
                               <div className="v-channel">{v.channel}</div>
                             </div>
                           </div>
@@ -1163,7 +1275,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             />
-            <div className="modal-meta">{modalVideo.channel} · {modalVideo.topic || 'General review'}</div>
+            <div className="modal-meta">{modalVideo.channel} · {modalVideo.category || modalVideo.topic || 'General review'}</div>
             <a
               className="modal-link"
               href={getWatchUrl(modalVideo.videoId)}
