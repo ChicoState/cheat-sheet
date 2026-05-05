@@ -22,6 +22,7 @@ services:
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
     volumes:
       - ./backend:/app
+      - tectonic_cache:/root/.cache/Tectonic
     depends_on:
       - db
     healthcheck:
@@ -44,3 +45,4 @@ services:
 volumes:
   postgres_data:
   frontend_node_modules:
+  tectonic_cache:

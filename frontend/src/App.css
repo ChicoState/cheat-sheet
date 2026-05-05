@@ -1079,7 +1079,25 @@ label {
 .category-checkboxes {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-sm);
+  gap: 0.5rem;
+}
+
+.class-video-stack {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.inline-video-card {
+  width: 100%;
+  margin-bottom: 0;
+  text-align: left;
+}
+
+.inline-video-status {
+  margin: 0.65rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.74rem;
 }
 
 .select-all-label {
@@ -1565,7 +1583,7 @@ THREE COLUMN LAYOUT
 
 .app-body {
   display: grid;
-  grid-template-columns: var(--app-body-columns, 280px 10px minmax(0, 1fr) 10px 300px);
+  grid-template-columns: var(--app-body-columns, 280px 10px minmax(0, 1fr));
   flex: 1;
   overflow: hidden;
   position: relative;
@@ -1929,6 +1947,12 @@ pdf main focus - center panel
 .pdf-zoom-readout,
 .pdf-zoom-fit {
   min-width: 5.9rem;
+}
+
+.pdf-zoom-group {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
 }
 
 .pdf-zoom-readout {
@@ -2502,7 +2526,7 @@ three - column responsive
 
 @media (max-width: 1100px) {
   .app-body {
-    grid-template-columns: 240px 10px minmax(0, 1fr) 10px 260px;
+    grid-template-columns: 240px 10px minmax(0, 1fr);
   }
 }
 

@@ -225,11 +225,35 @@ function FormulaReorderPanel({ groupedFormulas, onReorderClass, onReorderFormula
   );
 }
 
+const UNTITLED_TITLE_REGEX = /^Untitled Sheet \(\d+\)$/;
+
+const VideoCard = ({ video, onOpen }) => (
+  <button
+    type="button"
+    className="video-card-sm inline-video-card"
+    onClick={() => onOpen(video)}
+    aria-label={`Open ${video.title}`}
+  >
+    <div className="video-thumb-sm">
+      <img src={video.thumbnailUrl || `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`} alt={video.title} loading="lazy" />
+      <div className="play-icon">▶</div>
+    </div>
+    <div className="video-info-sm">
+      <div className="video-topic-chip">{video.category}</div>
+      <div className="v-title">{video.title}</div>
+      <div className="v-channel">{video.channel}</div>
+    </div>
+  </button>
+);
+
 const FormulaSelection = ({ 
   classesData, 
   selectedClasses, 
   selectedCategories, 
   groupedFormulas,
+  videosByClass,
+  videoError,
+  isLoadingVideos,
   toggleClass, 
   toggleCategory, 
   selectedCount, 
@@ -237,7 +261,8 @@ const FormulaSelection = ({
   onReorderClass,
   onReorderFormula,
   onRemoveClass,
-  onRemoveFormula
+  onRemoveFormula,
+  onOpenVideo,
 }) => {
   const [classesOpen, setClassesOpen] = useState(true);
   const [sectionsOpen, setSectionsOpen] = useState(true);
@@ -292,6 +317,16 @@ const FormulaSelection = ({
                   <p className="inline-note">
                     ✓ {cls.name} selected - all formulas included
                   </p>
+                  {!!videosByClass[cls.name]?.length && (
+                    <div className="class-video-stack" aria-label={`${cls.name} video picks`}>
+                      {videosByClass[cls.name].map((video) => (
+                        <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={onOpenVideo} />
+                      ))}
+                    </div>
+                  )}
+                  {!isLoadingVideos && !videosByClass[cls.name]?.length && videoError && (
+                    <p className="inline-video-status">{videoError}</p>
+                  )}
                 </div>
               );
             }
@@ -332,6 +367,16 @@ const FormulaSelection = ({
                     );
                   })}
                 </div>
+                {!!videosByClass[cls.name]?.length && (
+                  <div className="class-video-stack" aria-label={`${cls.name} video picks`}>
+                    {videosByClass[cls.name].map((video) => (
+                      <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={onOpenVideo} />
+                    ))}
+                  </div>
+                )}
+                {!isLoadingVideos && !videosByClass[cls.name]?.length && videoError && (
+                  <p className="inline-video-status">{videoError}</p>
+                )}
               </div>
             );
           })}
@@ -551,14 +596,8 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, onPrint }) => {
       <div className="pdf-preview-toolbar">
         <span className="pdf-toolbar-note">Use the controls to adjust the preview.</span>
         <div className="pdf-zoom-controls" role="toolbar" aria-label="PDF zoom controls">
-          <button type="button" className="pdf-zoom-btn" onClick={handleZoomOut} aria-label="Zoom out">
-            −
-          </button>
-          <button type="button" className="pdf-zoom-btn pdf-zoom-readout" onClick={handleResetZoom}>
-            {viewMode === 'width' ? 'Fit width' : viewMode === 'height' ? 'Fit height' : `${Math.round(zoom * 100)}%`}
-          </button>
-          <button type="button" className="pdf-zoom-btn" onClick={handleZoomIn} aria-label="Zoom in">
-            +
+          <button type="button" className="pdf-zoom-btn pdf-zoom-fit" onClick={onPrint} disabled={!pdfBlob}>
+            Print
           </button>
           <button type="button" className="pdf-zoom-btn pdf-zoom-fit" onClick={handleFitToWidth}>
             Fit width
@@ -566,9 +605,17 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, onPrint }) => {
           <button type="button" className="pdf-zoom-btn pdf-zoom-fit" onClick={handleFitToHeight}>
             Fit height
           </button>
-          <button type="button" className="pdf-zoom-btn pdf-zoom-fit" onClick={onPrint} disabled={!pdfBlob}>
-            Print
-          </button>
+          <div className="pdf-zoom-group">
+            <button type="button" className="pdf-zoom-btn" onClick={handleZoomOut} aria-label="Zoom out">
+              −
+            </button>
+            <button type="button" className="pdf-zoom-btn pdf-zoom-readout" onClick={handleResetZoom}>
+              {viewMode === 'width' ? 'Fit width' : viewMode === 'height' ? 'Fit height' : `${Math.round(zoom * 100)}%`}
+            </button>
+            <button type="button" className="pdf-zoom-btn" onClick={handleZoomIn} aria-label="Zoom in">
+              +
+            </button>
+          </div>
         </div>
       </div>
       <div ref={containerRef} className="pdf-preview-stage">
@@ -803,7 +850,6 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const [showSnapshots, setShowSnapshots] = useState(false);
   const [modalVideo, setModalVideo] = useState(null);
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
-  const [rightPanelVisible, setRightPanelVisible] = useState(true);
   const [panelLayout, setPanelLayout] = useState(() => loadPanelLayout());
   const lastAutoSavedPdfRef = useRef(null);
   const snapshots = useMemo(() => [...(initialData?.compileHistory || [])].reverse(), [initialData?.compileHistory]);
@@ -824,9 +870,28 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       return groups;
     }, {})
   ), [videoResources]);
-  const getThumbnail = (video) => video.thumbnailUrl || `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`;
   const getEmbedUrl  = (id) => `https://www.youtube.com/embed/${id}?autoplay=1`;
   const getWatchUrl = (id) => `https://www.youtube.com/watch?v=${id}`;
+
+  const selectedClassNames = useMemo(
+    () => classesData.filter((cls) => selectedClasses[cls.name]).map((cls) => cls.name),
+    [classesData, selectedClasses],
+  );
+
+  useEffect(() => {
+    const hasCompiledBefore = Boolean(initialData?.compileHistory?.length || pdfBlob || content.trim());
+    if (hasCompiledBefore) return;
+    if (!(UNTITLED_TITLE_REGEX.test(title) || !title.trim())) return;
+    if (!selectedClassNames.length) return;
+
+    const nextTitle = selectedClassNames.length === 1
+      ? `${selectedClassNames[0]} Cheat Sheet`
+      : `${selectedClassNames[0]} + ${selectedClassNames.length - 1} more Cheat Sheet`;
+
+    if (title !== nextTitle) {
+      setTitle(nextTitle);
+    }
+  }, [content, initialData?.compileHistory?.length, pdfBlob, selectedClassNames, setTitle, title]);
 
   useEffect(() => {
     localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(panelLayout));
@@ -879,13 +944,6 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
           };
         }
 
-        if (panel === 'right') {
-          return {
-            ...startLayout,
-            rightWidth: clampPanelWidth(startLayout.rightWidth - deltaX, 240, 420),
-          };
-        }
-
         return {
           ...startLayout,
           latexWidth: clampPanelWidth(startLayout.latexWidth + deltaX, 320, 760),
@@ -908,8 +966,6 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     leftPanelVisible ? `${panelLayout.leftWidth}px` : '0px',
     leftPanelVisible ? '10px' : '0px',
     'minmax(0, 1fr)',
-    rightPanelVisible ? '10px' : '0px',
-    rightPanelVisible ? `${panelLayout.rightWidth}px` : '0px',
   ].join(' ');
 
   const workspaceSplitTemplate = `${panelLayout.latexWidth}px 10px minmax(0, 1fr)`;
@@ -973,12 +1029,16 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                 groupedFormulas={groupedFormulas}
                 toggleClass={handleToggleClass}
                 toggleCategory={toggleCategory}
+                videosByClass={videosByClass}
+                videoError={videoError}
+                isLoadingVideos={isLoadingVideos}
                 selectedCount={selectedCount}
                 hasSelectedClasses={hasSelectedClasses}
                 onReorderClass={reorderClass}
                 onReorderFormula={reorderFormula}
                 onRemoveClass={removeClassFromOrder}
                 onRemoveFormula={removeSingleFormula}
+                onOpenVideo={setModalVideo}
               />
 
               <LayoutOptions
@@ -1118,14 +1178,6 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                     {showLatex ? 'Hide LaTeX' : 'Show LaTeX'}
                   </button>
                 )}
-                <button
-                  type="button"
-                  className="btn-toggle-panel"
-                  onClick={() => setRightPanelVisible(v => !v)}
-                  title={rightPanelVisible ? 'Hide videos' : 'Show videos'}
-                >
-                  {rightPanelVisible ? 'Hide videos' : 'Show videos'}
-                </button>
               </div>
             </div>
 
@@ -1185,74 +1237,6 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                )}
              </div>
           </main>
-          {rightPanelVisible ? (
-            <button
-              type="button"
-              className="panel-resizer panel-resizer-vertical"
-              onPointerDown={startResize('right')}
-              aria-label="Resize video panel"
-            />
-          ) : (
-            <div className="panel-resizer-slot" aria-hidden="true" />
-          )}
-
-          {/* ══ RIGHT PANEL — YouTube resources ══ */}
-          {rightPanelVisible && (
-          <aside className="right-panel">
-            <div className="right-panel-header">
-              📺 Video picks for your selected sections
-            </div>
-            <div className="right-panel-scroll">
-              {!selectedVideoTopics.length && (
-                <p className="right-panel-empty">Select one or more sections to load the top matching YouTube walkthrough for each.</p>
-              )}
-              {selectedVideoTopics.length > 0 && isLoadingVideos && (
-                <div className="video-skeleton-list" aria-hidden="true">
-                  {selectedVideoTopics.map((topic) => (
-                    <div className="video-card-skeleton" key={`${topic.className}:${topic.category}`} />
-                  ))}
-                </div>
-              )}
-              {selectedVideoTopics.length > 0 && videoError && !isLoadingVideos && (
-                <p className="right-panel-empty">{videoError}</p>
-              )}
-              {Object.keys(videosByClass).map((cls) => {
-                  const videos = videosByClass[cls] || [];
-                  return (
-                    <div key={cls} className="subject-video-group">
-                      <div className="subject-video-label">{cls}</div>
-                      {videos.length == 0 ? (
-                        <p className="right-panel-empty right-panel-empty-subtle">
-                          No videos added yet.
-                        </p>
-                      ) : (
-                        videos.map((v) => (
-                          <button 
-                            key={`${v.className}:${v.category}:${v.videoId}`}
-                            type="button"
-                            className="video-card-sm"
-                            onClick={() => setModalVideo(v)}
-                            aria-label={`Open ${v.title}`}
-                          >
-                            <div className="video-thumb-sm">
-                              <img src={getThumbnail(v)} alt={v.title} loading = "lazy" />
-                              <div className="play-icon">▶</div>
-                            </div>
-                            <div className="video-info-sm">
-                              <div className="video-topic-chip">{v.category}</div>
-                                <div className="v-title">{v.title}</div>
-                              <div className="v-channel">{v.channel}</div>
-                            </div>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-          </aside>
-          )}
-
         </div>
       </div>
 

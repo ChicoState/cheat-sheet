@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 
+const YOUTUBE_TOPIC_LIMIT = 12;
+const REQUEST_DEBOUNCE_MS = 350;
+
 export function useYouTubeResources(selectedTopics) {
   const [resources, setResources] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const requestBody = useMemo(() => JSON.stringify({ topics: selectedTopics }), [selectedTopics]);
+  const limitedTopics = useMemo(() => selectedTopics.slice(0, YOUTUBE_TOPIC_LIMIT), [selectedTopics]);
+  const requestBody = useMemo(() => JSON.stringify({ topics: limitedTopics }), [limitedTopics]);
 
   useEffect(() => {
-    if (!selectedTopics.length) {
+    if (!limitedTopics.length) {
       setResources([]);
       setIsLoading(false);
       setError('');
@@ -58,10 +62,13 @@ export function useYouTubeResources(selectedTopics) {
       }
     }
 
-    loadResources();
+    const timer = window.setTimeout(loadResources, REQUEST_DEBOUNCE_MS);
 
-    return () => controller.abort();
-  }, [requestBody, selectedTopics]);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [limitedTopics, requestBody]);
 
   return { resources, isLoading, error };
 }

@@ -87,10 +87,10 @@ def fetch_top_youtube_video(class_name, category_name, api_key):
     url = f"https://www.googleapis.com/youtube/v3/search?{params}"
 
     try:
-        with urlopen(url, timeout=8) as response:
+        with urlopen(url, timeout=4) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
-        raise RuntimeError("YouTube search failed") from exc
+        raise RuntimeError(f"YouTube search failed ({exc.code})") from exc
     except URLError as exc:
         raise RuntimeError("YouTube search is unavailable") from exc
 
@@ -324,7 +324,7 @@ def youtube_resources(request):
     if not isinstance(topics, list):
         return Response({"error": "topics must be a list"}, status=400)
     if len(topics) > YOUTUBE_MAX_TOPICS:
-        return Response({"error": f"topics must be {YOUTUBE_MAX_TOPICS} items or fewer"}, status=400)
+        topics = topics[:YOUTUBE_MAX_TOPICS]
 
     api_key = os.getenv("YOUTUBE_API_KEY", "").strip()
     if not api_key:

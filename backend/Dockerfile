@@ -28,6 +28,9 @@ RUN ARCH=$(uname -m) && \
     mv tectonic /usr/local/bin/ && \
     rm tectonic.tar.gz
 
+RUN printf '\\documentclass{article}\n\\begin{document}\nWarmup\n\\end{document}\n' > /tmp/tectonic-warmup.tex && \
+    tectonic /tmp/tectonic-warmup.tex >/dev/null 2>&1 || true
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
