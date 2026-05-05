@@ -6,7 +6,8 @@ COPY package.json package-lock.json* ./
 RUN npm ci
 
 COPY . .
+RUN chmod +x ./scripts/dev-entrypoint.sh
 
 EXPOSE 5173
 
-CMD ["npm", "run", "dev", "--", "--host"]
+CMD ["./scripts/dev-entrypoint.sh"]
