@@ -801,52 +801,48 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                 className="btn-compile"
                 disabled={isCompiling}
               >
-                {isCompiling ? '⏳ Compiling...' : '⚡ Compile PDF'}
+                {isCompiling ? 'Compiling…' : 'Compile PDF'}
               </button>
 
-              <div style={{ display: 'flex', gap: '0.4rem' }}>
+              <div className="button-row">
                 <button
                   type="button"
                   onClick={goBack}
                   disabled={!canGoBack}
                   className="btn history-btn"
-                  style={{ flex: 1 }}
                 >
-                  ← Back
+                  Back
                 </button>
                 <button
                   type="button"
                   onClick={goForward}
                   disabled={!canGoForward}
                   className="btn history-btn"
-                  style={{ flex: 1 }}
                 >
-                  Forward →
+                  Forward
                 </button>
               </div>
 
               {pdfBlob && (
                 <div className="btn-download-row">
-                  <button type="button" onClick={handleDownloadPDF} className="btn-dl">↓ PDF</button>
-                  <button type="button" onClick={handleDownloadTex} className="btn-dl">↓ .tex</button>
+                  <button type="button" onClick={handleDownloadPDF} className="btn-dl">PDF</button>
+                  <button type="button" onClick={handleDownloadTex} className="btn-dl">.tex</button>
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '0.4rem' }}>
+              <div className="button-row">
                 <button
                   type="button"
                   onClick={handleSave}
                   className="btn history-btn"
-                  style={{ flex: 1 }}
                   disabled={isSaving}
                 >
-                  {isSaving ? 'Saving...' : '💾 Save'}
+                  {isSaving ? 'Saving…' : 'Save'}
                 </button>
                 <button
                   type="button"
                   onClick={handleClear}
                   className="btn clear"
-                  style={{ flex: 1, fontSize: '0.78rem' }}
                 >
                   Clear
                 </button>
@@ -864,7 +860,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                   onClick={() => setLeftPanelVisible(v => !v)}
                   title={leftPanelVisible ? 'Hide subjects' : 'Show subjects'}
                 >
-                  {leftPanelVisible ? '◀ Hide subjects' : '▶ Show subjects'}
+                  {leftPanelVisible ? 'Hide subjects' : 'Show subjects'}
                 </button>
               </div>
 
@@ -875,7 +871,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                     className="btn-toggle-latex"
                     onClick={() => setShowLatex(v => !v)}
                   >
-                    {showLatex ? '📄 Show PDF' : '{ } Show LaTeX'}
+                    {showLatex ? 'Show PDF' : 'Show LaTeX'}
                   </button>
                 )}
                 <button
@@ -884,7 +880,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                   onClick={() => setRightPanelVisible(v => !v)}
                   title={rightPanelVisible ? 'Hide videos' : 'Show videos'}
                 >
-                  {rightPanelVisible ? 'Hide videos ▶' : 'Show videos ◀'}
+                  {rightPanelVisible ? 'Hide videos' : 'Show videos'}
                 </button>
               </div>
             </div>
