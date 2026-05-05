@@ -189,6 +189,13 @@ function App() {
       return nextSheet;
     }
 
+    if (!shouldPersistRemotely) {
+      if (showFeedback) {
+        alert('Saved to this browser. Sign in if you want this sheet synced to your account.');
+      }
+      return nextSheet;
+    }
+
     if (showFeedback) {
       setIsSaving(true);
     }

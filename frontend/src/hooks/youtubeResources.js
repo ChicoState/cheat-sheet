@@ -39,6 +39,8 @@ export function useYouTubeResources(selectedTopics) {
 
         if (data.configured === false) {
           setError(data.message || 'Add YOUTUBE_API_KEY to enable video search.');
+        } else if (Array.isArray(data.errors) && data.errors.length > 0) {
+          setError(data.errors[0] || 'Video suggestions are temporarily unavailable.');
         } else if (!nextResources.length) {
           setError('No video matches found for the current selections yet.');
         }
