@@ -1583,7 +1583,7 @@ THREE COLUMN LAYOUT
 
 .app-body {
   display: grid;
-  grid-template-columns: var(--app-body-columns, 280px 10px minmax(0, 1fr));
+  grid-template-columns: var(--app-body-columns, 280px 10px minmax(0, 1fr) 10px 300px);
   flex: 1;
   overflow: hidden;
   position: relative;
@@ -1598,6 +1598,26 @@ THREE COLUMN LAYOUT
 
 .panel-resizer-slot {
   width: 0;
+}
+
+.left-panel {
+  grid-column: 1;
+}
+
+.panel-resizer-left {
+  grid-column: 2;
+}
+
+.center-panel {
+  grid-column: 3;
+}
+
+.panel-resizer-right {
+  grid-column: 4;
+}
+
+.right-panel {
+  grid-column: 5;
 }
 
 .panel-resizer {
@@ -2526,7 +2546,7 @@ three - column responsive
 
 @media (max-width: 1100px) {
   .app-body {
-    grid-template-columns: 240px 10px minmax(0, 1fr);
+    grid-template-columns: var(--app-body-columns, 240px 10px minmax(0, 1fr) 10px 260px);
   }
 }
 
@@ -2565,6 +2585,14 @@ three - column responsive
   .panel-resizer,
   .panel-resizer-slot {
     display: none;
+  }
+
+  .left-panel,
+  .center-panel,
+  .right-panel,
+  .panel-resizer-left,
+  .panel-resizer-right {
+    grid-column: 1;
   }
 
   .left-panel,

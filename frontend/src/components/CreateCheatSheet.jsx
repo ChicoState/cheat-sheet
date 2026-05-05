@@ -227,10 +227,10 @@ function FormulaReorderPanel({ groupedFormulas, onReorderClass, onReorderFormula
 
 const UNTITLED_TITLE_REGEX = /^Untitled Sheet \(\d+\)$/;
 
-const VideoCard = ({ video, onOpen }) => (
+const VideoCard = ({ video, onOpen, className = '' }) => (
   <button
     type="button"
-    className="video-card-sm inline-video-card"
+    className={`video-card-sm ${className}`.trim()}
     onClick={() => onOpen(video)}
     aria-label={`Open ${video.title}`}
   >
@@ -850,6 +850,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const [showSnapshots, setShowSnapshots] = useState(false);
   const [modalVideo, setModalVideo] = useState(null);
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
+  const [rightPanelVisible, setRightPanelVisible] = useState(true);
   const [panelLayout, setPanelLayout] = useState(() => loadPanelLayout());
   const lastAutoSavedPdfRef = useRef(null);
   const snapshots = useMemo(() => [...(initialData?.compileHistory || [])].reverse(), [initialData?.compileHistory]);
@@ -944,6 +945,13 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
           };
         }
 
+        if (panel === 'right') {
+          return {
+            ...startLayout,
+            rightWidth: clampPanelWidth(startLayout.rightWidth - deltaX, 240, 420),
+          };
+        }
+
         return {
           ...startLayout,
           latexWidth: clampPanelWidth(startLayout.latexWidth + deltaX, 320, 760),
@@ -966,6 +974,8 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     leftPanelVisible ? `${panelLayout.leftWidth}px` : '0px',
     leftPanelVisible ? '10px' : '0px',
     'minmax(0, 1fr)',
+    rightPanelVisible ? '10px' : '0px',
+    rightPanelVisible ? `${panelLayout.rightWidth}px` : '0px',
   ].join(' ');
 
   const workspaceSplitTemplate = `${panelLayout.latexWidth}px 10px minmax(0, 1fr)`;
@@ -1115,12 +1125,12 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
           {leftPanelVisible ? (
             <button
               type="button"
-              className="panel-resizer panel-resizer-vertical"
+              className="panel-resizer panel-resizer-vertical panel-resizer-left"
               onPointerDown={startResize('left')}
               aria-label="Resize subject panel"
             />
           ) : (
-            <div className="panel-resizer-slot" aria-hidden="true" />
+            <div className="panel-resizer-slot panel-resizer-left" aria-hidden="true" />
           )}
           {/* ══ CENTER PANEL — PDF main focus ══ */}
           <main className="center-panel">
@@ -1141,6 +1151,14 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                   disabled={!snapshots.length}
                 >
                   Snapshots {snapshots.length ? `(${snapshots.length})` : ''}
+                </button>
+                <button
+                  type="button"
+                  className="btn-toggle-panel"
+                  onClick={() => setRightPanelVisible((value) => !value)}
+                  title={rightPanelVisible ? 'Hide videos' : 'Show videos'}
+                >
+                  {rightPanelVisible ? 'Hide videos' : 'Show videos'}
                 </button>
               </div>
 
@@ -1237,6 +1255,50 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                )}
              </div>
           </main>
+
+          {rightPanelVisible ? (
+            <button
+              type="button"
+              className="panel-resizer panel-resizer-vertical panel-resizer-right"
+              onPointerDown={startResize('right')}
+              aria-label="Resize video panel"
+            />
+          ) : (
+            <div className="panel-resizer-slot panel-resizer-right" aria-hidden="true" />
+          )}
+
+          {rightPanelVisible && (
+            <aside className="right-panel">
+              <div className="right-panel-header">
+                📺 Video picks for your selected sections
+              </div>
+              <div className="right-panel-scroll">
+                {!selectedVideoTopics.length && (
+                  <p className="right-panel-empty">Select one or more sections to load the top matching YouTube walkthrough for each.</p>
+                )}
+                {selectedVideoTopics.length > 0 && videoError && !isLoadingVideos && (
+                  <p className="right-panel-empty">{videoError}</p>
+                )}
+                {selectedVideoTopics.length > 0 && isLoadingVideos && !videoResources.length && !videoError && (
+                  <p className="right-panel-empty right-panel-empty-subtle">Finding video picks…</p>
+                )}
+                {Object.keys(videosByClass).map((cls) => {
+                  const videos = videosByClass[cls] || [];
+                  return (
+                    <div key={cls} className="subject-video-group">
+                      <div className="subject-video-label">{cls}</div>
+                      {videos.map((video) => (
+                        <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={setModalVideo} />
+                      ))}
+                    </div>
+                  );
+                })}
+                {selectedVideoTopics.length > 0 && !isLoadingVideos && !videoError && !videoResources.length && (
+                  <p className="right-panel-empty">No video matches found yet. Try a different section.</p>
+                )}
+              </div>
+            </aside>
+          )}
         </div>
       </div>
 

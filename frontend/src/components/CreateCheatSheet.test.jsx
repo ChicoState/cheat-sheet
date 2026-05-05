@@ -171,7 +171,20 @@ describe('CreateCheatSheet Component', () => {
 
     render(<CreateCheatSheet onSave={vi.fn()} onReset={vi.fn()} />);
 
-    expect(screen.getByRole('button', { name: /open algebra video/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /open algebra video/i }).length).toBeGreaterThan(0);
+  });
+
+  it('hides and restores the subjects panel from the toolbar', () => {
+    render(<CreateCheatSheet onSave={vi.fn()} onReset={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Hide subjects/i }));
+
+    expect(screen.queryByLabelText(/Title:/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Show subjects/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Show subjects/i }));
+
+    expect(screen.getByLabelText(/Title:/i)).toBeInTheDocument();
   });
 
   it('handles clearing data correctly', () => {

@@ -90,6 +90,10 @@ def fetch_top_youtube_video(class_name, category_name, api_key):
         with urlopen(url, timeout=4) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
+        if exc.code == 403:
+            raise RuntimeError(
+                "YouTube search failed (403). Check the API key, quota, and YouTube Data API access."
+            ) from exc
         raise RuntimeError(f"YouTube search failed ({exc.code})") from exc
     except URLError as exc:
         raise RuntimeError("YouTube search is unavailable") from exc
