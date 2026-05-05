@@ -88,22 +88,22 @@ describe('CreateCheatSheet Component', () => {
     expect(screen.getByText(/Compile will generate the first draft if the editor is still empty/i)).toBeInTheDocument();
   });
 
-  it('handles generating a cheat sheet', () => {
-    const handleGenerateSheetMock = vi.fn();
-    useLatex.mockReturnValue({ ...mockUseLatex, handleGenerateSheet: handleGenerateSheetMock });
+  it('uses compile as the main action', () => {
+    const handleCompileOnlyMock = vi.fn();
+    const selectedFormulas = [{ name: 'test' }];
+
+    useLatex.mockReturnValue({ ...mockUseLatex, handleCompileOnly: handleCompileOnlyMock });
     useFormulas.mockReturnValue({ 
       ...mockUseFormulas, 
       selectedCount: 1, 
-      getSelectedFormulasList: vi.fn().mockReturnValue([{ name: 'test' }]) 
+      getSelectedFormulasList: vi.fn().mockReturnValue(selectedFormulas) 
     });
 
     render(<CreateCheatSheet onSave={vi.fn()} onReset={vi.fn()} />);
-    
-    // Using role checking to reliably find the generate button which shouldn't be disabled
-    const generateBtn = screen.getByRole('button', { name: /Generate Cheat Sheet/i });
-    fireEvent.click(generateBtn);
-    
-    expect(handleGenerateSheetMock).toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Compile PDF/i }));
+
+    expect(handleCompileOnlyMock).toHaveBeenCalledWith(selectedFormulas);
   });
 
   it('passes selected formulas into compile', () => {

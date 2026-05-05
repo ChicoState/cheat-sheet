@@ -45,6 +45,26 @@ function SortableFormulaItem({ id, formula, onRemove, className }) {
   );
 }
 
+function CollapsiblePanelSection({ title, isOpen, onToggle, children, countBadge = null, className = '' }) {
+  return (
+    <section className={`left-panel-section ${className}`.trim()}>
+      <button
+        type="button"
+        className={`left-panel-section-toggle ${isOpen ? 'open' : ''}`}
+        onClick={onToggle}
+        aria-expanded={isOpen}
+      >
+        <span className="left-panel-section-title-row">
+          <span className="left-panel-section-title">{title}</span>
+          {countBadge ? <span className="left-panel-section-badge">{countBadge}</span> : null}
+        </span>
+        <span className="left-panel-section-icon">{isOpen ? '−' : '+'}</span>
+      </button>
+      {isOpen ? <div className="left-panel-section-body">{children}</div> : null}
+    </section>
+  );
+}
+
 function SortableClassGroup({ group, isCollapsed, onToggleCollapse, onRemoveClass, onRemoveFormula }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({ 
     id: `class-${group.class}`,
@@ -158,9 +178,6 @@ function FormulaReorderPanel({ groupedFormulas, onReorderClass, onReorderFormula
 
   return (
     <div className="formula-reorder-panel">
-      <label className="panel-label panel-label-spaced">
-        Drag to reorder formulas (top appears first in PDF)
-      </label>
       <div className="reorder-instructions subtle-copy">
         <span>Click the bar to collapse. Click and hold to move.</span>
       </div>
@@ -189,129 +206,136 @@ const FormulaSelection = ({
   groupedFormulas,
   toggleClass, 
   toggleCategory, 
-  onGenerate, 
-  isGenerating, 
   selectedCount, 
   hasSelectedClasses,
   onReorderClass,
   onReorderFormula,
   onRemoveClass,
   onRemoveFormula
-}) => (
-  <div className="formula-selection">
-    <label className="panel-label">
-      Select classes
-    </label>
-    
-    <div className="class-checkboxes">
-      {classesData.map((cls) => {
-        const isChecked = !!selectedClasses[cls.name];
-        return (
-          <label key={cls.name} className={`class-checkbox-label ${isChecked ? 'checked' : ''}`} onClick={(e) => {
-            e.preventDefault();
-            toggleClass(cls.name);
-          }}>
-            <input
-              type="checkbox"
-              checked={isChecked}
-              readOnly
-            />
-            {cls.name}
-          </label>
-        );
-      })}
-    </div>
+}) => {
+  const [classesOpen, setClassesOpen] = useState(true);
+  const [sectionsOpen, setSectionsOpen] = useState(true);
+  const [reorderOpen, setReorderOpen] = useState(true);
 
-    {hasSelectedClasses && (
-      <div className="category-dropdowns">
-        <label className="panel-label panel-label-spaced">
-          Select sections
-        </label>
-        
-        {classesData.map((cls) => {
-          if (!selectedClasses[cls.name]) return null;
-          
-          const isSpecialClass = cls.is_special || (cls.categories.length === 1 && cls.categories[0].name === cls.name);
-          
-          if (isSpecialClass) {
+  return (
+    <div className="formula-selection">
+      <CollapsiblePanelSection
+        title="Select classes"
+        isOpen={classesOpen}
+        onToggle={() => setClassesOpen((current) => !current)}
+        countBadge={selectedCount > 0 ? `${selectedCount}` : null}
+      >
+        <div className="class-checkboxes">
+          {classesData.map((cls) => {
+            const isChecked = !!selectedClasses[cls.name];
             return (
-              <div key={cls.name} className="class-category-section">
-                <p className="inline-note">
-                  ✓ {cls.name} selected - all formulas included
-                </p>
-              </div>
-            );
-          }
-          
-          return (
-            <div key={cls.name} className="class-category-section">
-              <label className="class-category-label">{cls.name}:</label>
-              <label className="select-all-label">
+              <label key={cls.name} className={`class-checkbox-label ${isChecked ? 'checked' : ''}`} onClick={(e) => {
+                e.preventDefault();
+                toggleClass(cls.name);
+              }}>
                 <input
                   type="checkbox"
-                  checked={cls.categories.every(cat => selectedCategories[`${cls.name}:${cat.name}`])}
-                  onChange={() => {
-                    const allSelected = cls.categories.every(cat => selectedCategories[`${cls.name}:${cat.name}`]);
-                    cls.categories.forEach(cat => {
-                      if (allSelected) {
-                        toggleCategory(cls.name, cat.name);
-                      } else if (!selectedCategories[`${cls.name}:${cat.name}`]) {
-                        toggleCategory(cls.name, cat.name);
-                      }
-                    });
-                  }}
+                  checked={isChecked}
+                  readOnly
                 />
-                Include all sections
+                {cls.name}
               </label>
-              <div className="category-checkboxes">
-                {cls.categories.map((cat) => {
-                  const key = `${cls.name}:${cat.name}`;
-                  const isChecked = !!selectedCategories[key];
-                  return (
-                    <label key={cat.name} className={`category-checkbox-label ${isChecked ? 'checked' : ''}`} onClick={(e) => {
-                      e.preventDefault();
-                      toggleCategory(cls.name, cat.name);
-                    }}>
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        readOnly
-                      />
-                      {cat.name} ({cat.formulas.length} formulas)
-                    </label>
-                  );
-                })}
+            );
+          })}
+        </div>
+
+        {selectedCount > 0 && (
+          <p className="subtle-copy selection-count-copy">
+            {selectedCount} formula(s) will be included
+          </p>
+        )}
+      </CollapsiblePanelSection>
+
+      {hasSelectedClasses && (
+        <CollapsiblePanelSection
+          title="Select sections"
+          isOpen={sectionsOpen}
+          onToggle={() => setSectionsOpen((current) => !current)}
+          className="category-dropdowns"
+        >
+          {classesData.map((cls) => {
+            if (!selectedClasses[cls.name]) return null;
+
+            const isSpecialClass = cls.is_special || (cls.categories.length === 1 && cls.categories[0].name === cls.name);
+
+            if (isSpecialClass) {
+              return (
+                <div key={cls.name} className="class-category-section">
+                  <p className="inline-note">
+                    ✓ {cls.name} selected - all formulas included
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div key={cls.name} className="class-category-section">
+                <label className="class-category-label">{cls.name}:</label>
+                <label className="select-all-label">
+                  <input
+                    type="checkbox"
+                    checked={cls.categories.every(cat => selectedCategories[`${cls.name}:${cat.name}`])}
+                    onChange={() => {
+                      const allSelected = cls.categories.every(cat => selectedCategories[`${cls.name}:${cat.name}`]);
+                      cls.categories.forEach(cat => {
+                        if (allSelected) {
+                          toggleCategory(cls.name, cat.name);
+                        } else if (!selectedCategories[`${cls.name}:${cat.name}`]) {
+                          toggleCategory(cls.name, cat.name);
+                        }
+                      });
+                    }}
+                  />
+                  Include all sections
+                </label>
+                <div className="category-checkboxes">
+                  {cls.categories.map((cat) => {
+                    const key = `${cls.name}:${cat.name}`;
+                    const isChecked = !!selectedCategories[key];
+                    return (
+                      <label key={cat.name} className={`category-checkbox-label ${isChecked ? 'checked' : ''}`} onClick={(e) => {
+                        e.preventDefault();
+                        toggleCategory(cls.name, cat.name);
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          readOnly
+                        />
+                        {cat.name} ({cat.formulas.length} formulas)
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-    )}
+            );
+          })}
+        </CollapsiblePanelSection>
+      )}
 
-    <FormulaReorderPanel 
-      groupedFormulas={groupedFormulas} 
-      onReorderClass={onReorderClass}
-      onReorderFormula={onReorderFormula}
-      onRemoveClass={onRemoveClass}
-      onRemoveFormula={onRemoveFormula}
-    />
-
-    <button
-      type="button"
-      onClick={onGenerate}
-      className="btn primary generate-btn"
-      disabled={isGenerating || selectedCount === 0}
-    >
-      {isGenerating ? 'Generating...' : 'Generate Cheat Sheet'}
-    </button>
-
-    {selectedCount > 0 && (
-      <p className="subtle-copy selection-count-copy">
-        {selectedCount} formula(s) will be included
-      </p>
-    )}
-  </div>
-);
+      {groupedFormulas.length > 0 && (
+        <CollapsiblePanelSection
+          title="Drag to reorder formulas"
+          isOpen={reorderOpen}
+          onToggle={() => setReorderOpen((current) => !current)}
+        >
+          <FormulaReorderPanel 
+            groupedFormulas={groupedFormulas} 
+            onReorderClass={onReorderClass}
+            onReorderFormula={onReorderFormula}
+            onRemoveClass={onRemoveClass}
+            onRemoveFormula={onRemoveFormula}
+          />
+        </CollapsiblePanelSection>
+      )}
+    </div>
+  );
+};
 
 const COMPILE_ERROR_LINE_REGEX = /document\.tex:(\d+):/g;
 const APP_LAYOUT_COMMENT_PREFIX = '% @cheatsheet-layout';
@@ -433,7 +457,7 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
             value={content}
             onChange={(e) => onChange(e.target.value)}
             onScroll={handleScroll}
-            placeholder='Select classes and categories above, then click "Generate Cheat Sheet" to see the LaTeX code here.'
+            placeholder='Select classes and categories above, then click "Compile PDF" to see the LaTeX code here.'
             className={`textarea-field ${isModified ? 'modified' : ''}`}
             rows={15}
             spellCheck="false"
@@ -474,6 +498,14 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
     setZoom(1);
   };
 
+  const handleWheelZoom = (event) => {
+    if (!pdfBlob || compileError) return;
+
+    event.preventDefault();
+    setFitToWidth(false);
+    setZoom((currentZoom) => clampZoom(currentZoom + (event.deltaY < 0 ? 0.1 : -0.1)));
+  };
+
   const pageWidth = containerWidth
     ? Math.max(240, Math.round(containerWidth * (fitToWidth ? 1 : zoom)))
     : undefined;
@@ -512,6 +544,7 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
       <div
         ref={containerRef}
         className="pdf-preview-scroll"
+        onWheel={handleWheelZoom}
       >
       {compileError ? (
         <div className="compile-error-box">
@@ -539,7 +572,7 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
           </Document>
       ) : (
         <div className="pdf-state-message">
-          Generate a cheat sheet to see your PDF!
+          Compile the PDF to see your preview.
           </div>
       )}
       </div>
@@ -677,14 +710,12 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
     margins,
     setMargins,
     pdfBlob,
-    isGenerating,
     isCompiling,
     compileError,
     canGoBack,
     canGoForward,
     goBack,
     goForward,
-    handleGenerateSheet,
     handleCompileOnly,
     handleDownloadPDF,
     handleDownloadTex,
@@ -704,11 +735,6 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
   };
   const handleCompileClick = () => {
     handleCompileOnly(getSelectedFormulasList());
-  };
-
-  const handleGenerate = () => {
-    const formulasList = getSelectedFormulasList();
-    handleGenerateSheet(formulasList);
   };
 
   const handleSave = async (e) => {
@@ -769,8 +795,6 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                 groupedFormulas={groupedFormulas}
                 toggleClass={handleToggleClass}
                 toggleCategory={toggleCategory}
-                onGenerate={handleGenerate}
-                isGenerating={isGenerating}
                 selectedCount={selectedCount}
                 hasSelectedClasses={hasSelectedClasses}
                 onReorderClass={reorderClass}
@@ -870,7 +894,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                     className="btn-toggle-latex"
                     onClick={() => setShowLatex(v => !v)}
                   >
-                    {showLatex ? 'Show PDF' : 'Show LaTeX'}
+                    {showLatex ? 'Hide LaTeX' : 'Show LaTeX'}
                   </button>
                 )}
                 <button
@@ -885,30 +909,44 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
             </div>
 
              <div className="pdf-container">
-              {showLatex ? (
-              <div className="latex-fullscreen">
-                <LatexEditor
-                content={content}
-                onChange={handleContentChange}
-                isModified={contentModified || hasLayoutChanges}
-                compileError={compileError}
-                />
-              </div>
-            ) : (
-              <>
-            {pdfBlob || compileError ? (
-            <PdfPreview pdfBlob={pdfBlob} compileError={compileError} />
-            ) : (
-              <div className="pdf-placeholder">
-                  <span>📄</span>
-                <p>Select a subject, pick categories, then compile</p>
-                <p>Your PDF will appear here</p>
-                <p>Compile will generate the first draft if the editor is still empty.</p>
-              </div>
-              )}
-              </>
-            )}
-            </div>
+               {showLatex ? (
+                 <div className="workspace-split">
+                   <div className="workspace-split-pane workspace-split-pane-latex">
+                     <LatexEditor
+                       content={content}
+                       onChange={handleContentChange}
+                       isModified={contentModified || hasLayoutChanges}
+                       compileError={compileError}
+                     />
+                   </div>
+                   <div className="workspace-split-pane workspace-split-pane-preview">
+                     {pdfBlob || compileError ? (
+                       <PdfPreview pdfBlob={pdfBlob} compileError={compileError} />
+                     ) : (
+                       <div className="pdf-placeholder">
+                         <span>📄</span>
+                         <p>Select a subject, pick categories, then compile</p>
+                         <p>Your PDF will appear here</p>
+                         <p>Compile will generate the first draft if the editor is still empty.</p>
+                       </div>
+                     )}
+                   </div>
+                 </div>
+               ) : (
+                 <>
+                   {pdfBlob || compileError ? (
+                     <PdfPreview pdfBlob={pdfBlob} compileError={compileError} />
+                   ) : (
+                     <div className="pdf-placeholder">
+                       <span>📄</span>
+                       <p>Select a subject, pick categories, then compile</p>
+                       <p>Your PDF will appear here</p>
+                       <p>Compile will generate the first draft if the editor is still empty.</p>
+                     </div>
+                   )}
+                 </>
+               )}
+             </div>
           </main>
 
           {/* ══ RIGHT PANEL — YouTube resources ══ */}
