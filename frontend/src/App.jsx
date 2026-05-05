@@ -1,11 +1,28 @@
 import { useState, useEffect, useContext } from 'react'
 import { Routes, Route, Link, Navigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Home, LayoutDashboard, LogIn, LogOut, Palette } from 'lucide-react';
 import AuthContext from './context/AuthContext';
 import Login from './components/Login';
 import SignUp from './components/SignUp';
 import Dashboard from './components/Dashboard';
 import './App.css'
 import CreateCheatSheet from './components/CreateCheatSheet';
+
+const isTestEnv = Boolean(
+  import.meta.env?.VITEST
+  ||
+  (typeof globalThis !== 'undefined' && globalThis.process?.env?.VITEST === 'true')
+  || (typeof globalThis !== 'undefined' && globalThis.process?.env?.NODE_ENV === 'test')
+  || import.meta.env?.MODE === 'test'
+);
+const MotionLink = isTestEnv ? Link : motion(Link);
+const MotionButton = isTestEnv ? 'button' : motion.button;
+const subtleMotion = {
+  whileHover: { y: -1 },
+  whileTap: { scale: 0.985 },
+};
+const motionInteractionProps = isTestEnv ? {} : subtleMotion;
 
 const DEFAULT_SHEET = {
   title: '',
@@ -165,29 +182,66 @@ function App() {
       <header className="app-header">
         <div className="app-header-inner">
           <div className="app-header-nav">
-            <Link to="/" className="app-header-link">Home</Link>
-            {user && <Link to="/dashboard" className="app-header-link">Dashboard</Link>}
-            {user && <button type="button" onClick={logoutUser} className="app-header-link app-header-logout">Logout ({user.username})</button>}
-            {!user && <Link to="/login" className="app-header-link">Login</Link>}
+            <MotionLink to="/" className="app-header-link" {...motionInteractionProps} aria-label="Home">
+              <Home size={14} strokeWidth={1.8} aria-hidden="true" />
+              <span>Home</span>
+            </MotionLink>
+            {user && (
+              <MotionLink to="/dashboard" className="app-header-link" {...motionInteractionProps} aria-label="Dashboard">
+                <LayoutDashboard size={14} strokeWidth={1.8} aria-hidden="true" />
+                <span>Dashboard</span>
+              </MotionLink>
+            )}
+            {user && (
+              <MotionButton
+                type="button"
+                onClick={logoutUser}
+                className="app-header-link app-header-logout"
+                {...motionInteractionProps}
+                aria-label={`Logout ${user.username}`}
+              >
+                <LogOut size={14} strokeWidth={1.8} aria-hidden="true" />
+                <span>Logout</span>
+              </MotionButton>
+            )}
+            {!user && (
+              <MotionLink to="/login" className="app-header-link" {...motionInteractionProps} aria-label="Login">
+                <LogIn size={14} strokeWidth={1.8} aria-hidden="true" />
+                <span>Login</span>
+              </MotionLink>
+            )}
           </div>
 
           <div className="app-header-brand">
-            <h1>Cheat Sheet Generator</h1>
-            <p>
-              Write Cheat Sheets With Integrated LaTeX Support!
-            </p>
+            <motion.img
+              src="/math_webicon.png"
+              alt=""
+              aria-hidden="true"
+              className="app-logo"
+              initial={{ opacity: 0, scale: 0.94 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+            />
+            <div className="app-header-brand-copy">
+              <h1>Cheat Sheet Generator</h1>
+              <p>Write cheat sheets with integrated LaTeX support.</p>
+            </div>
           </div>
           <div className="app-header-actions">
-           <select
-           value={theme}
-           onChange={(e) => setTheme(e.target.value)}
-           className="layout-select app-theme-select"
-           >
-        {THEMES.map(t => (
-        <option key={t.id} value={t.id}>{t.label}</option>
-      ))}
-    </select>
-  </div>
+            <div className="app-theme-control">
+              <Palette size={14} strokeWidth={1.8} aria-hidden="true" />
+              <select
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+                className="layout-select app-theme-select"
+                aria-label="Select theme"
+              >
+                {THEMES.map(t => (
+                  <option key={t.id} value={t.id}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
       </header>
       <main>

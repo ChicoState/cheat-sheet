@@ -352,6 +352,11 @@ label {
   color: #fca5a5;
 }
 
+.compile-error-box strong,
+.pdf-state-message strong {
+  font-weight: 600;
+}
+
 .right-panel-empty-subtle {
   padding: 0.25rem 0;
 }
@@ -955,13 +960,22 @@ label {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.25rem 0;
+  padding: 0.4rem 0;
   border: none;
   border-top: 1px solid var(--border);
   background: transparent;
   color: var(--text);
   cursor: pointer;
   text-align: left;
+  transition: color var(--transition-fast), transform var(--transition-fast), opacity var(--transition-fast);
+}
+
+.left-panel-section-toggle:hover {
+  color: var(--primary);
+}
+
+.left-panel-section-toggle:hover .left-panel-section-icon {
+  color: var(--primary);
 }
 
 .left-panel-section:first-child .left-panel-section-toggle {
@@ -1006,6 +1020,10 @@ label {
 
 .left-panel-section-body {
   padding-top: 0.45rem;
+}
+
+.left-panel-title-group {
+  padding: 0.95rem 0.85rem 0;
 }
 
 /* ==========================================================================
@@ -1421,8 +1439,29 @@ THREE COLUMN LAYOUT
 }
 
 .app-header-brand {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  text-align: left;
   min-width: 0;
+}
+
+.app-header-brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.app-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+  object-fit: cover;
+  flex: 0 0 auto;
 }
 
 .app-header-brand h1 {
@@ -1435,6 +1474,7 @@ THREE COLUMN LAYOUT
 .app-header-brand p {
   margin: 0.125rem 0 0;
   font-size: 0.7rem;
+  line-height: 1.25;
   color: var(--text-muted);
 }
 
@@ -1442,6 +1482,7 @@ THREE COLUMN LAYOUT
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.35rem;
   min-height: 2.1rem;
   padding: 0.4rem 0.75rem;
   border-radius: 999px;
@@ -1494,6 +1535,21 @@ THREE COLUMN LAYOUT
   min-width: 9.25rem;
   padding-right: 1.9rem;
   font-size: 0.8rem;
+}
+
+.app-theme-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+}
+
+.app-header-link svg,
+.app-theme-control svg,
+.btn-toggle-panel svg,
+.btn-toggle-latex svg,
+.right-panel-header svg {
+  flex: 0 0 auto;
 }
 
 .app-header input:focus {
@@ -1782,6 +1838,12 @@ pdf main focus - center panel
   box-shadow: none;
 }
 
+.pdf-zoom-controls .pdf-zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .pdf-zoom-btn {
   border: 1px solid var(--border);
   background: var(--box-bg);
@@ -1924,6 +1986,10 @@ center panel - latex drawer
 
 .btn-toggle-panel,
 .btn-toggle-latex {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
   background: var(--card-bg);
   color: var(--text);
   border: 1px solid var(--border);
@@ -2009,6 +2075,9 @@ right panel - youtube resources
 }
 
 .right-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
   padding: 0.7rem 0.85rem;
   font-weight: 600;
   font-size: 0.68rem;

@@ -12,6 +12,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url,
 ).toString();
 
+
 function SortableFormulaItem({ id, formula, onRemove, className }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({ 
     id,
@@ -775,7 +776,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
           }}>
             <div className="left-panel-scroll">
 
-              <div className="form-group" style={{ padding: '1rem 1rem 0' }}>
+              <div className="form-group left-panel-title-group">
                 <label htmlFor="title">Title:</label>
                 <input
                   type="text"
