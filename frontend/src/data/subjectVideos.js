@@ -4,13 +4,13 @@ export const SUBJECT_VIDEOS = {
       title: "Order of Operations (PEMDAS)",
       videoId: "dAgfnK528RA",
       channel: "Khan Academy",
-      topic: "Order of Operations"
+      topic: "Operations and Properties"
     },
     {
       title: "Fractions Explained",
       videoId: "n0FZhQ_GkKw",
       channel: "Math Antics",
-      topic: "Fractions"
+      topic: "Fractions, Ratios, and Proportions"
     },
     {
       title: "Area and Perimeter",
