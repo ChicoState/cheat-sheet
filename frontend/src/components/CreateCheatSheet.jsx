@@ -306,10 +306,10 @@ const formatViewCount = (viewCount) => {
   return `${count} views`;
 };
 
-const VideoCard = ({ video, onOpen, className = '' }) => (
+const VideoCard = ({ video, onOpen, className = '', compact = false }) => (
   <button
     type="button"
-    className={`video-card-sm ${className}`.trim()}
+    className={`video-card-sm ${compact ? 'compact' : ''} ${className}`.trim()}
     onClick={(event) => onOpen(video, event.currentTarget)}
     aria-label={`Open ${video.title}`}
   >
@@ -317,13 +317,15 @@ const VideoCard = ({ video, onOpen, className = '' }) => (
       <img src={video.thumbnailUrl || `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`} alt={video.title} loading="lazy" />
       <div className="play-icon">▶</div>
     </div>
-    <div className="video-info-sm">
-      <div className="video-topic-chip">{video.category}</div>
-      <div className="v-title">{video.title}</div>
-      <div className="v-channel">
-        {video.channel}{formatViewCount(video.viewCount) ? ` · ${formatViewCount(video.viewCount)}` : ''}
+    {compact ? null : (
+      <div className="video-info-sm">
+        <div className="video-topic-chip">{video.category}</div>
+        <div className="v-title">{video.title}</div>
+        <div className="v-channel">
+          {video.channel}{formatViewCount(video.viewCount) ? ` · ${formatViewCount(video.viewCount)}` : ''}
+        </div>
       </div>
-    </div>
+    )}
   </button>
 );
 
@@ -364,19 +366,14 @@ const SectionVideoPicks = ({
 
   return (
     <div className={`section-video-picks ${compact ? 'compact' : ''}`.trim()} aria-label={`${className} ${category} video picks`}>
-      <div className="section-video-heading">
-        <span>Curated videos</span>
-        {!!curatedVideos.length && <span className="section-video-count">{curatedVideos.length}</span>}
-      </div>
-
       {curatedVideos.length > 0 ? (
         <div id={sectionVideoListId} className="section-video-list">
           {visibleCuratedVideos.map((video) => (
-            <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={onOpen} />
+            <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={onOpen} compact={compact} />
           ))}
         </div>
       ) : (
-        <p className="inline-video-status">No curated video for this section yet.</p>
+        <p className="inline-video-status">No videos yet.</p>
       )}
 
       {hiddenCuratedCount > 0 && (
@@ -386,8 +383,10 @@ const SectionVideoPicks = ({
           onClick={() => setIsExpanded((current) => !current)}
           aria-expanded={isExpanded}
           aria-controls={sectionVideoListId}
+          aria-label={isExpanded ? 'Hide extra videos' : `Show ${hiddenCuratedCount} more videos`}
+          title={isExpanded ? 'Hide extra videos' : `Show ${hiddenCuratedCount} more videos`}
         >
-          {isExpanded ? 'Hide extra videos' : `Show ${hiddenCuratedCount} more curated video${hiddenCuratedCount === 1 ? '' : 's'}`}
+          {isExpanded ? '−' : `+${hiddenCuratedCount}`}
         </button>
       )}
 
@@ -398,15 +397,16 @@ const SectionVideoPicks = ({
             className="btn-toggle-panel section-video-search"
             onClick={() => onSearchMore({ className, category })}
             disabled={isSearching}
+            aria-label={`Search YouTube for more in ${category}`}
+            title={`Search YouTube for more in ${category}`}
           >
-            {isSearching ? 'Searching YouTube…' : `Search YouTube for more in ${category}`}
+            {isSearching ? '↻' : '⌕'}
           </button>
-          <span className="section-video-search-hint">Use this if the curated pick is not enough.</span>
         </div>
       )}
 
       {isSearching && !searchedVideos.length && !searchError && (
-        <p className="inline-video-status">Finding a YouTube result for this section…</p>
+        <p className="inline-video-status">Searching…</p>
       )}
 
       {hasSearched && searchError && !isSearching && (
@@ -415,9 +415,8 @@ const SectionVideoPicks = ({
 
       {!!searchedVideos.length && (
         <div className="section-video-results">
-          <div className="section-video-source-label">From YouTube search</div>
           {searchedVideos.map((video) => (
-            <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={onOpen} />
+            <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={onOpen} compact={compact} />
           ))}
         </div>
       )}
@@ -438,10 +437,17 @@ const FormulaSelection = ({
   onReorderFormula,
   onRemoveClass,
   onRemoveFormula,
+  collapseClassesSignal = 0,
 }) => {
   const [classesOpen, setClassesOpen] = useState(true);
   const [sectionsOpen, setSectionsOpen] = useState(true);
   const [reorderOpen, setReorderOpen] = useState(true);
+
+  useEffect(() => {
+    if (collapseClassesSignal > 0) {
+      setClassesOpen(false);
+    }
+  }, [collapseClassesSignal]);
 
   return (
     <div className="formula-selection">
@@ -1012,6 +1018,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     canGoForward,
     goBack,
     goForward,
+    handlePreview,
     handleCompileOnly,
     handleDownloadPDF,
     handleDownloadTex,
@@ -1026,10 +1033,12 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const [rightPanelVisible, setRightPanelVisible] = useState(true);
   const [panelLayout, setPanelLayout] = useState(() => loadPanelLayout());
   const [videoSearchRequest, setVideoSearchRequest] = useState(null);
+  const [classesCollapseSignal, setClassesCollapseSignal] = useState(0);
   const pendingPanelLayoutRef = useRef(panelLayout);
   const hasCollapsedLeftPanelOnceRef = useRef(false);
   const lastAutoSavedPdfRef = useRef(null);
   const lastVideoOpenerRef = useRef(null);
+  const modalDialogRef = useRef(null);
   const appBodyRef = useRef(null);
   const centerPanelRef = useRef(null);
   const snapshots = useMemo(() => [...(initialData?.compileHistory || [])].reverse(), [initialData?.compileHistory]);
@@ -1118,6 +1127,30 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         handleCloseVideo();
+        return;
+      }
+
+      if (event.key !== 'Tab') {
+        return;
+      }
+
+      const focusableElements = Array.from(
+        modalDialogRef.current?.querySelectorAll('a[href], button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])') || [],
+      );
+
+      if (!focusableElements.length) {
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
       }
     };
 
@@ -1268,6 +1301,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     if (!hasCollapsedLeftPanelOnceRef.current) {
       // First compile: keep controls reachable while reclaiming preview space.
       hasCollapsedLeftPanelOnceRef.current = true;
+      setClassesCollapseSignal((current) => current + 1);
       setPanelLayout((current) => {
         const nextLayout = {
           ...current,
@@ -1280,7 +1314,13 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       });
     }
 
-    handleCompileOnly(getSelectedFormulasList());
+    const selectedFormulas = getSelectedFormulasList();
+    if (!contentModified && selectedFormulas.length > 0) {
+      handlePreview(null, { formulas: selectedFormulas, columns, fontSize, spacing });
+      return;
+    }
+
+    handleCompileOnly(selectedFormulas);
   };
 
   const handleSave = async (e) => {
@@ -1341,6 +1381,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                 onReorderFormula={reorderFormula}
                 onRemoveClass={removeClassFromOrder}
                 onRemoveFormula={removeSingleFormula}
+                collapseClassesSignal={classesCollapseSignal}
               />
 
               <LayoutOptions
@@ -1564,11 +1605,11 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
           {rightPanelVisible && (
             <aside className="right-panel">
               <div className="right-panel-header">
-                📺 Video picks for your selected sections
+                Videos
               </div>
               <div className="right-panel-scroll">
                 {!selectedVideoTopics.length && (
-                  <p className="right-panel-empty">Select one or more sections to see curated video picks here.</p>
+                  <p className="right-panel-empty">Select sections</p>
                 )}
                 {selectedVideoTopics.map((topic) => {
                   const topicKey = getVideoTopicKey(topic);
@@ -1579,9 +1620,8 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
 
                   return (
                     <div key={topicKey} className="subject-video-group">
-                      <div className="subject-video-label">
-                        <span>{topic.className}</span>
-                        <strong>{topic.category}</strong>
+                      <div className="subject-video-label" title={`${topic.className} · ${topic.category}`}>
+                        {topic.category}
                       </div>
                       <SectionVideoPicks
                         className={topic.className}
@@ -1610,6 +1650,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
         <div className="modal-overlay" onClick={handleCloseVideo}>
           <div
             className="modal-box"
+            ref={modalDialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="video-modal-title"

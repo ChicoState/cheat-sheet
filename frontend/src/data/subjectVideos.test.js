@@ -11,6 +11,7 @@ describe('subjectVideos helpers', () => {
     expect(getYouTubeVideoId('https://www.youtube.com/watch?v=abcdefghijk')).toBe('abcdefghijk');
     expect(getYouTubeVideoId('https://youtu.be/abcdefghijk')).toBe('abcdefghijk');
     expect(getYouTubeVideoId('https://www.youtube.com/shorts/abcdefghijk')).toBe('abcdefghijk');
+    expect(getYouTubeVideoId('https://youtu.be/not-a-real-id')).toBe('');
     expect(getYouTubeVideoId('https://example.com/watch?v=abcdefghijk')).toBe('');
     expect(getYouTubeVideoId('https://not-youtu.be.example/watch?v=abcdefghijk')).toBe('');
   });

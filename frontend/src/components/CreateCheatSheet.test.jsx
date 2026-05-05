@@ -67,6 +67,7 @@ describe('CreateCheatSheet Component', () => {
     goBack: vi.fn(),
     goForward: vi.fn(),
     handleGenerateSheet: vi.fn(),
+    handlePreview: vi.fn(),
     handleCompileOnly: vi.fn(),
     handleDownloadPDF: vi.fn(),
     handleDownloadTex: vi.fn(),
@@ -97,11 +98,11 @@ describe('CreateCheatSheet Component', () => {
     expect(screen.getByText(/Compile will generate the first draft if the editor is still empty/i)).toBeInTheDocument();
   });
 
-  it('uses compile as the main action', () => {
-    const handleCompileOnlyMock = vi.fn();
+  it('regenerates selected formulas from the main compile action', () => {
+    const handlePreviewMock = vi.fn();
     const selectedFormulas = [{ name: 'test' }];
 
-    useLatex.mockReturnValue({ ...mockUseLatex, handleCompileOnly: handleCompileOnlyMock });
+    useLatex.mockReturnValue({ ...mockUseLatex, handlePreview: handlePreviewMock });
     useFormulas.mockReturnValue({ 
       ...mockUseFormulas, 
       selectedCount: 1, 
@@ -112,14 +113,14 @@ describe('CreateCheatSheet Component', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Compile PDF/i }));
 
-    expect(handleCompileOnlyMock).toHaveBeenCalledWith(selectedFormulas);
+    expect(handlePreviewMock).toHaveBeenCalledWith(null, expect.objectContaining({ formulas: selectedFormulas }));
   });
 
   it('shrinks the subject panel on first compile without hiding the compile controls', () => {
-    const handleCompileOnlyMock = vi.fn();
+    const handlePreviewMock = vi.fn();
     const selectedFormulas = [{ name: 'test' }];
 
-    useLatex.mockReturnValue({ ...mockUseLatex, handleCompileOnly: handleCompileOnlyMock });
+    useLatex.mockReturnValue({ ...mockUseLatex, handlePreview: handlePreviewMock });
     useFormulas.mockReturnValue({
       ...mockUseFormulas,
       selectedCount: 1,
@@ -132,7 +133,7 @@ describe('CreateCheatSheet Component', () => {
 
     expect(document.querySelector('.app-body')).toHaveStyle('--app-body-columns: 220px 10px minmax(0, 1fr) 10px 300px');
     expect(screen.getByRole('button', { name: /Compile PDF/i })).toBeInTheDocument();
-    expect(handleCompileOnlyMock).toHaveBeenCalledWith(selectedFormulas);
+    expect(handlePreviewMock).toHaveBeenCalledWith(null, expect.objectContaining({ formulas: selectedFormulas }));
   });
 
   it('keeps the LaTeX editor closed when compiled content exists', () => {
@@ -148,11 +149,11 @@ describe('CreateCheatSheet Component', () => {
     expect(screen.queryByLabelText(/Generated LaTeX Code:/i)).not.toBeInTheDocument();
   });
 
-  it('passes selected formulas into compile', () => {
+  it('compiles existing manual content without regenerating', () => {
     const handleCompileOnlyMock = vi.fn();
     const selectedFormulas = [{ name: 'test' }];
 
-    useLatex.mockReturnValue({ ...mockUseLatex, handleCompileOnly: handleCompileOnlyMock });
+    useLatex.mockReturnValue({ ...mockUseLatex, contentModified: true, handleCompileOnly: handleCompileOnlyMock });
     useFormulas.mockReturnValue({
       ...mockUseFormulas,
       selectedCount: 1,
@@ -256,7 +257,7 @@ describe('CreateCheatSheet Component', () => {
     expect(rightPanel.getByRole('button', { name: /open first algebra video/i })).toBeInTheDocument();
     expect(rightPanel.queryByRole('button', { name: /open second algebra video/i })).not.toBeInTheDocument();
 
-    fireEvent.click(rightPanel.getByRole('button', { name: /show 2 more curated videos/i }));
+    fireEvent.click(rightPanel.getByRole('button', { name: /show 2 more videos/i }));
 
     expect(rightPanel.getByRole('button', { name: /open second algebra video/i })).toBeInTheDocument();
     expect(rightPanel.getByRole('button', { name: /open third algebra video/i })).toBeInTheDocument();

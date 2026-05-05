@@ -1066,21 +1066,28 @@ label {
 }
 
 .layout-controls {
-  display: flex;
-  gap: var(--space-xl);
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+  gap: 0.55rem;
 }
 
 .layout-control {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
 }
 
 .layout-control label {
   font-weight: 500;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   color: var(--text);
+}
+
+.layout-control .layout-select,
+.layout-control input.layout-select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* ==========================================================================
@@ -1130,8 +1137,31 @@ label {
 }
 
 .section-video-picks.compact {
-  padding: 0.48rem;
-  border-left: 2px solid color-mix(in srgb, var(--primary) 35%, var(--border) 65%);
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.22rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.section-video-picks.compact .section-video-heading,
+.section-video-picks.compact .section-video-source-label,
+.section-video-picks.compact .inline-video-status,
+.section-video-picks.compact .section-video-search-hint {
+  display: none;
+}
+
+.section-video-picks.compact .section-video-list,
+.section-video-picks.compact .section-video-results {
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.section-video-picks.compact .section-video-list {
+  grid-column: 1;
+  grid-row: 1 / span 2;
 }
 
 .section-video-heading {
@@ -1140,7 +1170,7 @@ label {
   justify-content: space-between;
   gap: 0.5rem;
   color: var(--text-muted);
-  font-size: 0.64rem;
+  font-size: 0.58rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1177,7 +1207,7 @@ label {
   background: transparent;
   color: var(--primary);
   padding: 0.1rem 0;
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 700;
   cursor: pointer;
 }
@@ -1193,18 +1223,39 @@ label {
   border-radius: 6px;
 }
 
+.section-video-picks.compact .video-more-toggle {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: center;
+  padding: 0;
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
 .section-video-search-row {
   display: grid;
   gap: 0.24rem;
   margin-top: 0.12rem;
 }
 
+.section-video-picks.compact .section-video-search-row {
+  grid-column: 2;
+  grid-row: 1;
+  margin-top: 0;
+}
+
 .section-video-search {
-  width: 100%;
+  width: 1.55rem;
+  min-width: 1.55rem;
+  max-width: 1.55rem;
+  min-height: 1.55rem;
+  padding: 0;
   border-color: color-mix(in srgb, var(--primary) 45%, var(--border) 55%);
   color: var(--primary);
-  font-size: 0.68rem;
+  font-size: 0.8rem;
   font-weight: 700;
+  justify-self: end;
+  line-height: 1;
 }
 
 .section-video-search-hint {
@@ -2508,6 +2559,29 @@ right panel - youtube resources
   width: 100%;
 }
 
+.video-card-sm.compact {
+  display: block;
+  padding: 0;
+  gap: 0;
+}
+
+.video-card-sm.compact .video-thumb-sm {
+  width: 100%;
+}
+
+.video-card-sm.compact .video-thumb-sm img {
+  width: 100%;
+  height: 54px;
+}
+
+.video-card-sm.compact .play-icon {
+  font-size: 0.85rem;
+}
+
+.video-card-sm.compact .video-info-sm {
+  display: none;
+}
+
 .video-card-sm:hover {
   border-color: var(--primary);
   box-shadow: none;
@@ -2836,30 +2910,20 @@ three - column responsive
 }
 
 .subject-video-group{
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.44rem;
 }
 
 .subject-video-label {
-  display: grid;
-  gap: 0.12rem;
+  display: block;
   font-size: 0.66rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-  padding: 0.22rem 0.12rem;
-  margin-bottom: 0.24rem;
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  background: color-mix(in srgb, var(--panel-bg) 96%, var(--bg) 4%);
-  z-index: 1;
-}
-
-.subject-video-label strong {
+  letter-spacing: 0.01em;
   color: var(--text);
-  font-size: 0.76rem;
-  letter-spacing: 0.02em;
+  padding: 0 0.05rem;
+  margin-bottom: 0.18rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .latex-fullscreen {

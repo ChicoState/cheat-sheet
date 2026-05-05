@@ -11,6 +11,7 @@ import CreateCheatSheet from './components/CreateCheatSheet';
 
 const CURRENT_SHEET_STORAGE_KEY = 'currentCheatSheet';
 const UNTITLED_COUNTER_STORAGE_KEY = 'untitledSheetCounter';
+const COMPILE_HISTORY_STORAGE_PREFIX = 'cheatSheetCompileHistory';
 
 const getNextUntitledTitle = () => {
   const currentValue = Number(localStorage.getItem(UNTITLED_COUNTER_STORAGE_KEY) || '0');
@@ -70,13 +71,32 @@ const loadStoredSheet = () => {
   }
 };
 
+const getCompileHistoryStorageKey = (sheetId) => `${COMPILE_HISTORY_STORAGE_PREFIX}:${sheetId}`;
+
 const getStoredCompileHistory = (sheetId) => {
+  if (!sheetId) return [];
+
+  const savedHistory = localStorage.getItem(getCompileHistoryStorageKey(sheetId));
+  if (savedHistory) {
+    try {
+      const parsedHistory = JSON.parse(savedHistory);
+      if (Array.isArray(parsedHistory)) return parsedHistory;
+    } catch (e) {
+      console.error('Failed to parse compile history', e);
+    }
+  }
+
   const storedSheet = loadStoredSheet();
   if (storedSheet?.id !== sheetId) {
     return [];
   }
 
   return Array.isArray(storedSheet.compileHistory) ? storedSheet.compileHistory : [];
+};
+
+const saveStoredCompileHistory = (sheetId, compileHistory = []) => {
+  if (!sheetId) return;
+  localStorage.setItem(getCompileHistoryStorageKey(sheetId), JSON.stringify(compileHistory));
 };
 
 const isTestEnv = Boolean(
@@ -182,23 +202,20 @@ function App() {
     cheatSheetRef.current = nextSheet;
     setCheatSheet(nextSheet);
     localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(nextSheet));
+    saveStoredCompileHistory(nextSheet.id, nextHistory);
+
+    if (!showFeedback) {
+      return nextSheet;
+    }
 
     const shouldPersistRemotely = Boolean(authTokens?.access);
 
-    if (!showFeedback && !shouldPersistRemotely) {
-      return nextSheet;
-    }
-
     if (!shouldPersistRemotely) {
-      if (showFeedback) {
-        alert('Saved to this browser. Sign in if you want this sheet synced to your account.');
-      }
+      alert('Saved to this browser. Sign in if you want this sheet synced to your account.');
       return nextSheet;
     }
 
-    if (showFeedback) {
-      setIsSaving(true);
-    }
+    setIsSaving(true);
 
     try {
       let sheetId = nextSheet.id;
@@ -265,25 +282,18 @@ function App() {
       cheatSheetRef.current = persistedSheet;
       setCheatSheet(persistedSheet);
       localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(persistedSheet));
-      if (showFeedback) {
-        alert('Progress saved!');
-      }
+      saveStoredCompileHistory(persistedSheet.id, persistedSheet.compileHistory);
+      alert('Progress saved!');
       return persistedSheet;
     } catch (error) {
       console.error('Failed to save cheat sheet', error);
-      if (showFeedback) {
-        alert(`Failed to save progress: ${error.message}`);
-      } else {
-        return nextSheet;
-      }
+      alert(`Failed to save progress: ${error.message}`);
       throw error;
     } finally {
       if (pendingCreatePromiseRef.current) {
         pendingCreatePromiseRef.current = null;
       }
-      if (showFeedback) {
-        setIsSaving(false);
-      }
+      setIsSaving(false);
     }
   };
 

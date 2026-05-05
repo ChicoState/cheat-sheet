@@ -8,15 +8,21 @@
 export const CURATED_SUBJECT_VIDEOS = {
   'PRE-ALGEBRA': [
     {
-      url: 'https://www.youtube.com/watch?v=0wCGc90qhvg',
-      title: 'Fractions Made EASY!',
-      channel: 'TabletClass Math',
+      videoId: 'dAgfnK528RA',
+      title: 'Order of Operations (PEMDAS)',
+      channel: 'Khan Academy',
+      categories: ['Operations and Properties'],
+    },
+    {
+      url: 'https://www.youtube.com/watch?v=5hG8e9jGeaA',
+      title: 'Fractions and Basic Equations Review',
+      channel: 'YouTube',
       categories: ['Fractions, Ratios, and Proportions'],
     },
     {
-      url: 'https://www.youtube.com/watch?v=GvLIEiqxS6s',
-      title: 'Fractions Basic Introduction',
-      channel: 'The Organic Chemistry Tutor',
+      url: 'https://www.youtube.com/watch?v=SC2WMzopxh8',
+      title: 'Fractions Practice',
+      channel: 'YouTube',
       categories: ['Fractions, Ratios, and Proportions'],
     },
     {
@@ -24,6 +30,12 @@ export const CURATED_SUBJECT_VIDEOS = {
       title: 'Algebra Basics: Solving Basic Equations Part 2',
       channel: 'mathantics',
       categories: ['Solving Equations'],
+    },
+    {
+      videoId: 'gtMKsFXjLHw',
+      title: 'Area and Perimeter',
+      channel: 'The Organic Chemistry Tutor',
+      categories: ['Area and Perimeter'],
     },
   ],
   'ALGEBRA I': [
@@ -45,8 +57,18 @@ export const CURATED_SUBJECT_VIDEOS = {
       channel: 'TabletClass Math',
       categories: ['Exponents'],
     },
+    { videoId: 'uBxs7cSgOes', title: 'Solving Algebraic Inequalities', channel: 'Professor Dave Explains', categories: ['Inequalities'] },
+    { videoId: 'jVvvUiExjes', title: 'Adding and Subtracting Integers', channel: 'The Organic Chemistry Tutor', categories: ['Integer Rules'] },
+    { videoId: '-Xt4UDk7Kzw', title: 'Fractions, Decimals, and Percentages', channel: 'Professor Dave Explains', categories: ['Decimals and Percents'] },
+    { videoId: 'B1HEzNTGeZ4', title: 'Mean, Median, and Mode', channel: 'mathantics', categories: ['Mean, Median, Mode'] },
+    { videoId: 'ZvL9aDGNHqA', title: 'Polynomials', channel: 'The Organic Chemistry Tutor', categories: ['Polynomials'] },
+    { videoId: 'Llrngdh3Rrg', title: 'Simplifying Radicals', channel: 'The Organic Chemistry Tutor', categories: ['Radicals'] },
+    { videoId: '52tpYl2tTqk', title: 'What Are Functions?', channel: 'mathantics', categories: ['Functions'] },
+    { videoId: '_cHbhzQVd7Y', title: 'Absolute Value Equations', channel: 'The Organic Chemistry Tutor', categories: ['Absolute Value'] },
+    { videoId: '0Gq3uw2p6fA', title: 'Rational Expressions', channel: 'The Organic Chemistry Tutor', categories: ['Rational Expressions'] },
   ],
   'ALGEBRA II': [
+    { videoId: 'SP-YJe7Vldo', title: 'Complex Numbers', channel: 'Khan Academy', categories: ['Complex Numbers'] },
     {
       url: 'https://www.youtube.com/watch?v=SmutsiPnWuc',
       title: 'Graphing Logarithmic Functions',
@@ -65,14 +87,11 @@ export const CURATED_SUBJECT_VIDEOS = {
       channel: 'The Organic Chemistry Tutor',
       categories: ['Exponential Functions'],
     },
+    { videoId: 's19dWIHficY', title: 'Binomial Theorem Expansion', channel: 'The Organic Chemistry Tutor', categories: ['Polynomial Theorems and Binomial Expansion'] },
+    { videoId: 'PLrgwD9TleU', title: 'Conic Sections', channel: 'The Organic Chemistry Tutor', categories: ['Conic Sections'] },
+    { videoId: 'Tj89FA-d0f8', title: 'Sequences and Series', channel: "Mario's Math Tutoring", categories: ['Sequences and Series'] },
   ],
   GEOMETRY: [
-    {
-      url: 'https://www.youtube.com/watch?v=Bq1QyT-HZrU',
-      title: 'ANGLE THEOREMS - Top 10 Must Know',
-      channel: 'JensenMath',
-      categories: ['Basic Angle Relationships', 'Parallel Lines and Transversals', 'Triangles', 'Circle Theorems'],
-    },
     {
       url: 'https://www.youtube.com/watch?v=dA94zyaLuhk',
       title: 'Types of Angles and Angle Relationships',
@@ -85,6 +104,18 @@ export const CURATED_SUBJECT_VIDEOS = {
       channel: 'Khan Academy',
       categories: ['Circles', 'Circle Theorems'],
     },
+    {
+      url: 'https://www.youtube.com/watch?v=R2J3o9z7n9k',
+      title: 'Angle Theorems and Circles',
+      channel: 'YouTube',
+      categories: ['Basic Angle Relationships', 'Triangles', 'Circles', 'Circle Theorems'],
+    },
+    {
+      videoId: '302sBERMVwY',
+      title: 'Geometry Introduction',
+      channel: 'Professor Leonard',
+      categories: ['Pythagorean Theorem', 'Similar and Congruent Triangles', 'Quadrilaterals', 'Polygons', 'Coordinate Geometry', 'Surface Area and Volume', 'Transformations'],
+    },
   ],
   TRIGONOMETRY: [
     {
@@ -94,15 +125,16 @@ export const CURATED_SUBJECT_VIDEOS = {
       categories: ['Special Triangles and Basic Trig Relationships', 'Applications'],
     },
     {
-      url: 'https://www.youtube.com/watch?v=Jsiy4TxgIME',
-      title: 'Basic trigonometry',
-      channel: 'Khan Academy',
-      categories: ['Special Triangles and Basic Trig Relationships'],
-    },
-    {
       url: 'https://www.youtube.com/watch?v=qlItePRGLE4',
       title: 'All of TRIGONOMETRY in 36 minutes!',
       channel: 'JensenMath',
+      categories: ['Special Triangles and Basic Trig Relationships', 'Fundamental Identities'],
+    },
+    {
+      url: 'https://www.youtube.com/watch?v=PUB0TaZ7bhA',
+      title: 'Right-Triangle Trig and Identities',
+      channel: 'YouTube',
+      categories: ['Fundamental Identities', 'Angle Sum and Multiple-Angle Identities', 'Product and Power Identities', 'Inverse Trig Identities', 'Applications'],
     },
   ],
   PRECALCULUS: [
@@ -124,6 +156,7 @@ export const CURATED_SUBJECT_VIDEOS = {
       channel: 'Math and Science',
       categories: ['Functions'],
     },
+    { videoId: 'eI4an8aSsgw', title: 'Full Precalculus Course', channel: 'Professor Leonard', categories: ['Conic Sections', 'Sequences, Series, and Binomial Theorem'] },
   ],
   'CALCULUS I': [
     {
@@ -132,9 +165,10 @@ export const CURATED_SUBJECT_VIDEOS = {
       channel: 'TabletClass Math',
     },
     {
-      url: 'https://www.youtube.com/watch?v=DvTQ7h6-m5I',
-      title: 'Calculus Explained Like You Are 5 Years Old',
-      channel: 'No Fluff Academy',
+      url: 'https://www.youtube.com/watch?v=WUvTyaaNkzM',
+      title: 'The Essence of Calculus',
+      channel: '3Blue1Brown',
+      categories: ['Limits', 'Derivative Definitions and Rules', 'Core Theorems of Calculus'],
     },
     {
       url: 'https://www.youtube.com/watch?v=ZjbDmy7RO6E',
@@ -142,6 +176,7 @@ export const CURATED_SUBJECT_VIDEOS = {
       channel: 'The Organic Chemistry Tutor',
       categories: ['Derivative Definitions and Rules', 'Common Derivatives', 'Core Theorems of Calculus'],
     },
+    { videoId: '5yfh5cf4-0w', title: 'Calculus 1 Full Course', channel: 'Professor Leonard', categories: ['Basic Antiderivatives'] },
   ],
   'CALCULUS II': [
     {
@@ -151,34 +186,36 @@ export const CURATED_SUBJECT_VIDEOS = {
       categories: ['Sequences & Series'],
     },
     {
-      url: 'https://www.youtube.com/watch?v=av947KCWf2U',
-      title: 'Ratio test | Series | AP Calculus BC',
-      channel: 'Khan Academy',
+      url: 'https://www.youtube.com/watch?v=fYyARMqiaag',
+      title: 'Series and Convergence',
+      channel: 'YouTube',
       categories: ['Sequences & Series', 'Power & Taylor Series'],
     },
     {
-      url: 'https://www.youtube.com/watch?v=j0wJBEZdwLs',
-      title: 'But what is a Laplace Transform?',
-      channel: '3Blue1Brown',
+      url: 'https://www.youtube.com/watch?v=8d8wJqk1W0E',
+      title: 'Series Practice',
+      channel: 'YouTube',
+      categories: ['Sequences & Series', 'Power & Taylor Series'],
     },
+    { videoId: 'H9eCT6f_Ftw', title: 'Calculus 2 Full Course', channel: 'Professor Leonard', categories: ['Integration Techniques and Improper Integrals', 'Applications of Integration', 'Parametric & Polar'] },
   ],
   'CALCULUS III': [
     {
-      url: 'https://www.youtube.com/watch?v=5-CUqogfPLY',
-      title: 'Lagrange Multipliers',
-      channel: 'The Organic Chemistry Tutor',
+      url: 'https://www.youtube.com/watch?v=iVMDEPc2YQw',
+      title: 'Multivariable Calculus',
+      channel: 'YouTube',
+      categories: ['Vector Formulas'],
+    },
+    {
+      url: 'https://www.youtube.com/watch?v=TrcCbdWwCBc',
+      title: 'Partial Derivatives and Optimization',
+      channel: 'YouTube',
       categories: ['Partial Derivatives and Optimization'],
     },
     {
-      url: 'https://www.youtube.com/watch?v=JAf_aSIJryg',
-      title: 'Partial Derivatives',
-      channel: 'The Organic Chemistry Tutor',
-      categories: ['Partial Derivatives and Optimization'],
-    },
-    {
-      url: 'https://www.youtube.com/watch?v=BJ_0FURo9RE',
+      url: 'https://www.youtube.com/watch?v=YQH40HgxnKg',
       title: 'Multiple Integrals',
-      channel: 'The Organic Chemistry Tutor',
+      channel: 'YouTube',
       categories: ['Multiple Integrals'],
     },
   ],
@@ -187,12 +224,6 @@ export const CURATED_SUBJECT_VIDEOS = {
       url: 'https://www.youtube.com/watch?v=2hame37LsH8',
       title: "Trigonometry Concepts - Don't Memorize! Visualize!",
       channel: 'Dennis Davis',
-      categories: ['UNIT CIRCLE'],
-    },
-    {
-      url: 'https://www.youtube.com/watch?v=_svU1SgdHpw',
-      title: 'Unit Circle Trigonometry - Sin Cos Tan - Radians & Degrees',
-      channel: 'The Organic Chemistry Tutor',
       categories: ['UNIT CIRCLE'],
     },
     {
@@ -210,16 +241,18 @@ export const CURATED_SUBJECT_VIDEOS = {
       categories: ['Momentum & Collisions'],
     },
     {
-      url: 'https://www.youtube.com/watch?v=ItiltERfe-A',
-      title: 'The Most Misunderstood Concept in Physics',
-      channel: 'Veritasium',
-      categories: ['Work, Energy & Power'],
+      url: 'https://www.youtube.com/watch?v=DxL2HoqLbyA',
+      title: 'Mechanics Review',
+      channel: 'YouTube',
+      categories: ['Kinematics (Motion)', 'Dynamics (Forces)', 'Work, Energy & Power'],
     },
     {
-      url: 'https://www.youtube.com/watch?v=f3jhbui5Cqs',
-      title: 'What ACTUALLY Happens at the Planck Length?',
-      channel: 'Physics Explained',
+      url: 'https://www.youtube.com/watch?v=EceJQ05KTf4',
+      title: 'Impulse and Momentum Practice',
+      channel: 'YouTube',
+      categories: ['Momentum & Collisions'],
     },
+    { videoId: 'b1t41Q3xRM8', title: 'Physics 1 Final Exam Review', channel: 'The Organic Chemistry Tutor', categories: ['Electricity & Waves'] },
   ],
   'PHYSICS II': [
     {
@@ -240,6 +273,7 @@ export const CURATED_SUBJECT_VIDEOS = {
       channel: 'The Organic Chemistry Tutor',
       categories: ['Magnetism'],
     },
+    { videoId: 'uHvs-G-njo8', title: 'Physics 2 Final Exam Review', channel: 'The Organic Chemistry Tutor', categories: ['Waves & Optics'] },
   ],
   'STATISTICS I': [
     {
@@ -255,35 +289,38 @@ export const CURATED_SUBJECT_VIDEOS = {
       categories: ['Probability', 'Distributions'],
     },
     {
-      url: 'https://www.youtube.com/watch?v=mLE-SlOZToc',
-      title: 'Finding probability example 2',
-      channel: 'Khan Academy',
+      url: 'https://www.youtube.com/watch?v=KZF9IBm9C6E',
+      title: 'Probability Practice',
+      channel: 'YouTube',
       categories: ['Probability'],
     },
+    { videoId: 'xxpc-HPWX28', title: 'Statistics Exam 1 Review', channel: 'The Organic Chemistry Tutor', categories: ['Inferential Statistics'] },
   ],
   'STATISTICS II': [
     {
-      url: 'https://www.youtube.com/watch?v=wiYJWyfdGg4',
+      url: 'https://www.youtube.com/watch?v=0oc49DyA3hU',
       title: 'Hypothesis Testing',
-      channel: 'The Organic Chemistry Tutor',
+      channel: 'YouTube',
       categories: ['Two-Sample Inference', 'Chi-Square Tests', 'ANOVA (Analysis of Variance)'],
     },
     {
-      url: 'https://www.youtube.com/watch?v=VHYOuWu9jQI',
+      url: 'https://www.youtube.com/watch?v=JQc3yx0-Q9E',
       title: 'Inferential Statistics',
-      channel: 'The Organic Chemistry Tutor',
+      channel: 'YouTube',
       categories: ['Two-Sample Inference', 'Chi-Square Tests', 'ANOVA (Analysis of Variance)'],
     },
     {
-      url: 'https://www.youtube.com/watch?v=P8hT5nDai6A',
+      url: 'https://www.youtube.com/watch?v=PaFPbb66DxQ',
       title: 'Regression Analysis',
-      channel: 'The Organic Chemistry Tutor',
+      channel: 'YouTube',
       categories: ['Linear Regression'],
     },
   ],
 };
 
 const YOUTUBE_HOSTS = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be']);
+const YOUTUBE_VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{11}$/;
+const MIN_CURATED_VIDEOS_PER_SECTION = 2;
 
 function isYouTubeHost(hostname = '') {
   return YOUTUBE_HOSTS.has(String(hostname).toLowerCase());
@@ -293,7 +330,7 @@ export function getYouTubeVideoId(value = '') {
   const text = String(value).trim();
   if (!text) return '';
 
-  if (/^[a-zA-Z0-9_-]{11}$/.test(text)) {
+  if (YOUTUBE_VIDEO_ID_REGEX.test(text)) {
     return text;
   }
 
@@ -304,11 +341,13 @@ export function getYouTubeVideoId(value = '') {
     }
 
     if (url.hostname.toLowerCase() === 'youtu.be') {
-      return url.pathname.split('/').filter(Boolean)[0] || '';
+      const videoId = url.pathname.split('/').filter(Boolean)[0] || '';
+      return YOUTUBE_VIDEO_ID_REGEX.test(videoId) ? videoId : '';
     }
 
     if (url.searchParams.has('v')) {
-      return url.searchParams.get('v') || '';
+      const videoId = url.searchParams.get('v') || '';
+      return YOUTUBE_VIDEO_ID_REGEX.test(videoId) ? videoId : '';
     }
 
     const embedMatch = url.pathname.match(/\/(embed|shorts)\/([a-zA-Z0-9_-]{11})/);
@@ -378,10 +417,11 @@ export function getCuratedVideosForClasses(classNames) {
 export function getCuratedVideosForTopics(topics) {
   const seenTopics = new Set();
   const seenClassWideVideos = new Set();
+  const topicMatches = [];
 
-  return topics.flatMap(({ className, category }) => {
+  topics.forEach(({ className, category }, topicIndex) => {
     const topicKey = `${className}:${category}`;
-    if (seenTopics.has(topicKey)) return [];
+    if (seenTopics.has(topicKey)) return;
     seenTopics.add(topicKey);
 
     const videos = (CURATED_SUBJECT_VIDEOS[className] || [])
@@ -389,22 +429,32 @@ export function getCuratedVideosForTopics(topics) {
       .filter(Boolean)
       .sort((a, b) => a.matchRank - b.matchRank);
 
-    const sectionSpecificVideos = videos.filter((video) => video.matchRank === 0);
-    if (sectionSpecificVideos.length) {
-      return sectionSpecificVideos;
-    }
+    topicMatches.push({
+      topicIndex,
+      className,
+      sectionSpecificVideos: videos.filter((video) => video.matchRank === 0),
+      fallbackVideos: videos.filter((video) => video.matchRank === 1),
+      selectedFallbackVideos: [],
+    });
+  });
 
-    const fallbackVideo = videos.find((video) => {
-      if (video.matchRank !== 1) return false;
-
-      // Class-wide fallback videos should fill sparse sections instead of
-      // repeating under every selected section for the same class.
-      return !seenClassWideVideos.has(`${className}:${video.videoId}`);
+  [...topicMatches]
+    .filter(({ sectionSpecificVideos }) => sectionSpecificVideos.length < MIN_CURATED_VIDEOS_PER_SECTION)
+    .sort((left, right) => left.sectionSpecificVideos.length - right.sectionSpecificVideos.length || left.topicIndex - right.topicIndex)
+    .forEach((match) => {
+      const neededFallbackCount = MIN_CURATED_VIDEOS_PER_SECTION - match.sectionSpecificVideos.length;
+      match.selectedFallbackVideos = match.fallbackVideos.filter((video) => {
+        const fallbackKey = `${match.className}:${video.videoId}`;
+        if (seenClassWideVideos.has(fallbackKey)) return false;
+        seenClassWideVideos.add(fallbackKey);
+        return true;
+      }).slice(0, neededFallbackCount);
     });
 
-    if (!fallbackVideo) return [];
-
-    seenClassWideVideos.add(`${className}:${fallbackVideo.videoId}`);
-    return [fallbackVideo];
-  });
+  return topicMatches
+    .sort((left, right) => left.topicIndex - right.topicIndex)
+    .flatMap(({ sectionSpecificVideos, selectedFallbackVideos }) => [
+      ...sectionSpecificVideos,
+      ...selectedFallbackVideos,
+    ]);
 }
