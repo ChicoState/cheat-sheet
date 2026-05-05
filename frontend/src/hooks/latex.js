@@ -4,6 +4,7 @@ import AuthContext from '../context/AuthContext';
 const STORAGE_KEY = 'cheatSheetLatex';
 const SAVE_DEBOUNCE_MS = 500;
 const AUTO_COMPILE_DEBOUNCE_MS = 450;
+const MAX_HISTORY_ENTRIES = 7;
 const DEFAULT_LAYOUT = {
   columns: 4,
   fontSize: '9pt',
@@ -134,12 +135,16 @@ export function useLatex(initialData) {
   }, [historyIndex, history]);
 
   const saveToHistory = useCallback((newContent) => {
-    setHistory(prev => {
-      const newHistory = prev.slice(0, historyIndex + 1);
-      newHistory.push({ content: newContent, timestamp: Date.now() });
-      return newHistory;
+    setHistory((previousHistory) => {
+      const baseHistory = previousHistory.slice(0, historyIndex + 1);
+      const nextHistory = [
+        ...baseHistory,
+        { content: newContent, timestamp: Date.now() },
+      ].slice(-MAX_HISTORY_ENTRIES);
+
+      setHistoryIndex(nextHistory.length - 1);
+      return nextHistory;
     });
-    setHistoryIndex(historyIndex + 1);
   }, [historyIndex]);
 
   useEffect(() => {

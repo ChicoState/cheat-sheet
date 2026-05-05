@@ -75,6 +75,10 @@ describe('CreateCheatSheet Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.ResizeObserver = class ResizeObserver {
+      observe = vi.fn();
+      disconnect = vi.fn();
+    };
     CURATED_SUBJECT_VIDEOS['Math 101'] = [];
     useFormulas.mockReturnValue(mockUseFormulas);
     useLatex.mockReturnValue(mockUseLatex);
@@ -82,7 +86,7 @@ describe('CreateCheatSheet Component', () => {
   });
 
   it('renders correctly with default state', () => {
-    render(<CreateCheatSheet onSave={vi.fn()} onReset={vi.fn()} />);
+    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
 
     // Check title input
     expect(screen.getByLabelText(/Title:/i)).toBeInTheDocument();
@@ -104,11 +108,44 @@ describe('CreateCheatSheet Component', () => {
       getSelectedFormulasList: vi.fn().mockReturnValue(selectedFormulas) 
     });
 
-    render(<CreateCheatSheet onSave={vi.fn()} onReset={vi.fn()} />);
+    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: /Compile PDF/i }));
 
     expect(handleCompileOnlyMock).toHaveBeenCalledWith(selectedFormulas);
+  });
+
+  it('shrinks the subject panel on first compile without hiding the compile controls', () => {
+    const handleCompileOnlyMock = vi.fn();
+    const selectedFormulas = [{ name: 'test' }];
+
+    useLatex.mockReturnValue({ ...mockUseLatex, handleCompileOnly: handleCompileOnlyMock });
+    useFormulas.mockReturnValue({
+      ...mockUseFormulas,
+      selectedCount: 1,
+      getSelectedFormulasList: vi.fn().mockReturnValue(selectedFormulas),
+    });
+
+    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Compile PDF/i }));
+
+    expect(document.querySelector('.app-body')).toHaveStyle('--app-body-columns: 220px 10px minmax(0, 1fr) 10px 300px');
+    expect(screen.getByRole('button', { name: /Compile PDF/i })).toBeInTheDocument();
+    expect(handleCompileOnlyMock).toHaveBeenCalledWith(selectedFormulas);
+  });
+
+  it('keeps the LaTeX editor closed when compiled content exists', () => {
+    useLatex.mockReturnValue({
+      ...mockUseLatex,
+      content: '\\documentclass{article}',
+      pdfBlob: new Blob(['pdf'], { type: 'application/pdf' }),
+    });
+
+    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: /Show LaTeX editor/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Generated LaTeX Code:/i)).not.toBeInTheDocument();
   });
 
   it('passes selected formulas into compile', () => {

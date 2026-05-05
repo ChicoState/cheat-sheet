@@ -283,6 +283,12 @@ export const CURATED_SUBJECT_VIDEOS = {
   ],
 };
 
+const YOUTUBE_HOSTS = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be']);
+
+function isYouTubeHost(hostname = '') {
+  return YOUTUBE_HOSTS.has(String(hostname).toLowerCase());
+}
+
 export function getYouTubeVideoId(value = '') {
   const text = String(value).trim();
   if (!text) return '';
@@ -293,7 +299,11 @@ export function getYouTubeVideoId(value = '') {
 
   try {
     const url = new URL(text);
-    if (url.hostname.includes('youtu.be')) {
+    if (!isYouTubeHost(url.hostname)) {
+      return '';
+    }
+
+    if (url.hostname.toLowerCase() === 'youtu.be') {
       return url.pathname.split('/').filter(Boolean)[0] || '';
     }
 
@@ -367,15 +377,34 @@ export function getCuratedVideosForClasses(classNames) {
 
 export function getCuratedVideosForTopics(topics) {
   const seenTopics = new Set();
+  const seenClassWideVideos = new Set();
 
   return topics.flatMap(({ className, category }) => {
     const topicKey = `${className}:${category}`;
     if (seenTopics.has(topicKey)) return [];
     seenTopics.add(topicKey);
 
-    return (CURATED_SUBJECT_VIDEOS[className] || [])
+    const videos = (CURATED_SUBJECT_VIDEOS[className] || [])
       .map((entry, index) => normalizeCuratedVideo(entry, className, index, category))
       .filter(Boolean)
       .sort((a, b) => a.matchRank - b.matchRank);
+
+    const sectionSpecificVideos = videos.filter((video) => video.matchRank === 0);
+    if (sectionSpecificVideos.length) {
+      return sectionSpecificVideos;
+    }
+
+    const fallbackVideo = videos.find((video) => {
+      if (video.matchRank !== 1) return false;
+
+      // Class-wide fallback videos should fill sparse sections instead of
+      // repeating under every selected section for the same class.
+      return !seenClassWideVideos.has(`${className}:${video.videoId}`);
+    });
+
+    if (!fallbackVideo) return [];
+
+    seenClassWideVideos.add(`${className}:${fallbackVideo.videoId}`);
+    return [fallbackVideo];
   });
 }

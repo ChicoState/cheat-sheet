@@ -12,7 +12,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 from api.latex_utils import LATEX_HEADER, build_dynamic_header, build_latex_for_formulas, normalize_latex_layout
 from api.models import Template, CheatSheet, PracticeProblem
-from api.views import fetch_top_youtube_video, get_youtube_http_error_message
+from api.views import YOUTUBE_RESOURCE_CACHE, fetch_top_youtube_video, get_youtube_http_error_message
 
 
 @pytest.fixture
@@ -524,6 +524,9 @@ class TestTemplateAPI:
 
 @pytest.mark.django_db
 class TestYouTubeResourcesAPI:
+    def setup_method(self):
+        YOUTUBE_RESOURCE_CACHE.clear()
+
     @patch('api.views.fetch_top_youtube_video')
     def test_youtube_resources_configured(self, mock_fetch, api_client, monkeypatch):
         mock_fetch.return_value = {
@@ -542,6 +545,28 @@ class TestYouTubeResourcesAPI:
         assert response.status_code == 200
         assert response.data['configured'] is True
         assert len(response.data['resources']) == 1
+
+    @patch('api.views.fetch_top_youtube_video')
+    def test_youtube_resources_reuses_cached_results(self, mock_fetch, api_client, monkeypatch):
+        mock_fetch.return_value = {
+            'className': 'ALGEBRA I',
+            'category': 'Linear Equations',
+            'title': 'Algebra walkthrough',
+            'channel': 'YouTube',
+            'description': '',
+            'videoId': 'abc123',
+            'thumbnailUrl': 'https://example.com/thumb.jpg',
+        }
+        monkeypatch.setenv('YOUTUBE_API_KEY', 'test-key')
+        payload = {'topics': [{'className': 'ALGEBRA I', 'category': 'Linear Equations'}]}
+
+        first_response = api_client.post('/api/youtube-resources/', payload, format='json')
+        second_response = api_client.post('/api/youtube-resources/', payload, format='json')
+
+        assert first_response.status_code == 200
+        assert second_response.status_code == 200
+        assert first_response.data['resources'] == second_response.data['resources']
+        assert mock_fetch.call_count == 1
 
     def test_youtube_resources_missing_key(self, api_client, monkeypatch):
         monkeypatch.delenv('YOUTUBE_API_KEY', raising=False)

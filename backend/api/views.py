@@ -11,6 +11,7 @@ import tempfile
 import os
 import json
 import re
+import time
 from html import unescape
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -25,7 +26,9 @@ from .latex_utils import build_latex_for_formulas, normalize_latex_layout
 YOUTUBE_MAX_TOPICS = 6
 YOUTUBE_SEARCH_RESULT_LIMIT = 5
 YOUTUBE_MIN_VIEW_COUNT = 10_000
+YOUTUBE_RESOURCE_CACHE_TTL_SECONDS = 60 * 60 * 12
 YOUTUBE_TOPIC_SET = None
+YOUTUBE_RESOURCE_CACHE = {}
 
 # ------------------------------------------------------------------
 # Whitelist validation for layout parameters
@@ -114,6 +117,26 @@ def get_youtube_http_error_message(exc):
 def fetch_youtube_json(url):
     with urlopen(url, timeout=4) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def get_cached_youtube_resource(class_name, category):
+    cache_key = (class_name, category)
+    cached = YOUTUBE_RESOURCE_CACHE.get(cache_key)
+    if not cached:
+        return None
+
+    expires_at, resource = cached
+    if expires_at <= time.time():
+        YOUTUBE_RESOURCE_CACHE.pop(cache_key, None)
+        return None
+
+    return resource
+
+
+def set_cached_youtube_resource(class_name, category, resource):
+    cache_key = (class_name, category)
+    expires_at = time.time() + YOUTUBE_RESOURCE_CACHE_TTL_SECONDS
+    YOUTUBE_RESOURCE_CACHE[cache_key] = (expires_at, resource)
 
 
 def get_youtube_video_id(item):
@@ -448,12 +471,19 @@ def youtube_resources(request):
     resources = []
     errors = []
     for topic in sanitized_topics:
+        cached_resource = get_cached_youtube_resource(topic["className"], topic["category"])
+        if cached_resource is not None:
+            if cached_resource:
+                resources.append(cached_resource)
+            continue
+
         try:
             resource = fetch_top_youtube_video(topic["className"], topic["category"], api_key)
         except RuntimeError as exc:
             errors.append(str(exc))
             continue
 
+        set_cached_youtube_resource(topic["className"], topic["category"], resource or {})
         if resource and resource["videoId"]:
             resources.append(resource)
 

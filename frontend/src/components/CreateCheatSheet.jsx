@@ -430,7 +430,6 @@ const FormulaSelection = ({
   selectedClasses, 
   selectedCategories, 
   groupedFormulas,
-  videosByTopic,
   toggleClass, 
   toggleCategory, 
   selectedCount, 
@@ -439,7 +438,6 @@ const FormulaSelection = ({
   onReorderFormula,
   onRemoveClass,
   onRemoveFormula,
-  onOpenVideo,
 }) => {
   const [classesOpen, setClassesOpen] = useState(true);
   const [sectionsOpen, setSectionsOpen] = useState(true);
@@ -489,37 +487,14 @@ const FormulaSelection = ({
             const isSpecialClass = cls.is_special || (cls.categories.length === 1 && cls.categories[0].name === cls.name);
 
             if (isSpecialClass) {
-              const categoryName = cls.categories[0]?.name || cls.name;
-              const topicKey = getVideoTopicKey({ className: cls.name, category: categoryName });
-              const curatedVideos = videosByTopic[topicKey] || [];
-
               return (
                 <div key={cls.name} className="class-category-section">
                   <p className="inline-note">
                     ✓ {cls.name} selected - all formulas included
                   </p>
-                  {!!curatedVideos.length && (
-                    <div className="class-section-video-groups">
-                      <SectionVideoPicks
-                        className={cls.name}
-                        category={categoryName}
-                        curatedVideos={curatedVideos}
-                        onOpen={onOpenVideo}
-                        compact
-                      />
-                    </div>
-                  )}
                 </div>
               );
             }
-
-            const selectedCategoryVideoGroups = cls.categories
-              .filter((cat) => selectedCategories[`${cls.name}:${cat.name}`])
-              .map((cat) => ({
-                category: cat.name,
-                videos: videosByTopic[getVideoTopicKey({ className: cls.name, category: cat.name })] || [],
-              }))
-              .filter((group) => group.videos.length > 0);
 
             return (
               <div key={cls.name} className="class-category-section">
@@ -557,20 +532,6 @@ const FormulaSelection = ({
                     );
                   })}
                 </div>
-                {!!selectedCategoryVideoGroups.length && (
-                  <div className="class-section-video-groups">
-                    {selectedCategoryVideoGroups.map((group) => (
-                      <SectionVideoPicks
-                        key={group.category}
-                        className={cls.name}
-                        category={group.category}
-                        curatedVideos={group.videos}
-                        onOpen={onOpenVideo}
-                        compact
-                      />
-                    ))}
-                  </div>
-                )}
               </div>
             );
           })}
@@ -728,7 +689,7 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
   );
 };
 
-const PdfPreview = ({ pdfBlob, compileError, isCompiling }) => {
+const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => {
   const [numPages, setNumPages] = useState(null);
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(null);
@@ -771,19 +732,40 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling }) => {
     ? Math.max(320, Math.round((containerHeight - 24) * zoom))
     : undefined;
 
+  const updatePreviewSize = useCallback(() => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    setContainerWidth(rect.width);
+    setContainerHeight(rect.height);
+  }, []);
+
   useEffect(() => {
-    if (!containerRef.current) return;
+    const container = containerRef.current;
+    if (!container) return;
+
+    updatePreviewSize();
+
+    if (!window.ResizeObserver) {
+      window.addEventListener('resize', updatePreviewSize);
+      return () => window.removeEventListener('resize', updatePreviewSize);
+    }
 
     const resizeObserver = new window.ResizeObserver((entries) => {
-      for (let entry of entries) {
-        setContainerWidth(entry.contentRect.width);
-        setContainerHeight(entry.contentRect.height);
-      }
+      const entry = entries[0];
+      if (!entry) return;
+
+      setContainerWidth(entry.contentRect.width);
+      setContainerHeight(entry.contentRect.height);
     });
 
-    resizeObserver.observe(containerRef.current);
+    resizeObserver.observe(container);
     return () => resizeObserver.disconnect();
-  }, []);
+  }, [updatePreviewSize]);
+
+  useEffect(() => {
+    updatePreviewSize();
+  }, [layoutSignature, updatePreviewSize]);
 
   return (
     <div className="pdf-preview-shell">
@@ -1045,11 +1027,11 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const [panelLayout, setPanelLayout] = useState(() => loadPanelLayout());
   const [videoSearchRequest, setVideoSearchRequest] = useState(null);
   const pendingPanelLayoutRef = useRef(panelLayout);
+  const hasCollapsedLeftPanelOnceRef = useRef(false);
   const lastAutoSavedPdfRef = useRef(null);
   const lastVideoOpenerRef = useRef(null);
   const appBodyRef = useRef(null);
   const centerPanelRef = useRef(null);
-  const hasAutoOpenedLatexRef = useRef(false);
   const snapshots = useMemo(() => [...(initialData?.compileHistory || [])].reverse(), [initialData?.compileHistory]);
   const selectedClassNames = useMemo(
     () => classesData.filter((cls) => selectedClasses[cls.name]).map((cls) => cls.name),
@@ -1129,13 +1111,6 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       topics: [topic],
     });
   };
-
-  useEffect(() => {
-    if (!pdfBlob || hasAutoOpenedLatexRef.current) return;
-
-    hasAutoOpenedLatexRef.current = true;
-    setShowLatex(true);
-  }, [pdfBlob]);
 
   useEffect(() => {
     if (!modalVideo) return undefined;
@@ -1287,11 +1262,24 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   ].join(' ');
 
   const workspaceSplitTemplate = `minmax(${LATEX_PANEL_MIN_WIDTH}px, ${panelLayout.latexWidth}px) 10px minmax(${MIN_PREVIEW_WIDTH}px, 1fr)`;
+  const previewLayoutSignature = `${appBodyGridTemplate}|${workspaceSplitTemplate}|${leftPanelVisible}|${rightPanelVisible}|${showLatex}`;
 
-  const handleToggleClass = (className) => {
-    toggleClass(className);
-  };
   const handleCompileClick = () => {
+    if (!hasCollapsedLeftPanelOnceRef.current) {
+      // First compile: keep controls reachable while reclaiming preview space.
+      hasCollapsedLeftPanelOnceRef.current = true;
+      setPanelLayout((current) => {
+        const nextLayout = {
+          ...current,
+          leftWidth: LEFT_PANEL_MIN_WIDTH,
+        };
+
+        pendingPanelLayoutRef.current = nextLayout;
+        localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(nextLayout));
+        return nextLayout;
+      });
+    }
+
     handleCompileOnly(getSelectedFormulasList());
   };
 
@@ -1345,16 +1333,14 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                 selectedClasses={selectedClasses}
                 selectedCategories={selectedCategories}
                 groupedFormulas={groupedFormulas}
-                toggleClass={handleToggleClass}
+                toggleClass={toggleClass}
                 toggleCategory={toggleCategory}
-                videosByTopic={curatedVideosByTopic}
                 selectedCount={selectedCount}
                 hasSelectedClasses={hasSelectedClasses}
                 onReorderClass={reorderClass}
                 onReorderFormula={reorderFormula}
                 onRemoveClass={removeClassFromOrder}
                 onRemoveFormula={removeSingleFormula}
-                onOpenVideo={handleOpenVideo}
               />
 
               <LayoutOptions
@@ -1526,7 +1512,12 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                    />
                    <div className="workspace-split-pane workspace-split-pane-preview">
                      {pdfBlob || compileError || isCompiling ? (
-                       <PdfPreview pdfBlob={pdfBlob} compileError={compileError} isCompiling={isCompiling} />
+                       <PdfPreview
+                          pdfBlob={pdfBlob}
+                          compileError={compileError}
+                          isCompiling={isCompiling}
+                          layoutSignature={previewLayoutSignature}
+                        />
                      ) : (
                        <div className="pdf-placeholder">
                          <span>📄</span>
@@ -1540,7 +1531,12 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                ) : (
                  <>
                    {pdfBlob || compileError || isCompiling ? (
-                     <PdfPreview pdfBlob={pdfBlob} compileError={compileError} isCompiling={isCompiling} />
+                     <PdfPreview
+                        pdfBlob={pdfBlob}
+                        compileError={compileError}
+                        isCompiling={isCompiling}
+                        layoutSignature={previewLayoutSignature}
+                      />
                    ) : (
                      <div className="pdf-placeholder">
                        <span>📄</span>
@@ -1598,6 +1594,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                         searchError={hasSearchedTopic ? videoError : ''}
                         hasSearched={hasSearchedTopic}
                         allowSearch
+                        compact
                       />
                     </div>
                   );

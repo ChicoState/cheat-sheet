@@ -10,7 +10,6 @@
 
 <p align="center">
   <a href="https://github.com/ChicoState/cheat-sheet/actions/workflows/ci.yml"><img src="https://github.com/ChicoState/cheat-sheet/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
-  <a href="https://chicostate.github.io/cheat-sheet/"><img src="https://img.shields.io/website?url=https%3A%2F%2Fchicostate.github.io%2Fcheat-sheet%2F&up_message=up&down_message=down&label=project%20page" alt="Project page status" /></a>
   <img src="https://img.shields.io/github/languages/top/ChicoState/cheat-sheet" alt="Top language" />
   <img src="https://img.shields.io/badge/node-24-339933?logo=node.js&logoColor=white" alt="Node 24" />
   <img src="https://img.shields.io/badge/python-3.14-3776AB?logo=python&logoColor=white" alt="Python 3.14" />
@@ -51,25 +50,33 @@ The main editor is a three-region workspace:
 ### Left rail
 
 - class checklist
-- section/category toggles
+- card-style section/category toggles with clearer collapse affordances
 - drag-and-drop formula ordering grouped by class
 - layout controls for columns, text size, spacing, and margins
 - primary actions for compile, save, reset, and downloads
 
 ### Center workspace
 
-- top toolbar with subject toggle, snapshot toggle, save, print, and preview rebuild actions
-- optional split view with LaTeX editor on one side and compiled PDF preview on the other
+- top toolbar with subject toggle, snapshot toggle, save, print, video rail toggle, and manual LaTeX editor toggle
+- optional split view with LaTeX editor on one side and compiled PDF preview on the other; the editor stays closed until the user opens it
 - PDF preview controls for zoom in/out, reset, fit width, fit height, and print
 - animated recompilation overlay while the preview refreshes
 
 ### Right rail
 
-- section-aware YouTube recommendations
-- one top YouTube result per selected category
-- grouped display by class with inline thumbnails and modal playback
+- compact section-aware study video recommendations
+- one curated video shown by default per selected section, with section-level expansion for more curated links
+- per-section YouTube search only when the curated picks are not enough
+- inline thumbnails with modal playback; video cards live only in the right rail
 
 ## Features
+
+### Recent updates
+
+- clearer left-rail section disclosures and a first-compile rail shrink for a wider preview
+- curated class/section video links with compact right-rail cards and API search kept as a per-section fallback
+- LaTeX editor remains closed by default so the compiled PDF stays front and center
+- GitHub Pages project-page assets were removed; the app is now documented as a local/Docker full-stack project
 
 ### Editing and generation
 
@@ -80,6 +87,7 @@ The main editor is a three-region workspace:
 - compile through the backend with Tectonic
 - PDF preview with button-driven zoom controls
 - print support from the current compiled PDF
+- first compile narrows the subject rail to its minimum width so the preview has more room
 
 ### Layout controls
 
@@ -100,7 +108,8 @@ The main editor is a three-region workspace:
 ### UI workflow
 
 - resizable left rail, LaTeX pane, and right rail
-- hide/show subject rail without losing access to save/compile controls
+- hide/show subject and video rails from the toolbar
+- LaTeX editor hidden by default after compile to keep the PDF preview as the main focus
 - responsive layout cleanup for tighter desktop widths and smaller screens
 - compile-state loading shell for preview refreshes
 
@@ -108,6 +117,8 @@ The main editor is a three-region workspace:
 
 - backend-proxied YouTube search so the API key never reaches the browser
 - repo-root `YOUTUBE_API_KEY` support for local runs and Docker Compose passthrough
+- curated class/section links in `frontend/src/data/subjectVideos.js` shown before any API call
+- section-scoped “search more” behavior so the YouTube API is a last-resort fallback for the clicked section only
 - request validation and error handling for missing key, invalid topics, empty results, and upstream failures
 
 ## Tech stack
@@ -163,13 +174,13 @@ Backend (Django + DRF)
 │   ├── src/
 │   │   ├── components/            # Editor, dashboard, auth, UI components
 │   │   ├── context/               # Auth context
+│   │   ├── data/                  # Curated study video links
 │   │   ├── hooks/                 # Formula, latex, YouTube resource hooks
 │   │   ├── App.css                # Main application styling
 │   │   └── App.jsx                # Routing, shell, save workflow
 │   ├── Dockerfile
 │   ├── package.json
 │   └── vite.config.js
-├── docs/                          # Static/project-page assets
 ├── .github/workflows/             # CI workflows
 ├── docker-compose.yml
 ├── current-ui.png
@@ -250,7 +261,7 @@ Services:
 3. Reorder class groups or formulas if needed.
 4. Generate/compile the sheet.
 5. Adjust columns, spacing, font size, or margins.
-6. Rebuild the preview or let layout-only changes trigger recompilation.
+6. Open the LaTeX editor only if you need to inspect or edit the generated source.
 7. Save locally or, if signed in, save to your account.
 8. Restore a compile snapshot if you want to jump back to an earlier draft.
 9. Export `.pdf` / `.tex` or print directly from the preview toolbar.
@@ -298,6 +309,10 @@ Services:
 - CALCULUS II
 - CALCULUS III
 - UNIT CIRCLE
+- PHYSICS I
+- PHYSICS II
+- STATISTICS I
+- STATISTICS II
 
 Each class contains multiple categories and formulas in `backend/api/formula_data/`.
 
@@ -321,6 +336,14 @@ pytest -v
 ruff check .
 ```
 
+For the Docker-backed backend checks used before release:
+
+```bash
+docker compose run --rm backend python manage.py check
+docker compose run --rm backend pytest -q
+docker compose run --rm backend ruff check .
+```
+
 ### Docker
 
 ```bash
@@ -334,7 +357,7 @@ GitHub Actions verifies:
 
 - frontend install and build
 - backend lint/tests
-- container build health
+- container build verification
 
 ## Development notes
 
