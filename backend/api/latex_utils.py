@@ -130,7 +130,7 @@ def append_text_heading(lines, text):
     lines.append(r"\noindent " + text + r"\par")
 
 
-def build_layout_comment_block(columns=2, font_size="10pt", margins="0.25in", spacing="large"):
+def build_layout_comment_block(columns=4, font_size="9pt", margins="0.15in", spacing="small"):
     return [
         f"% @cheatsheet-layout columns: {columns} | change layout options up top to update columns",
         f"% @cheatsheet-layout font_size: {font_size} | change layout options up top to update text size",
@@ -140,7 +140,7 @@ def build_layout_comment_block(columns=2, font_size="10pt", margins="0.25in", sp
     ]
 
 
-def build_dynamic_header(columns=2, font_size="10pt", margins="0.25in", spacing="large"):
+def build_dynamic_header(columns=4, font_size="9pt", margins="0.15in", spacing="small"):
     """
     Build a dynamic LaTeX header based on user-selected options.
     """
@@ -188,7 +188,7 @@ def build_dynamic_footer(columns=2):
     return "\n".join(footer_lines)
 
 
-def normalize_latex_layout(content, columns=2, font_size="10pt", margins="0.25in", spacing="large"):
+def normalize_latex_layout(content, columns=4, font_size="9pt", margins="0.15in", spacing="small"):
     """Rebuild document wrappers so current layout controls apply to existing LaTeX content."""
     if not content:
         return content
@@ -225,7 +225,7 @@ def normalize_latex_layout(content, columns=2, font_size="10pt", margins="0.25in
     return header + body + ("\n" if body else "") + footer
 
 
-def build_latex_for_formulas(selected_formulas, columns=2, font_size="10pt", margins="0.25in", spacing="large"):
+def build_latex_for_formulas(selected_formulas, columns=4, font_size="9pt", margins="0.15in", spacing="small"):
     """
     Given a list of selected formulas (each with class_name, category, name, latex),
     build a complete LaTeX document.

@@ -9,7 +9,11 @@ from django.core.exceptions import ImproperlyConfigured
 import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
+ORIGINAL_ENV = dict(os.environ)
+load_dotenv(BASE_DIR.parent / ".env")
+load_dotenv(BASE_DIR / ".env", override=True)
+for key, value in ORIGINAL_ENV.items():
+    os.environ[key] = value
 
 DEBUG = os.getenv("DJANGO_DEBUG", "True") == "True"
 

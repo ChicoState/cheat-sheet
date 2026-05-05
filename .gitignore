@@ -76,3 +76,5 @@ test-results/
 blob-report/
 .playwright-mcp/
 
+# Local R history
+.Rhistory

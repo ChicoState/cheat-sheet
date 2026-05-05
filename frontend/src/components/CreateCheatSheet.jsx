@@ -1,16 +1,103 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useId } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
-import { SUBJECT_VIDEOS } from '../data/subjectVideos';
 import { CSS } from '@dnd-kit/utilities';
 import { useFormulas } from '../hooks/formulas';
 import { useLatex } from '../hooks/latex';
+import { useYouTubeResources } from '../hooks/youtubeResources';
+import { getCuratedVideosForTopics } from '../data/subjectVideos';
 import { Document, Page, pdfjs } from 'react-pdf';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
   import.meta.url,
 ).toString();
+
+const PANEL_LAYOUT_STORAGE_KEY = 'editorPanelLayout';
+const DEFAULT_PANEL_LAYOUT = {
+  leftWidth: 280,
+  rightWidth: 300,
+  latexWidth: 430,
+};
+
+const LEFT_PANEL_MIN_WIDTH = 220;
+const LEFT_PANEL_MAX_WIDTH = 420;
+const RIGHT_PANEL_MIN_WIDTH = 240;
+const RIGHT_PANEL_MAX_WIDTH = 420;
+const LATEX_PANEL_MIN_WIDTH = 320;
+const LATEX_PANEL_MAX_WIDTH = 760;
+const RESIZER_WIDTH = 10;
+const MIN_CENTER_WIDTH = 360;
+const MIN_PREVIEW_WIDTH = 260;
+const DEFAULT_PDF_ZOOM = 0.85;
+const MIN_SPLIT_CENTER_WIDTH = LATEX_PANEL_MIN_WIDTH + RESIZER_WIDTH + MIN_PREVIEW_WIDTH;
+
+function loadPanelLayout() {
+  try {
+    const saved = localStorage.getItem(PANEL_LAYOUT_STORAGE_KEY);
+    if (!saved) return DEFAULT_PANEL_LAYOUT;
+
+    const parsed = JSON.parse(saved);
+    return {
+      leftWidth: Number.isFinite(parsed.leftWidth) ? parsed.leftWidth : DEFAULT_PANEL_LAYOUT.leftWidth,
+      rightWidth: Number.isFinite(parsed.rightWidth) ? parsed.rightWidth : DEFAULT_PANEL_LAYOUT.rightWidth,
+      latexWidth: Number.isFinite(parsed.latexWidth) ? parsed.latexWidth : DEFAULT_PANEL_LAYOUT.latexWidth,
+    };
+  } catch {
+    return DEFAULT_PANEL_LAYOUT;
+  }
+}
+
+const clampPanelWidth = (value, min, max) => Math.min(max, Math.max(min, value));
+
+function constrainPanelLayout(layout, { bodyWidth, leftPanelVisible, rightPanelVisible, showLatex }) {
+  const minimumCenterWidth = showLatex ? MIN_SPLIT_CENTER_WIDTH : MIN_CENTER_WIDTH;
+  const leftReserve = leftPanelVisible ? RESIZER_WIDTH : 0;
+  const rightReserve = rightPanelVisible ? RESIZER_WIDTH : 0;
+  const next = {
+    leftWidth: clampPanelWidth(layout.leftWidth, LEFT_PANEL_MIN_WIDTH, LEFT_PANEL_MAX_WIDTH),
+    rightWidth: clampPanelWidth(layout.rightWidth, RIGHT_PANEL_MIN_WIDTH, RIGHT_PANEL_MAX_WIDTH),
+    latexWidth: clampPanelWidth(layout.latexWidth, LATEX_PANEL_MIN_WIDTH, LATEX_PANEL_MAX_WIDTH),
+  };
+
+  if (!Number.isFinite(bodyWidth) || bodyWidth <= 0) {
+    return next;
+  }
+
+  const maxLeftWidth = Math.max(
+    LEFT_PANEL_MIN_WIDTH,
+    Math.min(
+      LEFT_PANEL_MAX_WIDTH,
+      bodyWidth - (rightPanelVisible ? next.rightWidth + rightReserve : 0) - leftReserve - minimumCenterWidth,
+    ),
+  );
+  next.leftWidth = clampPanelWidth(next.leftWidth, LEFT_PANEL_MIN_WIDTH, maxLeftWidth);
+
+  const maxRightWidth = Math.max(
+    RIGHT_PANEL_MIN_WIDTH,
+    Math.min(
+      RIGHT_PANEL_MAX_WIDTH,
+      bodyWidth - (leftPanelVisible ? next.leftWidth + leftReserve : 0) - rightReserve - minimumCenterWidth,
+    ),
+  );
+  next.rightWidth = clampPanelWidth(next.rightWidth, RIGHT_PANEL_MIN_WIDTH, maxRightWidth);
+
+  const estimatedCenterWidth = bodyWidth
+    - (leftPanelVisible ? next.leftWidth + leftReserve : 0)
+    - (rightPanelVisible ? next.rightWidth + rightReserve : 0);
+  const maxLatexWidth = Math.max(
+    LATEX_PANEL_MIN_WIDTH,
+    Math.min(LATEX_PANEL_MAX_WIDTH, estimatedCenterWidth - RESIZER_WIDTH - MIN_PREVIEW_WIDTH),
+  );
+  next.latexWidth = clampPanelWidth(next.latexWidth, LATEX_PANEL_MIN_WIDTH, maxLatexWidth);
+
+  return next;
+}
+
+const samePanelLayout = (a, b) => (
+  a.leftWidth === b.leftWidth && a.rightWidth === b.rightWidth && a.latexWidth === b.latexWidth
+);
+
 
 function SortableFormulaItem({ id, formula, onRemove, className }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({ 
@@ -45,6 +132,36 @@ function SortableFormulaItem({ id, formula, onRemove, className }) {
   );
 }
 
+function CollapsiblePanelSection({ title, isOpen, onToggle, children, countBadge = null, className = '' }) {
+  const sectionId = useId();
+  const toggleId = `${sectionId}-toggle`;
+  const panelId = `${sectionId}-panel`;
+
+  return (
+    <section className={`left-panel-section ${className}`.trim()}>
+      <button
+        id={toggleId}
+        type="button"
+        className={`left-panel-section-toggle ${isOpen ? 'open' : ''}`}
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        aria-controls={panelId}
+      >
+        <span className="left-panel-section-title-row">
+          <span className="left-panel-section-title">{title}</span>
+          {countBadge ? <span className="left-panel-section-badge">{countBadge}</span> : null}
+        </span>
+        <span className="left-panel-section-icon" aria-hidden="true">▸</span>
+      </button>
+      {isOpen ? (
+        <div id={panelId} className="left-panel-section-body" role="region" aria-labelledby={toggleId}>
+          {children}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function SortableClassGroup({ group, isCollapsed, onToggleCollapse, onRemoveClass, onRemoveFormula }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({ 
     id: `class-${group.class}`,
@@ -72,7 +189,6 @@ function SortableClassGroup({ group, isCollapsed, onToggleCollapse, onRemoveClas
           <span className="collapse-icon">{isCollapsed ? '▶' : '▼'}</span>
           <span 
             className="class-group-title" 
-            style={{ fontWeight: 'bold', marginLeft: '0.5rem' }}
           >
             {group.class} ({group.formulas.length})
           </span>
@@ -159,10 +275,7 @@ function FormulaReorderPanel({ groupedFormulas, onReorderClass, onReorderFormula
 
   return (
     <div className="formula-reorder-panel">
-      <label style={{ fontWeight: 'bold', marginTop: '1rem', marginBottom: '0.5rem', display: 'block' }}>
-        Drag to reorder formulas (top appears first in PDF)
-      </label>
-      <div className="reorder-instructions">
+      <div className="reorder-instructions subtle-copy">
         <span>Click the bar to collapse. Click and hold to move.</span>
       </div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -183,6 +296,134 @@ function FormulaReorderPanel({ groupedFormulas, onReorderClass, onReorderFormula
   );
 }
 
+const UNTITLED_TITLE_REGEX = /^Untitled Sheet \(\d+\)$/;
+
+const formatViewCount = (viewCount) => {
+  const count = Number(viewCount || 0);
+  if (!count) return '';
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(count >= 10_000_000 ? 0 : 1)}M views`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(count >= 10_000 ? 0 : 1)}K views`;
+  return `${count} views`;
+};
+
+const VideoCard = ({ video, onOpen, className = '', compact = false }) => (
+  <button
+    type="button"
+    className={`video-card-sm ${compact ? 'compact' : ''} ${className}`.trim()}
+    onClick={(event) => onOpen(video, event.currentTarget)}
+    aria-label={`Open ${video.title}`}
+  >
+    <div className="video-thumb-sm">
+      <img src={video.thumbnailUrl || `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`} alt={video.title} loading="lazy" />
+      <div className="play-icon">▶</div>
+    </div>
+    {compact ? null : (
+      <div className="video-info-sm">
+        <div className="video-topic-chip">{video.category}</div>
+        <div className="v-title">{video.title}</div>
+        <div className="v-channel">
+          {video.channel}{formatViewCount(video.viewCount) ? ` · ${formatViewCount(video.viewCount)}` : ''}
+        </div>
+      </div>
+    )}
+  </button>
+);
+
+const CURATED_VIDEO_PREVIEW_COUNT = 1;
+
+const getVideoTopicKey = ({ className, category }) => `${className}:${category}`;
+
+const getVideoResourceKey = (video) => `${video.className}:${video.category}:${video.videoId || video.title}`;
+
+const groupVideosByTopic = (resources) => resources.reduce((groups, resource) => {
+  const topicKey = getVideoTopicKey(resource);
+  if (!groups[topicKey]) {
+    groups[topicKey] = [];
+  }
+  groups[topicKey].push(resource);
+  return groups;
+}, {});
+
+const SectionVideoPicks = ({
+  className,
+  category,
+  curatedVideos = [],
+  searchedVideos = [],
+  onOpen,
+  onSearchMore,
+  isSearching = false,
+  searchError = '',
+  hasSearched = false,
+  allowSearch = false,
+  compact = false,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const sectionVideoListId = useId();
+  const hiddenCuratedCount = Math.max(curatedVideos.length - CURATED_VIDEO_PREVIEW_COUNT, 0);
+  const visibleCuratedVideos = isExpanded
+    ? curatedVideos
+    : curatedVideos.slice(0, CURATED_VIDEO_PREVIEW_COUNT);
+
+  return (
+    <div className={`section-video-picks ${compact ? 'compact' : ''}`.trim()} aria-label={`${className} ${category} video picks`}>
+      {curatedVideos.length > 0 ? (
+        <div id={sectionVideoListId} className="section-video-list">
+          {visibleCuratedVideos.map((video) => (
+            <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={onOpen} compact={compact} />
+          ))}
+        </div>
+      ) : (
+        <p className="inline-video-status">No videos yet.</p>
+      )}
+
+      {hiddenCuratedCount > 0 && (
+        <button
+          type="button"
+          className="video-more-toggle"
+          onClick={() => setIsExpanded((current) => !current)}
+          aria-expanded={isExpanded}
+          aria-controls={sectionVideoListId}
+          aria-label={isExpanded ? 'Hide extra videos' : `Show ${hiddenCuratedCount} more videos`}
+          title={isExpanded ? 'Hide extra videos' : `Show ${hiddenCuratedCount} more videos`}
+        >
+          {isExpanded ? '−' : `+${hiddenCuratedCount}`}
+        </button>
+      )}
+
+      {allowSearch && (
+        <div className="section-video-search-row">
+          <button
+            type="button"
+            className="btn-toggle-panel section-video-search"
+            onClick={() => onSearchMore({ className, category })}
+            disabled={isSearching}
+            aria-label={`Search YouTube for more in ${category}`}
+            title={`Search YouTube for more in ${category}`}
+          >
+            {isSearching ? '↻' : '⌕'}
+          </button>
+        </div>
+      )}
+
+      {isSearching && !searchedVideos.length && !searchError && (
+        <p className="inline-video-status">Searching…</p>
+      )}
+
+      {hasSearched && searchError && !isSearching && (
+        <p className="inline-video-status inline-video-status-error">{searchError}</p>
+      )}
+
+      {!!searchedVideos.length && (
+        <div className="section-video-results">
+          {searchedVideos.map((video) => (
+            <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={onOpen} compact={compact} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const FormulaSelection = ({ 
   classesData, 
   selectedClasses, 
@@ -190,129 +431,137 @@ const FormulaSelection = ({
   groupedFormulas,
   toggleClass, 
   toggleCategory, 
-  onGenerate, 
-  isGenerating, 
   selectedCount, 
   hasSelectedClasses,
   onReorderClass,
   onReorderFormula,
   onRemoveClass,
-  onRemoveFormula
-}) => (
-  <div className="formula-selection">
-    <label style={{ fontWeight: 'bold', marginBottom: '0.5rem', display: 'block' }}>
-      Select classes
-    </label>
-    
-    <div className="class-checkboxes">
-      {classesData.map((cls) => {
-        const isChecked = !!selectedClasses[cls.name];
-        return (
-          <label key={cls.name} className={`class-checkbox-label ${isChecked ? 'checked' : ''}`} onClick={(e) => {
-            e.preventDefault();
-            toggleClass(cls.name);
-          }}>
-            <input
-              type="checkbox"
-              checked={isChecked}
-              readOnly
-            />
-            {cls.name}
-          </label>
-        );
-      })}
-    </div>
+  onRemoveFormula,
+  collapseClassesSignal = 0,
+}) => {
+  const [classesOpen, setClassesOpen] = useState(true);
+  const [sectionsOpen, setSectionsOpen] = useState(true);
+  const [reorderOpen, setReorderOpen] = useState(true);
 
-    {hasSelectedClasses && (
-      <div className="category-dropdowns">
-        <label style={{ fontWeight: 'bold', marginTop: '1rem', marginBottom: '0.5rem', display: 'block' }}>
-          Select sections
-        </label>
-        
-        {classesData.map((cls) => {
-          if (!selectedClasses[cls.name]) return null;
-          
-          const isSpecialClass = cls.is_special || (cls.categories.length === 1 && cls.categories[0].name === cls.name);
-          
-          if (isSpecialClass) {
+  useEffect(() => {
+    if (collapseClassesSignal > 0) {
+      setClassesOpen(false);
+    }
+  }, [collapseClassesSignal]);
+
+  return (
+    <div className="formula-selection">
+      <CollapsiblePanelSection
+        title="Select classes"
+        isOpen={classesOpen}
+        onToggle={() => setClassesOpen((current) => !current)}
+        countBadge={selectedCount > 0 ? `${selectedCount}` : null}
+      >
+        <div className="class-checkboxes">
+          {classesData.map((cls) => {
+            const isChecked = !!selectedClasses[cls.name];
             return (
-              <div key={cls.name} className="class-category-section">
-                <p style={{ fontSize: '0.9rem', color: '#666', marginLeft: '0.5rem' }}>
-                  ✓ {cls.name} selected - all formulas included
-                </p>
-              </div>
-            );
-          }
-          
-          return (
-            <div key={cls.name} className="class-category-section">
-              <label className="class-category-label">{cls.name}:</label>
-              <label className="select-all-label">
+              <label key={cls.name} className={`class-checkbox-label ${isChecked ? 'checked' : ''}`}>
                 <input
                   type="checkbox"
-                  checked={cls.categories.every(cat => selectedCategories[`${cls.name}:${cat.name}`])}
-                  onChange={() => {
-                    const allSelected = cls.categories.every(cat => selectedCategories[`${cls.name}:${cat.name}`]);
-                    cls.categories.forEach(cat => {
-                      if (allSelected) {
-                        toggleCategory(cls.name, cat.name);
-                      } else if (!selectedCategories[`${cls.name}:${cat.name}`]) {
-                        toggleCategory(cls.name, cat.name);
-                      }
-                    });
-                  }}
+                  checked={isChecked}
+                  onChange={() => toggleClass(cls.name)}
                 />
-                Include all sections
+                {cls.name}
               </label>
-              <div className="category-checkboxes">
-                {cls.categories.map((cat) => {
-                  const key = `${cls.name}:${cat.name}`;
-                  const isChecked = !!selectedCategories[key];
-                  return (
-                    <label key={cat.name} className={`category-checkbox-label ${isChecked ? 'checked' : ''}`} onClick={(e) => {
-                      e.preventDefault();
-                      toggleCategory(cls.name, cat.name);
-                    }}>
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        readOnly
-                      />
-                      {cat.name} ({cat.formulas.length} formulas)
-                    </label>
-                  );
-                })}
+            );
+          })}
+        </div>
+
+        {selectedCount > 0 && (
+          <p className="subtle-copy selection-count-copy">
+            {selectedCount} formula(s) will be included
+          </p>
+        )}
+      </CollapsiblePanelSection>
+
+      {hasSelectedClasses && (
+        <CollapsiblePanelSection
+          title="Select sections"
+          isOpen={sectionsOpen}
+          onToggle={() => setSectionsOpen((current) => !current)}
+          className="category-dropdowns"
+        >
+          {classesData.map((cls) => {
+            if (!selectedClasses[cls.name]) return null;
+
+            const isSpecialClass = cls.is_special || (cls.categories.length === 1 && cls.categories[0].name === cls.name);
+
+            if (isSpecialClass) {
+              return (
+                <div key={cls.name} className="class-category-section">
+                  <p className="inline-note">
+                    ✓ {cls.name} selected - all formulas included
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div key={cls.name} className="class-category-section">
+                <label className="class-category-label">{cls.name}:</label>
+                <label className="select-all-label">
+                  <input
+                    type="checkbox"
+                    checked={cls.categories.every(cat => selectedCategories[`${cls.name}:${cat.name}`])}
+                    onChange={() => {
+                      const allSelected = cls.categories.every(cat => selectedCategories[`${cls.name}:${cat.name}`]);
+                      cls.categories.forEach(cat => {
+                        if (allSelected) {
+                          toggleCategory(cls.name, cat.name);
+                        } else if (!selectedCategories[`${cls.name}:${cat.name}`]) {
+                          toggleCategory(cls.name, cat.name);
+                        }
+                      });
+                    }}
+                  />
+                  Include all sections
+                </label>
+                <div className="category-checkboxes">
+                  {cls.categories.map((cat) => {
+                    const key = `${cls.name}:${cat.name}`;
+                    const isChecked = !!selectedCategories[key];
+                    return (
+                      <label key={cat.name} className={`category-checkbox-label ${isChecked ? 'checked' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleCategory(cls.name, cat.name)}
+                        />
+                        {cat.name} ({cat.formulas.length} formulas)
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-    )}
+            );
+          })}
+        </CollapsiblePanelSection>
+      )}
 
-    <FormulaReorderPanel 
-      groupedFormulas={groupedFormulas} 
-      onReorderClass={onReorderClass}
-      onReorderFormula={onReorderFormula}
-      onRemoveClass={onRemoveClass}
-      onRemoveFormula={onRemoveFormula}
-    />
-
-    <button
-      type="button"
-      onClick={onGenerate}
-      className="btn primary generate-btn"
-      disabled={isGenerating || selectedCount === 0}
-    >
-      {isGenerating ? 'Generating...' : 'Generate Cheat Sheet'}
-    </button>
-
-    {selectedCount > 0 && (
-      <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem' }}>
-        {selectedCount} formula(s) will be included
-      </p>
-    )}
-  </div>
-);
+      {groupedFormulas.length > 0 && (
+        <CollapsiblePanelSection
+          title="Drag to reorder formulas"
+          isOpen={reorderOpen}
+          onToggle={() => setReorderOpen((current) => !current)}
+        >
+          <FormulaReorderPanel 
+            groupedFormulas={groupedFormulas} 
+            onReorderClass={onReorderClass}
+            onReorderFormula={onReorderFormula}
+            onRemoveClass={onRemoveClass}
+            onRemoveFormula={onRemoveFormula}
+          />
+        </CollapsiblePanelSection>
+      )}
+    </div>
+  );
+};
 
 const COMPILE_ERROR_LINE_REGEX = /document\.tex:(\d+):/g;
 const APP_LAYOUT_COMMENT_PREFIX = '% @cheatsheet-layout';
@@ -434,7 +683,7 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
             value={content}
             onChange={(e) => onChange(e.target.value)}
             onScroll={handleScroll}
-            placeholder='Select classes and categories above, then click "Generate Cheat Sheet" to see the LaTeX code here.'
+            placeholder='Select classes and categories above, then click "Compile PDF" to see the LaTeX code here.'
             className={`textarea-field ${isModified ? 'modified' : ''}`}
             rows={15}
             spellCheck="false"
@@ -446,78 +695,192 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
   );
 };
 
-const PdfPreview = ({ pdfBlob, compileError }) => {
+const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => {
   const [numPages, setNumPages] = useState(null);
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(null);
+  const [containerHeight, setContainerHeight] = useState(null);
+  const [zoom, setZoom] = useState(DEFAULT_PDF_ZOOM);
+  const [viewMode, setViewMode] = useState('custom');
 
-  useEffect(() => {
-    if (!containerRef.current) return;
+  const clampZoom = (value) => Math.min(2, Math.max(0.5, value));
 
-    const resizeObserver = new window.ResizeObserver((entries) => {
-      for (let entry of entries) {
-        setContainerWidth(entry.contentRect.width);
-      }
-    });
+  const handleZoomOut = () => {
+    setViewMode('custom');
+    setZoom((currentZoom) => clampZoom(currentZoom - 0.15));
+  };
 
-    resizeObserver.observe(containerRef.current);
-    return () => resizeObserver.disconnect();
+  const handleZoomIn = () => {
+    setViewMode('custom');
+    setZoom((currentZoom) => clampZoom(currentZoom + 0.15));
+  };
+
+  const handleResetZoom = () => {
+    setViewMode('custom');
+    setZoom(DEFAULT_PDF_ZOOM);
+  };
+
+  const handleFitToWidth = () => {
+    setViewMode('width');
+    setZoom(1);
+  };
+
+  const handleFitToHeight = () => {
+    setViewMode('height');
+    setZoom(1);
+  };
+
+  const pageWidth = containerWidth && viewMode !== 'height'
+    ? Math.max(240, Math.round(containerWidth * (viewMode === 'width' ? 1 : zoom)))
+    : undefined;
+
+  const pageHeight = containerHeight && viewMode === 'height'
+    ? Math.max(320, Math.round((containerHeight - 24) * zoom))
+    : undefined;
+
+  const updatePreviewSize = useCallback(() => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    setContainerWidth(rect.width);
+    setContainerHeight(rect.height);
   }, []);
 
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    updatePreviewSize();
+
+    if (!window.ResizeObserver) {
+      window.addEventListener('resize', updatePreviewSize);
+      return () => window.removeEventListener('resize', updatePreviewSize);
+    }
+
+    const resizeObserver = new window.ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+
+      setContainerWidth(entry.contentRect.width);
+      setContainerHeight(entry.contentRect.height);
+    });
+
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, [updatePreviewSize]);
+
+  useEffect(() => {
+    updatePreviewSize();
+  }, [layoutSignature, updatePreviewSize]);
+
   return (
-    <div 
-      ref={containerRef}
-      style={{ width: '100%', height: '100%', overflow: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center'}}
-
-    >
-      {compileError ? (
-        <div style={{ padding: '20px', color: '#ff4444', backgroundColor: '#331111', borderRadius: '4px', border: '1px solid #ff4444', whiteSpace: 'prewrap', fontFamily: 'monospace', fontSize: '12px', overflowX: 'auto', width: '100%', boxSizing: 'border-box'}}>
-          <strong>Compilation: Error:</strong><br /><br />
-          {compileError}
-        </div>
-      ) : pdfBlob ? (
-          <Document
-            file={pdfBlob}
-            onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-            loading={<div style={{ padding: '2rem', color: '#666', textAlign: 'center'}}>Loading PDF...</div>}
-            error={<div style={{ padding: '2rem', color: '#ff4444', textAlign: 'center'}}>Failed to load PDF.</div>}
-            >
-              {Array.from(new Array(numPages), (_, index) => (
-                <Page 
-                  key={`page_${index + 1}`}
-                  pageNumber={index + 1}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                  className="pdf-page"
-                  width={containerWidth ? containerWidth: undefined}
-                  />
-
-              ))}
-          </Document>
-      ) : (
-        <div style={{ padding: '20px', color: '#666', textAlign: 'center' }}>
-          Generate a cheat sheet to see your PDF!
+    <div className="pdf-preview-shell">
+      <div className="pdf-preview-toolbar">
+        <span className="pdf-toolbar-note">Use the controls to adjust the preview.</span>
+        <div className="pdf-zoom-controls" role="toolbar" aria-label="PDF zoom controls">
+          <button type="button" className={`pdf-zoom-btn pdf-zoom-fit ${viewMode === 'width' ? 'active' : ''}`} onClick={handleFitToWidth} aria-pressed={viewMode === 'width'}>
+            Fit width
+          </button>
+          <button type="button" className={`pdf-zoom-btn pdf-zoom-fit ${viewMode === 'height' ? 'active' : ''}`} onClick={handleFitToHeight} aria-pressed={viewMode === 'height'}>
+            Fit height
+          </button>
+          <div className="pdf-zoom-group">
+            <button type="button" className="pdf-zoom-btn" onClick={handleZoomOut} aria-label="Zoom out">
+              −
+            </button>
+            <button type="button" className={`pdf-zoom-btn pdf-zoom-readout ${viewMode === 'custom' ? 'active' : ''}`} onClick={handleResetZoom} aria-pressed={viewMode === 'custom'}>
+              {viewMode === 'width' ? 'Fit width' : viewMode === 'height' ? 'Fit height' : `${Math.round(zoom * 100)}%`}
+            </button>
+            <button type="button" className="pdf-zoom-btn" onClick={handleZoomIn} aria-label="Zoom in">
+              +
+            </button>
           </div>
-      )}
+        </div>
+      </div>
+      <div ref={containerRef} className="pdf-preview-stage">
+        <div className="pdf-preview-scroll">
+        {compileError ? (
+          <div className="compile-error-box">
+            <strong>Compilation: Error:</strong><br /><br />
+            {compileError}
+          </div>
+        ) : pdfBlob ? (
+            <Document
+              file={pdfBlob}
+              onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+              loading={<div className="pdf-state-message">Loading PDF...</div>}
+              error={<div className="pdf-state-message pdf-state-error">Failed to load PDF.</div>}
+              >
+                {Array.from(new Array(numPages), (_, index) => (
+                  <Page 
+                    key={`page_${index + 1}`}
+                    pageNumber={index + 1}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                    className="pdf-page"
+                    width={pageWidth}
+                    height={pageHeight}
+                    />
+
+                ))}
+            </Document>
+        ) : (
+          <div className="pdf-state-message">
+            Compile the PDF to see your preview.
+            </div>
+        )}
+        </div>
+        {isCompiling && (
+          <div className="pdf-recompile-overlay" aria-live="polite" aria-busy="true">
+            <div className="pdf-recompile-spinner" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+            <strong>Recompiling PDF…</strong>
+            <p>Hang tight — the preview is being refreshed.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
-const ActionToolbar = ({ handleDownloadTex, handleDownloadPDF, isLoading, isSaving, content, handleClear }) => (
-  <div className="actions">
-    <button type="submit" className="btn primary" disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Progress'}</button>
-    <button type="button" onClick={handleDownloadTex} className="btn download">Download .tex</button>
-    <button
-      type="button"
-      onClick={handleDownloadPDF}
-      className="btn download"
-      disabled={isLoading || !content}
-    >
-      {isLoading ? 'Compiling...' : 'Download PDF'}
-    </button>
-    <button type="button" onClick={handleClear} className="btn clear">Clear</button>
-  </div>
-);
+const SnapshotTray = ({ snapshots, onRestore }) => {
+  if (!snapshots.length) {
+    return null;
+  }
+
+  return (
+    <section className="snapshot-tray" aria-label="Compile snapshots">
+      <div className="snapshot-tray-header">
+        <h3>Compile snapshots</h3>
+        <p>Restore an earlier compiled draft, then the preview will rebuild automatically.</p>
+      </div>
+      <div className="snapshot-list">
+        {snapshots.map((snapshot, index) => {
+          const formulaCount = snapshot.selectedFormulas?.length || 0;
+
+          return (
+            <article className="snapshot-card" key={`${snapshot.compiledAt || 'snapshot'}-${index}`}>
+              <div className="snapshot-card-copy">
+                <div className="snapshot-card-title">{snapshot.title || 'Untitled snapshot'}</div>
+                <div className="snapshot-card-meta">
+                  <span>{snapshot.compiledAt ? new Date(snapshot.compiledAt).toLocaleString() : 'Saved compile'}</span>
+                  <span>{formulaCount} formula{formulaCount === 1 ? '' : 's'}</span>
+                  <span>{snapshot.columns || 2} col</span>
+                </div>
+              </div>
+              <button type="button" className="snapshot-restore-btn" onClick={() => onRestore(snapshot)}>
+                Restore
+              </button>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+};
 
 const FONT_SIZE_PRESETS = ['8pt', '9pt', '10pt', '11pt', '12pt'];
 const SPACING_PRESETS = ['tiny', 'small', 'medium', 'large'];
@@ -528,7 +891,7 @@ const LayoutOptions = ({ columns, setColumns, fontSize, setFontSize, spacing, se
 
   return (
   <div className="layout-options">
-    <label style={{ fontWeight: 'bold', marginBottom: '0.5rem', display: 'block' }}>
+    <label className="panel-label">
       Layout Options
     </label>
     <div className="layout-controls">
@@ -615,7 +978,7 @@ const LayoutOptions = ({ columns, setColumns, fontSize, setFontSize, spacing, se
   );
 };
 
-const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) => {
+const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isSaving = false }) => {
   const {
     classesData,
     selectedClasses,
@@ -638,6 +1001,8 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
     setTitle,
     content,
     contentModified,
+    contentSource,
+    canRegenerateFromSelections,
     hasLayoutChanges,
     handleContentChange,
     columns,
@@ -649,37 +1014,317 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
     margins,
     setMargins,
     pdfBlob,
-    isGenerating,
     isCompiling,
-    isLoading,
     compileError,
     canGoBack,
     canGoForward,
     goBack,
     goForward,
-    handleGenerateSheet,
+    handlePreview,
     handleCompileOnly,
     handleDownloadPDF,
     handleDownloadTex,
+    handlePrintPDF,
     clearLatex
   } = useLatex(initialData);
 
   const [showLatex, setShowLatex] = useState(false);
+  const [showSnapshots, setShowSnapshots] = useState(false);
   const [modalVideo, setModalVideo] = useState(null);
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
-  const getThumbnail = (id) => `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
+  const [rightPanelVisible, setRightPanelVisible] = useState(true);
+  const [panelLayout, setPanelLayout] = useState(() => loadPanelLayout());
+  const [videoSearchRequest, setVideoSearchRequest] = useState(null);
+  const [classesCollapseSignal, setClassesCollapseSignal] = useState(0);
+  const pendingPanelLayoutRef = useRef(panelLayout);
+  const hasCollapsedLeftPanelOnceRef = useRef(false);
+  const lastAutoSavedPdfRef = useRef(null);
+  const lastVideoOpenerRef = useRef(null);
+  const modalDialogRef = useRef(null);
+  const appBodyRef = useRef(null);
+  const centerPanelRef = useRef(null);
+  const snapshots = useMemo(() => [...(initialData?.compileHistory || [])].reverse(), [initialData?.compileHistory]);
+  const selectedClassNames = useMemo(
+    () => classesData.filter((cls) => selectedClasses[cls.name]).map((cls) => cls.name),
+    [classesData, selectedClasses],
+  );
+  const selectedVideoTopics = useMemo(() => (
+    classesData.flatMap((cls) => (
+      (cls.categories || [])
+        .filter((category) => selectedCategories[`${cls.name}:${category.name}`])
+        .map((category) => ({ className: cls.name, category: category.name }))
+    ))
+  ), [classesData, selectedCategories]);
+  const selectedVideoTopicKey = useMemo(
+    () => selectedVideoTopics.map((topic) => `${topic.className}:${topic.category}`).join('|'),
+    [selectedVideoTopics],
+  );
+  const curatedVideoResources = useMemo(
+    () => getCuratedVideosForTopics(selectedVideoTopics),
+    [selectedVideoTopics],
+  );
+  const { resources: searchedVideoResources, isLoading: isLoadingVideos, error: videoError } = useYouTubeResources(videoSearchRequest);
+  const curatedVideoKeys = useMemo(
+    () => new Set(curatedVideoResources.map((video) => getVideoResourceKey(video))),
+    [curatedVideoResources],
+  );
+  const visibleSearchedVideoResources = useMemo(
+    () => searchedVideoResources.filter((video) => !curatedVideoKeys.has(getVideoResourceKey(video))),
+    [curatedVideoKeys, searchedVideoResources],
+  );
+  const curatedVideosByTopic = useMemo(() => groupVideosByTopic(curatedVideoResources), [curatedVideoResources]);
+  const searchedVideosByTopic = useMemo(() => groupVideosByTopic(visibleSearchedVideoResources), [visibleSearchedVideoResources]);
   const getEmbedUrl  = (id) => `https://www.youtube.com/embed/${id}?autoplay=1`;
+  const getWatchUrl = (id) => `https://www.youtube.com/watch?v=${id}`;
+  const hasSearchedVideos = Boolean(videoSearchRequest?.key);
+  const searchedTopicKey = videoSearchRequest?.topicKey || '';
 
-  const handleToggleClass = (className) => {
-    toggleClass(className);
+  const handleOpenVideo = useCallback((video, opener) => {
+    lastVideoOpenerRef.current = opener || null;
+    setModalVideo(video);
+  }, []);
+
+  const handleCloseVideo = useCallback(() => {
+    setModalVideo(null);
+    const refocusOpener = () => lastVideoOpenerRef.current?.focus();
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(refocusOpener);
+    } else {
+      refocusOpener();
+    }
+  }, []);
+
+  useEffect(() => {
+    const hasCompiledBefore = Boolean(initialData?.compileHistory?.length || pdfBlob || content.trim());
+    if (hasCompiledBefore) return;
+    if (!(UNTITLED_TITLE_REGEX.test(title) || !title.trim())) return;
+    if (!selectedClassNames.length) return;
+
+    const nextTitle = selectedClassNames.length === 1
+      ? `${selectedClassNames[0]} Cheat Sheet`
+      : `${selectedClassNames[0]} + ${selectedClassNames.length - 1} more Cheat Sheet`;
+
+    if (title !== nextTitle) {
+      setTitle(nextTitle);
+    }
+  }, [content, initialData?.compileHistory?.length, pdfBlob, selectedClassNames, setTitle, title]);
+
+  useEffect(() => {
+    setVideoSearchRequest(null);
+  }, [selectedVideoTopicKey]);
+
+  const handleSearchMoreVideos = (topic) => {
+    if (!topic) return;
+
+    setVideoSearchRequest({
+      key: Date.now(),
+      topicKey: getVideoTopicKey(topic),
+      topics: [topic],
+    });
   };
+
+  useEffect(() => {
+    if (!modalVideo) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        handleCloseVideo();
+        return;
+      }
+
+      if (event.key !== 'Tab') {
+        return;
+      }
+
+      const focusableElements = Array.from(
+        modalDialogRef.current?.querySelectorAll('a[href], button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])') || [],
+      );
+
+      if (!focusableElements.length) {
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleCloseVideo, modalVideo]);
+
+  useEffect(() => {
+    const clampToViewport = () => {
+      const bodyWidth = appBodyRef.current?.clientWidth || window.innerWidth;
+
+      setPanelLayout((current) => {
+        const nextLayout = constrainPanelLayout(current, {
+          bodyWidth,
+          leftPanelVisible,
+          rightPanelVisible,
+          showLatex,
+        });
+
+        if (samePanelLayout(current, nextLayout)) {
+          return current;
+        }
+
+        pendingPanelLayoutRef.current = nextLayout;
+        localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(nextLayout));
+        return nextLayout;
+      });
+    };
+
+    clampToViewport();
+    window.addEventListener('resize', clampToViewport);
+
+    return () => window.removeEventListener('resize', clampToViewport);
+  }, [leftPanelVisible, rightPanelVisible, showLatex]);
+
+  useEffect(() => {
+    if (!pdfBlob || compileError || lastAutoSavedPdfRef.current === pdfBlob) {
+      return;
+    }
+
+    lastAutoSavedPdfRef.current = pdfBlob;
+
+    onSave({
+      title,
+      content,
+      contentSource,
+      columns,
+      fontSize,
+      spacing,
+      margins,
+      selectedFormulas: getSelectedFormulasList(),
+      compileSnapshot: {
+        title,
+        content,
+        contentSource,
+        columns,
+        fontSize,
+        spacing,
+        margins,
+        selectedFormulas: getSelectedFormulasList(),
+        compiledAt: new Date().toISOString(),
+      },
+    }, false).catch((error) => {
+      console.error('Failed to autosave compiled sheet', error);
+    });
+  }, [columns, compileError, content, contentSource, fontSize, getSelectedFormulasList, margins, onSave, pdfBlob, spacing, title]);
+
+  const startResize = useCallback((panel) => (event) => {
+    event.preventDefault();
+
+    const startX = event.clientX;
+    const startLayout = panelLayout;
+    pendingPanelLayoutRef.current = startLayout;
+    const bodyWidth = appBodyRef.current?.clientWidth || window.innerWidth;
+    const centerWidth = centerPanelRef.current?.clientWidth || 0;
+    const minimumCenterWidth = showLatex ? MIN_SPLIT_CENTER_WIDTH : MIN_CENTER_WIDTH;
+    const leftReserve = leftPanelVisible ? RESIZER_WIDTH : 0;
+    const rightReserve = rightPanelVisible ? RESIZER_WIDTH : 0;
+    const maxLeftWidth = Math.max(
+      LEFT_PANEL_MIN_WIDTH,
+      Math.min(
+        LEFT_PANEL_MAX_WIDTH,
+        bodyWidth - (rightPanelVisible ? startLayout.rightWidth + rightReserve : 0) - leftReserve - minimumCenterWidth,
+      ),
+    );
+    const maxRightWidth = Math.max(
+      RIGHT_PANEL_MIN_WIDTH,
+      Math.min(
+        RIGHT_PANEL_MAX_WIDTH,
+        bodyWidth - (leftPanelVisible ? startLayout.leftWidth + leftReserve : 0) - rightReserve - minimumCenterWidth,
+      ),
+    );
+    const maxLatexWidth = Math.max(
+      LATEX_PANEL_MIN_WIDTH,
+      Math.min(LATEX_PANEL_MAX_WIDTH, centerWidth - RESIZER_WIDTH - MIN_PREVIEW_WIDTH),
+    );
+
+    const handlePointerMove = (moveEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+
+      setPanelLayout(() => {
+        let nextLayout;
+
+        if (panel === 'left') {
+          nextLayout = {
+            ...startLayout,
+            leftWidth: clampPanelWidth(startLayout.leftWidth + deltaX, LEFT_PANEL_MIN_WIDTH, maxLeftWidth),
+          };
+        } else if (panel === 'right') {
+          nextLayout = {
+            ...startLayout,
+            rightWidth: clampPanelWidth(startLayout.rightWidth - deltaX, RIGHT_PANEL_MIN_WIDTH, maxRightWidth),
+          };
+        } else {
+          nextLayout = {
+            ...startLayout,
+            latexWidth: clampPanelWidth(startLayout.latexWidth + deltaX, LATEX_PANEL_MIN_WIDTH, maxLatexWidth),
+          };
+        }
+
+        pendingPanelLayoutRef.current = nextLayout;
+        return nextLayout;
+      });
+    };
+
+    const handlePointerUp = () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      document.body.classList.remove('is-resizing-panels');
+      localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(pendingPanelLayoutRef.current));
+    };
+
+    document.body.classList.add('is-resizing-panels');
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+  }, [leftPanelVisible, panelLayout, rightPanelVisible, showLatex]);
+
+  const appBodyGridTemplate = [
+    leftPanelVisible ? `${panelLayout.leftWidth}px` : '0px',
+    leftPanelVisible ? '10px' : '0px',
+    'minmax(0, 1fr)',
+    rightPanelVisible ? '10px' : '0px',
+    rightPanelVisible ? `${panelLayout.rightWidth}px` : '0px',
+  ].join(' ');
+
+  const workspaceSplitTemplate = `minmax(${LATEX_PANEL_MIN_WIDTH}px, ${panelLayout.latexWidth}px) 10px minmax(${MIN_PREVIEW_WIDTH}px, 1fr)`;
+  const previewLayoutSignature = `${appBodyGridTemplate}|${workspaceSplitTemplate}|${leftPanelVisible}|${rightPanelVisible}|${showLatex}`;
+
   const handleCompileClick = () => {
-    handleCompileOnly();
-  };
+    if (!hasCollapsedLeftPanelOnceRef.current) {
+      // First compile: keep controls reachable while reclaiming preview space.
+      hasCollapsedLeftPanelOnceRef.current = true;
+      setClassesCollapseSignal((current) => current + 1);
+      setPanelLayout((current) => {
+        const nextLayout = {
+          ...current,
+          leftWidth: LEFT_PANEL_MIN_WIDTH,
+        };
 
-  const handleGenerate = () => {
-    const formulasList = getSelectedFormulasList();
-    handleGenerateSheet(formulasList);
+        pendingPanelLayoutRef.current = nextLayout;
+        localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(nextLayout));
+        return nextLayout;
+      });
+    }
+
+    const selectedFormulas = getSelectedFormulasList();
+    if (!contentModified && canRegenerateFromSelections && selectedFormulas.length > 0) {
+      handlePreview(null, { formulas: selectedFormulas, columns, fontSize, spacing });
+      return;
+    }
+
+    handleCompileOnly(selectedFormulas);
   };
 
   const handleSave = async (e) => {
@@ -687,6 +1332,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
     await onSave({
       title,
       content,
+      contentSource,
       columns,
       fontSize,
       spacing,
@@ -707,27 +1353,14 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
     <>
       <div className="app-shell">
 
-       <div className="app-body" style={{gridTemplateColumns: leftPanelVisible ? '280px 1fr 300px' : '0 1fr 300px'}}>
-          <button
-            className="panel-toggle-btn"
-            onClick={() =>setLeftPanelVisible(v => !v)}
-            title={leftPanelVisible ? 'Hide subjects' : 'Show subjects'}
-          >
-            {leftPanelVisible ? '◀ Hide' : '▶ Show'}
-          </button>
+       <div className="app-body" ref={appBodyRef} style={{ '--app-body-columns': appBodyGridTemplate }}>
 
           {/* ══ LEFT PANEL ══ */}
           {leftPanelVisible && (
-          <aside className="left-panel" style={{ 
-            overflow: leftPanelVisible ? 'hidden' : 'hidden',
-            minWidth: 0, 
-            visibility: leftPanelVisible ? 'visible' : 'hidden',
-            opacity: leftPanelVisible ? 1 : 0, 
-            transition: 'opacity var(--transition-slow), visibility var(--transition-slow)',
-          }}>
+          <aside className="left-panel">
             <div className="left-panel-scroll">
 
-              <div className="form-group" style={{ padding: '1rem 1rem 0' }}>
+              <div className="form-group left-panel-title-group">
                 <label htmlFor="title">Title:</label>
                 <input
                   type="text"
@@ -745,16 +1378,15 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                 selectedClasses={selectedClasses}
                 selectedCategories={selectedCategories}
                 groupedFormulas={groupedFormulas}
-                toggleClass={handleToggleClass}
+                toggleClass={toggleClass}
                 toggleCategory={toggleCategory}
-                onGenerate={handleGenerate}
-                isGenerating={isGenerating}
                 selectedCount={selectedCount}
                 hasSelectedClasses={hasSelectedClasses}
                 onReorderClass={reorderClass}
                 onReorderFormula={reorderFormula}
                 onRemoveClass={removeClassFromOrder}
                 onRemoveFormula={removeSingleFormula}
+                collapseClassesSignal={classesCollapseSignal}
               />
 
               <LayoutOptions
@@ -778,52 +1410,49 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                 className="btn-compile"
                 disabled={isCompiling}
               >
-                {isCompiling ? '⏳ Compiling...' : '⚡ Compile PDF'}
+                {isCompiling ? 'Compiling…' : 'Compile PDF'}
               </button>
 
-              <div style={{ display: 'flex', gap: '0.4rem' }}>
+              <div className="button-row">
                 <button
                   type="button"
                   onClick={goBack}
                   disabled={!canGoBack}
                   className="btn history-btn"
-                  style={{ flex: 1 }}
                 >
-                  ← Back
+                  Back
                 </button>
                 <button
                   type="button"
                   onClick={goForward}
                   disabled={!canGoForward}
                   className="btn history-btn"
-                  style={{ flex: 1 }}
                 >
-                  Forward →
+                  Forward
                 </button>
               </div>
 
               {pdfBlob && (
                 <div className="btn-download-row">
-                  <button type="button" onClick={handleDownloadPDF} className="btn-dl">↓ PDF</button>
-                  <button type="button" onClick={handleDownloadTex} className="btn-dl">↓ .tex</button>
+                  <button type="button" onClick={handlePrintPDF} className="btn-dl">Print</button>
+                  <button type="button" onClick={handleDownloadPDF} className="btn-dl">Download PDF</button>
+                  <button type="button" onClick={handleDownloadTex} className="btn-dl">.tex</button>
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '0.4rem' }}>
+              <div className="button-row">
                 <button
                   type="button"
                   onClick={handleSave}
                   className="btn history-btn"
-                  style={{ flex: 1 }}
                   disabled={isSaving}
                 >
-                  {isSaving ? 'Saving...' : '💾 Save'}
+                  {isSaving ? 'Saving…' : 'Save'}
                 </button>
                 <button
                   type="button"
                   onClick={handleClear}
                   className="btn clear"
-                  style={{ flex: 1, fontSize: '0.78rem' }}
                 >
                   Clear
                 </button>
@@ -831,107 +1460,209 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
             </div>
           </aside>
 )}
+          {leftPanelVisible ? (
+            <button
+              type="button"
+              className="panel-resizer panel-resizer-vertical panel-resizer-left"
+              onPointerDown={startResize('left')}
+              aria-label="Resize subject panel"
+            />
+          ) : (
+            <div className="panel-resizer-slot panel-resizer-left" aria-hidden="true" />
+          )}
           {/* ══ CENTER PANEL — PDF main focus ══ */}
-          <main className="center-panel">
-            <button 
-              className="btn-toggle-left"
-              onClick={() => setLeftPanelVisible(v => !v)}
-              title={leftPanelVisible ? 'Hide subjects' : 'Show subjects'}
-            >
-              {leftPanelVisible ? '◀ Hide' : '▶ Show'}
-            </button>
-
-            {content && (
-              <div className="pdf-topbar">
-                <div style={{ flex: 1 }} />
-                  <button
+          <main className="center-panel" ref={centerPanelRef}>
+            <div className="workspace-topbar">
+              <div className="workspace-topbar-group">
+                <button
                   type="button"
-                  className="btn-toggle-latex"
-                  onClick={() => setShowLatex(v => !v)}
+                  className="btn-toggle-panel"
+                  onClick={() => setLeftPanelVisible(v => !v)}
+                  title={leftPanelVisible ? 'Hide subjects' : 'Show subjects'}
                 >
-                 {showLatex ? '📄 Show PDF' : '{ } Show LaTeX'}
-              </button>
+                  {leftPanelVisible ? 'Hide subjects' : 'Show subjects'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-toggle-panel"
+                  onClick={() => setShowSnapshots((value) => !value)}
+                  disabled={!snapshots.length}
+                >
+                  Snapshots {snapshots.length ? `(${snapshots.length})` : ''}
+                </button>
+                {content && (
+                  <button
+                    type="button"
+                    className="btn-toggle-latex btn-toggle-latex-prominent"
+                    onClick={() => setShowLatex(v => !v)}
+                  >
+                    {showLatex ? 'Hide LaTeX editor' : 'Show LaTeX editor'}
+                  </button>
+                )}
+              </div>
+
+              <div className="workspace-topbar-group workspace-topbar-group-end">
+                <button
+                  type="button"
+                  className="btn-toggle-panel"
+                  onClick={handlePrintPDF}
+                  disabled={!pdfBlob}
+                >
+                  Print
+                </button>
+                <button
+                  type="button"
+                  className="btn-toggle-panel"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                >
+                  {isSaving ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-toggle-panel btn-toggle-videos"
+                  onClick={() => setRightPanelVisible((value) => !value)}
+                  title={rightPanelVisible ? 'Hide videos' : 'Show videos'}
+                >
+                  {rightPanelVisible ? 'Hide videos' : 'Show videos'}
+                </button>
+              </div>
             </div>
-           )}
-             <div className="pdf-container">
-              {showLatex ? (
-              <div className="latex-fullscreen">
-                <LatexEditor
-                content={content}
-                onChange={handleContentChange}
-                isModified={contentModified || hasLayoutChanges}
-                compileError={compileError}
-                />
-              </div>
-            ) : (
-              <>
-            {pdfBlob || compileError ? (
-            <PdfPreview pdfBlob={pdfBlob} compileError={compileError} />
-            ) : (
-              <div className="pdf-placeholder">
-                  <span>📄</span>
-                <p>Select a subject, pick categories, then compile</p>
-                <p>Your PDF will appear here</p>
-              </div>
-              )}
-              </>
+
+            {showSnapshots && snapshots.length > 0 && (
+              <SnapshotTray
+                snapshots={snapshots}
+                onRestore={(snapshot) => {
+                  setShowSnapshots(false);
+                  onRestoreSnapshot?.(snapshot);
+                }}
+              />
             )}
-            </div>
+
+             <div className="pdf-container">
+               {showLatex ? (
+                 <div className="workspace-split" style={{ '--workspace-split-columns': workspaceSplitTemplate }}>
+                   <div className="workspace-split-pane workspace-split-pane-latex">
+                     <LatexEditor
+                       content={content}
+                       onChange={handleContentChange}
+                       isModified={contentModified || hasLayoutChanges}
+                       compileError={compileError}
+                     />
+                   </div>
+                   <button
+                     type="button"
+                     className="panel-resizer panel-resizer-vertical panel-resizer-inner"
+                     onPointerDown={startResize('latex')}
+                     aria-label="Resize LaTeX panel"
+                   />
+                   <div className="workspace-split-pane workspace-split-pane-preview">
+                     {pdfBlob || compileError || isCompiling ? (
+                       <PdfPreview
+                          pdfBlob={pdfBlob}
+                          compileError={compileError}
+                          isCompiling={isCompiling}
+                          layoutSignature={previewLayoutSignature}
+                        />
+                     ) : (
+                       <div className="pdf-placeholder">
+                         <span>📄</span>
+                         <p>Select a subject, pick categories, then compile</p>
+                         <p>Your PDF will appear here</p>
+                         <p>Compile will generate the first draft if the editor is still empty.</p>
+                       </div>
+                     )}
+                   </div>
+                 </div>
+               ) : (
+                 <>
+                   {pdfBlob || compileError || isCompiling ? (
+                     <PdfPreview
+                        pdfBlob={pdfBlob}
+                        compileError={compileError}
+                        isCompiling={isCompiling}
+                        layoutSignature={previewLayoutSignature}
+                      />
+                   ) : (
+                     <div className="pdf-placeholder">
+                       <span>📄</span>
+                       <p>Select a subject, pick categories, then compile</p>
+                       <p>Your PDF will appear here</p>
+                       <p>Compile will generate the first draft if the editor is still empty.</p>
+                     </div>
+                   )}
+                 </>
+               )}
+             </div>
           </main>
 
-          {/* ══ RIGHT PANEL — YouTube resources ══ */}
-          <aside className="right-panel">
-            <div className="right-panel-header">
-              📺 Check Out These Resources!
-            </div>
-            <div className="right-panel-scroll">
-              { Object.keys(selectedClasses).filter(cls => selectedClasses[cls]).length == 0 && (
-                <p className="right-panel-empty">Select a subject to see related videos!</p>
-              )}
-              {Object.keys(selectedClasses)
-                .filter(cls => selectedClasses[cls])
-                .map(cls => {
-                  const videos = SUBJECT_VIDEOS[cls] || [];
+          {rightPanelVisible ? (
+            <button
+              type="button"
+              className="panel-resizer panel-resizer-vertical panel-resizer-right"
+              onPointerDown={startResize('right')}
+              aria-label="Resize video panel"
+            />
+          ) : (
+            <div className="panel-resizer-slot panel-resizer-right" aria-hidden="true" />
+          )}
+
+          {rightPanelVisible && (
+            <aside className="right-panel">
+              <div className="right-panel-header">
+                Videos
+              </div>
+              <div className="right-panel-scroll">
+                {!selectedVideoTopics.length && (
+                  <p className="right-panel-empty">Select sections</p>
+                )}
+                {selectedVideoTopics.map((topic) => {
+                  const topicKey = getVideoTopicKey(topic);
+                  const curatedVideos = curatedVideosByTopic[topicKey] || [];
+                  const searchedVideos = searchedVideosByTopic[topicKey] || [];
+                  const isSearchingTopic = isLoadingVideos && searchedTopicKey === topicKey;
+                  const hasSearchedTopic = hasSearchedVideos && searchedTopicKey === topicKey;
+
                   return (
-                    <div key={cls} className="subject-video-group">
-                      <div className="subject-video-label">{cls}</div>
-                      {videos.length == 0 ? (
-                        <p className="right-panel-empty" style={{ fontSize: '0.72rem', padding: '0.25rem 0' }}>
-                          No videos added yet.
-                        </p>
-                      ) : (
-                        videos.map((v) => (
-                          <div 
-                            key={v.videoId}
-                            className="video-card-sm"
-                            onClick={() => setModalVideo(v)}
-                          >
-                            <div className="video-thumb-sm">
-                              <img src={getThumbnail(v.videoId)} alt={v.title} loading = "lazy" />
-                              <div className="play-icon">▶</div>
-                            </div>
-                            <div className="video-info-sm">
-                              <div className="v-title">{v.title}</div>
-                              <div className="v-channel">{v.channel}</div>
-                            </div>
-                          </div>
-                        ))
-                      )}
+                    <div key={topicKey} className="subject-video-group">
+                      <div className="subject-video-label" title={`${topic.className} · ${topic.category}`}>
+                        {topic.category}
+                      </div>
+                      <SectionVideoPicks
+                        className={topic.className}
+                        category={topic.category}
+                        curatedVideos={curatedVideos}
+                        searchedVideos={searchedVideos}
+                        onOpen={handleOpenVideo}
+                        onSearchMore={handleSearchMoreVideos}
+                        isSearching={isSearchingTopic}
+                        searchError={hasSearchedTopic ? videoError : ''}
+                        hasSearched={hasSearchedTopic}
+                        allowSearch
+                        compact
+                      />
                     </div>
                   );
                 })}
               </div>
-          </aside>
-
+            </aside>
+          )}
         </div>
       </div>
 
       {/* ══ VIDEO MODAL ══ */}
       {modalVideo && (
-        <div className="modal-overlay" onClick={() => setModalVideo(null)}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setModalVideo(null)}>✕</button>
-            <h4>{modalVideo.title}</h4>
+        <div className="modal-overlay" onClick={handleCloseVideo}>
+          <div
+            className="modal-box"
+            ref={modalDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="video-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button className="modal-close" onClick={handleCloseVideo} autoFocus>✕</button>
+            <h4 id="video-modal-title">{modalVideo.title}</h4>
             <iframe
               width="100%"
               height="400"
@@ -941,7 +1672,15 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             />
-            <div className="modal-meta">{modalVideo.channel} · {modalVideo.topic}</div>
+            <div className="modal-meta">{modalVideo.channel} · {modalVideo.category || modalVideo.topic || 'General review'}</div>
+            <a
+              className="modal-link"
+              href={getWatchUrl(modalVideo.videoId)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open on YouTube
+            </a>
           </div>
         </div>
       )}

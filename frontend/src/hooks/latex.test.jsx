@@ -1,6 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { useLatex } from './latex';
 import AuthContext from '../context/AuthContext';
+import { vi } from 'vitest';
 
 // Mock localStorage
 const mockLocalStorage = (() => {
@@ -20,6 +21,9 @@ global.URL.revokeObjectURL = vi.fn();
 // Mock fetch
 global.fetch = vi.fn();
 
+// Mock alert for jsdom
+window.alert = vi.fn();
+
 describe('useLatex hook', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -37,10 +41,10 @@ describe('useLatex hook', () => {
 
     expect(result.current.title).toBe('');
     expect(result.current.content).toBe('');
-    expect(result.current.columns).toBe(2);
-    expect(result.current.fontSize).toBe('10pt');
-    expect(result.current.spacing).toBe('large');
-    expect(result.current.margins).toBe('0.25in');
+    expect(result.current.columns).toBe(4);
+    expect(result.current.fontSize).toBe('9pt');
+    expect(result.current.spacing).toBe('small');
+    expect(result.current.margins).toBe('0.15in');
     expect(result.current.pdfBlob).toBeNull();
     expect(result.current.compileError).toBeNull();
   });
@@ -65,6 +69,35 @@ describe('useLatex hook', () => {
     expect(result.current.margins).toBe('0.5in');
   });
 
+  test('treats persisted generated sheets as safe to regenerate', () => {
+    const { result } = renderHook(() => useLatex({
+      content: '\\documentclass{article}',
+      contentSource: 'generated',
+      selectedFormulas: [{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }],
+    }), { wrapper });
+
+    expect(result.current.canRegenerateFromSelections).toBe(true);
+  });
+
+  test('treats legacy non-empty sheets as manual without trusted provenance', () => {
+    const { result } = renderHook(() => useLatex({
+      content: '\\documentclass{article}',
+      selectedFormulas: [{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }],
+    }), { wrapper });
+
+    expect(result.current.canRegenerateFromSelections).toBe(false);
+  });
+
+  test('restores saved manual provenance when provided', () => {
+    const { result } = renderHook(() => useLatex({
+      content: '\\documentclass{article}',
+      contentSource: 'manual',
+      selectedFormulas: [{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }],
+    }), { wrapper });
+
+    expect(result.current.canRegenerateFromSelections).toBe(false);
+  });
+
   test('loads from local storage if available and initial content is null', () => {
     mockLocalStorage.setItem('cheatSheetLatex', JSON.stringify({
       title: 'Storage Title',
@@ -87,6 +120,28 @@ describe('useLatex hook', () => {
     expect(result.current.content).toBe('New latex content');
     expect(result.current.contentModified).toBe(true);
     expect(result.current.compileError).toBeNull();
+  });
+
+  test('manual edits remain protected from selection regeneration after compile', async () => {
+    const { result } = renderHook(() => useLatex(), { wrapper });
+
+    act(() => {
+      result.current.handleContentChange('\\documentclass{article}\n% custom manual edit');
+    });
+
+    expect(result.current.canRegenerateFromSelections).toBe(false);
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      blob: async () => new Blob(['fake pdf data'])
+    });
+
+    await act(async () => {
+      await result.current.handleCompileOnly([{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }]);
+    });
+
+    expect(result.current.contentModified).toBe(false);
+    expect(result.current.canRegenerateFromSelections).toBe(false);
   });
 
   test('history goBack and goForward work correctly', async () => {
@@ -125,12 +180,12 @@ describe('useLatex hook', () => {
 
   test('handleCompileOnly handles successful compilation', async () => {
     const { result } = renderHook(() => useLatex(), { wrapper });
+    const selectedFormulas = [{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }];
 
-    // Mock normalize and compile fetch responses
     global.fetch
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ tex_code: 'normalized content' })
+        json: async () => ({ tex_code: 'generated content' })
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -138,25 +193,32 @@ describe('useLatex hook', () => {
       });
 
     await act(async () => {
-      await result.current.handleCompileOnly();
+      await result.current.handleCompileOnly(selectedFormulas);
     });
 
     expect(global.fetch).toHaveBeenCalledTimes(2);
-    expect(result.current.content).toBe('normalized content');
+    expect(result.current.content).toBe('generated content');
     expect(result.current.pdfBlob).toBe('blob:test-url');
     expect(result.current.compileError).toBeNull();
   });
 
   test('handleCompileOnly handles errors', async () => {
     const { result } = renderHook(() => useLatex(), { wrapper });
+    const selectedFormulas = [{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }];
 
-    global.fetch.mockResolvedValueOnce({
+    global.fetch
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ tex_code: 'generated content' })
+    })
+    .mockResolvedValueOnce({
       ok: false,
-      json: async () => ({ details: 'Syntax error on line 1' })
+      json: async () => ({ details: 'Syntax error on line 1' }),
+      blob: async () => new Blob()
     });
 
     await act(async () => {
-      await result.current.handleCompileOnly();
+      await result.current.handleCompileOnly(selectedFormulas);
     });
 
     expect(result.current.compileError).toContain('Syntax error');

@@ -5,16 +5,12 @@
 </p>
 
 <p align="center">
-  A full-stack React and Django application for generating LaTeX-based cheat sheets with live preview, saved projects, and PDF export.
+  Full-stack React + Django editor for building LaTeX cheat sheets with live PDF preview, local draft recovery, account-backed saves, compile snapshots, and section-based YouTube study picks.
 </p>
 
 <p align="center">
   <a href="https://github.com/ChicoState/cheat-sheet/actions/workflows/ci.yml"><img src="https://github.com/ChicoState/cheat-sheet/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
-  <a href="https://chicostate.github.io/cheat-sheet/"><img src="https://img.shields.io/website?url=https%3A%2F%2Fchicostate.github.io%2Fcheat-sheet%2F&up_message=up&down_message=down&label=project%20page" alt="Project page status" /></a>
   <img src="https://img.shields.io/github/languages/top/ChicoState/cheat-sheet" alt="Top language" />
-  <img src="https://img.shields.io/github/languages/count/ChicoState/cheat-sheet" alt="Language count" />
-  <img src="https://img.shields.io/github/repo-size/ChicoState/cheat-sheet" alt="Repository size" />
-  <img src="https://img.shields.io/github/last-commit/ChicoState/cheat-sheet" alt="Last commit" />
   <img src="https://img.shields.io/badge/node-24-339933?logo=node.js&logoColor=white" alt="Node 24" />
   <img src="https://img.shields.io/badge/python-3.14-3776AB?logo=python&logoColor=white" alt="Python 3.14" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?logo=react&logoColor=black" alt="React 18" />
@@ -25,101 +21,169 @@
 </p>
 
 <p align="center">
+  <a href="#overview">Overview</a> •
+  <a href="#current-editor-ui">Current Editor UI</a> •
   <a href="#features">Features</a> •
   <a href="#architecture">Architecture</a> •
+  <a href="#project-structure">Project Structure</a> •
   <a href="#getting-started">Getting Started</a> •
-  <a href="#deployments">Deployments</a> •
   <a href="#api-endpoints">API Endpoints</a> •
-  <a href="#contributing">Contributing</a>
+  <a href="#checks-and-validation">Checks and Validation</a>
 </p>
 
 ![Cheat Sheet Generator interface preview](current-ui.png)
 
 ## Overview
 
-Cheat Sheet Generator helps students and instructors build math reference sheets from structured formula libraries. Users can select topics, generate starter LaTeX, refine layout settings, preview compiled output, and export the final result as source or PDF.
+Cheat Sheet Generator is a study-sheet editor for math-heavy classes. Users can pick classes and categories, generate starter LaTeX from the formula library, tune layout settings, preview compiled output, restore prior compile snapshots, and export the result as PDF or `.tex`.
 
-The repository includes:
+The app is split into:
 
-- a React frontend for the interactive editor and preview workflow
-- a Django REST API for formula generation, persistence, and PDF compilation
-- a public GitHub Pages site for lightweight project browsing
+- a **React + Vite frontend** for the editor, dashboard, auth screens, preview controls, and resource rail
+- a **Django REST API** for formula generation, persistence, JWT auth, and PDF compilation
+- a **Docker Compose setup** for local full-stack development with PostgreSQL
+
+## Current Editor UI
+
+The main editor is a three-region workspace:
+
+### Left rail
+
+- class checklist
+- card-style section/category toggles with clearer collapse affordances
+- drag-and-drop formula ordering grouped by class
+- layout controls for columns, text size, spacing, and margins
+- primary actions for compile, save, reset, and downloads
+
+### Center workspace
+
+- top toolbar with subject toggle, snapshot toggle, save, print, video rail toggle, and manual LaTeX editor toggle
+- optional split view with LaTeX editor on one side and compiled PDF preview on the other; the editor stays closed until the user opens it
+- PDF preview controls for zoom in/out, reset, fit width, fit height, and print
+- animated recompilation overlay while the preview refreshes
+
+### Right rail
+
+- compact section-aware study video recommendations
+- one curated video shown by default per selected section, with section-level expansion for more curated links
+- per-section YouTube search only when the curated picks are not enough
+- inline thumbnails with modal playback; video cards live only in the right rail
 
 ## Features
 
-### Core workflow
+### Recent updates
 
-- Multi-class selection across subjects from pre-algebra through calculus
-- Category-based formula picking without multi-select keyboard shortcuts
-- Drag-and-drop ordering for formulas and grouped sections
-- Generated LaTeX editing in the browser
-- Live PDF preview alongside the editor
-- PDF compilation through the backend using Tectonic
-- Download support for both `.tex` and compiled `.pdf`
-- Local autosave to preserve in-progress work
+- clearer left-rail section disclosures and a first-compile rail shrink for a wider preview
+- curated class/section video links with compact right-rail cards and API search kept as a per-section fallback
+- LaTeX editor remains closed by default so the compiled PDF stays front and center
+- GitHub Pages project-page assets were removed; the app is now documented as a local/Docker full-stack project
 
-### Layout and formatting
+### Editing and generation
 
-- One, two, or three column layouts
-- Adjustable margins, font sizing, and spacing
-- Layout-aware recompile flow after formatting changes
+- formula library spanning pre-algebra through calculus
+- category-based formula picking
+- drag-and-drop ordering for classes and formulas
+- generated LaTeX editing in-browser
+- compile through the backend with Tectonic
+- PDF preview with button-driven zoom controls
+- print support from the current compiled PDF
+- first compile narrows the subject rail to its minimum width so the preview has more room
 
-### Persistence
+### Layout controls
 
-- Saved cheat sheet projects
-- Reusable templates
-- Practice problem storage
+- **1 to 5 columns**
+- preset and custom font sizing
+- preset and custom spacing
+- adjustable page margins
+- automatic preview rebuild after layout-only changes
 
-## Project page
+### Persistence and recovery
 
-A public project page is available at `https://chicostate.github.io/cheat-sheet/` for lightweight browsing and onboarding.
+- browser-local draft persistence for the active sheet
+- account-backed save/load for signed-in users
+- local compile snapshots for the active draft
+- snapshot restore flow that repopulates the editor and rebuilds preview on reopen
+- local-only save success message when the user is not signed in
 
-The hosted project page does not run the full application by itself. The full experience still depends on the Django API.
+### UI workflow
+
+- resizable left rail, LaTeX pane, and right rail
+- hide/show subject and video rails from the toolbar
+- LaTeX editor hidden by default after compile to keep the PDF preview as the main focus
+- responsive layout cleanup for tighter desktop widths and smaller screens
+- compile-state loading shell for preview refreshes
+
+### Study resources
+
+- backend-proxied YouTube search so the API key never reaches the browser
+- repo-root `YOUTUBE_API_KEY` support for local runs and Docker Compose passthrough
+- curated class/section links in `frontend/src/data/subjectVideos.js` shown before any API call
+- section-scoped “search more” behavior so the YouTube API is a last-resort fallback for the clicked section only
+- request validation and error handling for missing key, invalid topics, empty results, and upstream failures
 
 ## Tech stack
 
 | Layer | Technology |
 | --- | --- |
-| Frontend | React 18, Vite 6, react-pdf, dnd-kit |
-| Backend | Django 6, Django REST Framework |
+| Frontend | React 18, Vite 6, react-pdf, dnd-kit, lucide-react, framer-motion |
+| Backend | Django 6, Django REST Framework, Simple JWT |
 | PDF pipeline | Tectonic |
-| Database | SQLite in development, PostgreSQL in Docker |
-| Container tooling | Docker Compose |
-| CI | GitHub Actions |
+| Database | SQLite by default, PostgreSQL in Docker |
+| Tooling | Docker Compose, ESLint, Vitest, Pytest, Ruff |
 
 ## Architecture
 
 ```text
 Frontend (React + Vite)
-  ├─ Formula selection UI
-  ├─ Layout controls
-  ├─ LaTeX editor
-  └─ PDF preview
+  ├─ Auth + dashboard routes
+  ├─ Formula selection and ordering UI
+  ├─ Layout controls + LaTeX editor
+  ├─ PDF preview and export actions
+  └─ YouTube resource rail
          │
          ▼
 Backend (Django + DRF)
-  ├─ Formula data and generation
-  ├─ Template / cheat sheet APIs
-  ├─ Practice problem APIs
-  └─ PDF compilation endpoint
+  ├─ JWT auth + registration
+  ├─ Formula/class metadata
+  ├─ LaTeX generation endpoint
+  ├─ LaTeX compile + normalize endpoint
+  ├─ YouTube resource proxy endpoint
+  └─ Template / cheat sheet / problem CRUD
 ```
 
 ## Project structure
 
 ```text
-├── backend/                      # Django REST API
-│   ├── api/                      # Models, serializers, views, tests, formula data
-│   ├── cheat_sheet/              # Django settings
+.
+├── backend/
+│   ├── api/
+│   │   ├── formula_data/          # Class/category/formula source data
+│   │   ├── models.py              # Template, CheatSheet, PracticeProblem
+│   │   ├── serializers.py         # DRF serializers
+│   │   ├── tests.py               # Backend API and compile tests
+│   │   ├── urls.py                # API routes
+│   │   └── views.py               # Generation, compile, resource, CRUD views
+│   ├── cheat_sheet/
+│   │   ├── settings.py            # Django settings + env loading
+│   │   └── urls.py
+│   ├── Dockerfile
 │   ├── manage.py
 │   └── requirements.txt
-├── frontend/                     # React + Vite app
+├── frontend/
 │   ├── public/
 │   ├── src/
+│   │   ├── components/            # Editor, dashboard, auth, UI components
+│   │   ├── context/               # Auth context
+│   │   ├── data/                  # Curated study video links
+│   │   ├── hooks/                 # Formula, latex, YouTube resource hooks
+│   │   ├── App.css                # Main application styling
+│   │   └── App.jsx                # Routing, shell, save workflow
 │   ├── Dockerfile
 │   ├── package.json
-│   └── package-lock.json
-├── .github/workflows/            # CI workflows
+│   └── vite.config.js
+├── .github/workflows/             # CI workflows
 ├── docker-compose.yml
+├── current-ui.png
 └── README.md
 ```
 
@@ -127,10 +191,25 @@ Backend (Django + DRF)
 
 ### Prerequisites
 
-- Python 3.14
 - Node.js 24+
+- Python 3.14+
 - Tectonic
-- Docker Desktop or compatible Docker engine for containerized development
+- Docker Desktop or equivalent container runtime
+
+### Environment
+
+The backend reads both, with `/backend/.env` taking precedence over repo-root defaults:
+
+- `/.env`
+- `/backend/.env`
+
+For YouTube suggestions, add this in the repo-root `.env`:
+
+```dotenv
+YOUTUBE_API_KEY=your_key_here
+```
+
+Docker Compose passes `YOUTUBE_API_KEY` into the backend container from the repo-root `.env` (or from your shell environment), so the same key works in local Django runs and containers without mounting the whole root `.env` file into the container.
 
 ### Backend setup
 
@@ -143,22 +222,21 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-Backend health check:
+Backend URL:
 
 ```text
-http://localhost:8000/api/health/
+http://localhost:8000/api/
 ```
 
 ### Frontend setup
 
 ```bash
 cd frontend
-nvm use || true
 npm install
 npm run dev
 ```
 
-Frontend app:
+Frontend URL:
 
 ```text
 http://localhost:5173/
@@ -170,16 +248,23 @@ http://localhost:5173/
 docker compose up --build
 ```
 
-## Deployments
+Services:
 
-### GitHub Pages
+- frontend: `http://localhost:5173`
+- backend: `http://localhost:8000/api/`
+- postgres: internal Compose service used by Django
 
-- Public project page: `https://chicostate.github.io/cheat-sheet/`
-- Intended use: UI demonstration of the frontend without backend dependencies
+## Editor workflow
 
-### Application runtime
-
-The full application is intended to run locally or through container infrastructure because PDF generation and persistence require the backend API.
+1. Select one or more classes.
+2. Toggle the categories you want included.
+3. Reorder class groups or formulas if needed.
+4. Generate/compile the sheet.
+5. Adjust columns, spacing, font size, or margins.
+6. Open the LaTeX editor only if you need to inspect or edit the generated source.
+7. Save locally or, if signed in, save to your account.
+8. Restore a compile snapshot if you want to jump back to an earlier draft.
+9. Export `.pdf` / `.tex` or print directly from the preview toolbar.
 
 ## API endpoints
 
@@ -188,19 +273,20 @@ The full application is intended to run locally or through container infrastruct
 | Method | Endpoint | Description |
 | --- | --- | --- |
 | GET | `/api/health/` | Service health check |
-| POST | `/api/register/` | Register a user |
+| POST | `/api/register/` | Register a new user |
 | POST | `/api/token/` | Obtain JWT access and refresh tokens |
-| POST | `/api/token/refresh/` | Refresh a JWT access token |
+| POST | `/api/token/refresh/` | Refresh JWT access token |
 
-### Formula generation
+### Editor and compilation
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
 | GET | `/api/classes/` | List classes, categories, and formulas |
-| POST | `/api/generate-sheet/` | Generate LaTeX from selected content |
-| POST | `/api/compile/` | Compile LaTeX into PDF |
+| POST | `/api/generate-sheet/` | Generate LaTeX from selected formulas |
+| POST | `/api/compile/` | Normalize and compile LaTeX into PDF |
+| POST | `/api/youtube-resources/` | Return top YouTube picks for selected sections |
 
-### Resource management
+### Persistence
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
@@ -211,66 +297,80 @@ The full application is intended to run locally or through container infrastruct
 | GET / POST | `/api/problems/` | List or create practice problems |
 | GET / PUT / PATCH / DELETE | `/api/problems/{id}/` | Retrieve or modify a practice problem |
 
-## Available formula classes
+## Available formula coverage
 
-- **PRE-ALGEBRA**: order of operations, fractions, ratios, properties, area and perimeter, solving equations
-- **ALGEBRA I**: linear equations, inequalities, quadratics, polynomials, exponents, radicals, functions, and more
-- **ALGEBRA II**: complex numbers, logarithms, exponentials, conics, sequences, matrices, binomial theorem
-- **GEOMETRY**: angles, parallel lines, triangles, circles, polygons, coordinate geometry, transformations
-- **TRIGONOMETRY**: right-triangle relationships, special angles, identities, laws of sines and cosines
-- **PRECALCULUS**: functions, conics, exponentials, logarithms, polar and parametric topics, sequences
-- **CALCULUS I**: limits, derivatives, derivative applications, integrals
-- **CALCULUS II**: integration techniques, applications, sequences and series
-- **CALCULUS III**: vectors, multivariable derivatives, multiple integrals, vector calculus
-- **UNIT CIRCLE**: radians, degrees, and coordinate reference data
+- PRE-ALGEBRA
+- ALGEBRA I
+- ALGEBRA II
+- GEOMETRY
+- TRIGONOMETRY
+- PRECALCULUS
+- CALCULUS I
+- CALCULUS II
+- CALCULUS III
+- UNIT CIRCLE
+- PHYSICS I
+- PHYSICS II
+- STATISTICS I
+- STATISTICS II
 
-## Running checks
+Each class contains multiple categories and formulas in `backend/api/formula_data/`.
 
-### Backend
-
-```bash
-cd backend
-ruff check .
-safety check
-pytest -v
-```
+## Checks and validation
 
 ### Frontend
 
 ```bash
 cd frontend
-npx eslint src/
+npx eslint src
+npm test -- --run
 npm run build
+```
+
+### Backend
+
+```bash
+cd backend
+python manage.py check
+pytest -v
+ruff check .
+```
+
+For the Docker-backed backend checks used before release:
+
+```bash
+docker compose run --rm backend python manage.py check
+docker compose run --rm backend pytest -q
+docker compose run --rm backend ruff check .
 ```
 
 ### Docker
 
 ```bash
+docker compose config
 docker compose build
 ```
 
 ## CI pipeline
 
-GitHub Actions runs:
+GitHub Actions verifies:
 
-- backend linting and tests
-- frontend dependency install and production build
-- Docker image build verification
-
-The frontend and CI are configured around Node.js 24.
+- frontend install and build
+- backend lint/tests
+- container build verification
 
 ## Development notes
 
-### Adding a new API endpoint
+### Add a new API endpoint
 
 1. Add the view in `backend/api/views.py`
-2. Add or update serializers in `backend/api/serializers.py`
-3. Register the route in `backend/api/urls.py`
-4. Add tests in `backend/api/tests.py`
+2. Register the route in `backend/api/urls.py`
+3. Add or update serializers if needed
+4. Cover it in `backend/api/tests.py`
 
-### Adding formula data
+### Add formula content
 
-Update the appropriate module under `backend/api/formula_data/`.
+Update the appropriate file under `backend/api/formula_data/`.
 
 ## Community
 
@@ -280,11 +380,11 @@ Update the appropriate module under `backend/api/formula_data/`.
 
 ## Contributing
 
-Contributions are welcome through issues and pull requests. For setup, workflow, and review expectations, see [CONTRIBUTING.md](CONTRIBUTING.md).
+Open issues or pull requests if you want to improve formula coverage, editor workflow, tests, or docs. For repo workflow expectations, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Security
 
-If you find a vulnerability, follow the reporting guidance in [SECURITY.md](SECURITY.md) instead of opening a public issue.
+If you find a vulnerability, follow [SECURITY.md](SECURITY.md) instead of opening a public issue.
 
 ## License
 
