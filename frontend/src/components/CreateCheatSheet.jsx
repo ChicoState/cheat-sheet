@@ -327,20 +327,110 @@ const VideoCard = ({ video, onOpen, className = '' }) => (
   </button>
 );
 
-const groupVideosByClass = (resources) => resources.reduce((groups, resource) => {
-  if (!groups[resource.className]) {
-    groups[resource.className] = [];
+const CURATED_VIDEO_PREVIEW_COUNT = 1;
+
+const getVideoTopicKey = ({ className, category }) => `${className}:${category}`;
+
+const getVideoResourceKey = (video) => `${video.className}:${video.category}:${video.videoId || video.title}`;
+
+const groupVideosByTopic = (resources) => resources.reduce((groups, resource) => {
+  const topicKey = getVideoTopicKey(resource);
+  if (!groups[topicKey]) {
+    groups[topicKey] = [];
   }
-  groups[resource.className].push(resource);
+  groups[topicKey].push(resource);
   return groups;
 }, {});
+
+const SectionVideoPicks = ({
+  className,
+  category,
+  curatedVideos = [],
+  searchedVideos = [],
+  onOpen,
+  onSearchMore,
+  isSearching = false,
+  searchError = '',
+  hasSearched = false,
+  allowSearch = false,
+  compact = false,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const sectionVideoListId = useId();
+  const hiddenCuratedCount = Math.max(curatedVideos.length - CURATED_VIDEO_PREVIEW_COUNT, 0);
+  const visibleCuratedVideos = isExpanded
+    ? curatedVideos
+    : curatedVideos.slice(0, CURATED_VIDEO_PREVIEW_COUNT);
+
+  return (
+    <div className={`section-video-picks ${compact ? 'compact' : ''}`.trim()} aria-label={`${className} ${category} video picks`}>
+      <div className="section-video-heading">
+        <span>Curated videos</span>
+        {!!curatedVideos.length && <span className="section-video-count">{curatedVideos.length}</span>}
+      </div>
+
+      {curatedVideos.length > 0 ? (
+        <div id={sectionVideoListId} className="section-video-list">
+          {visibleCuratedVideos.map((video) => (
+            <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={onOpen} />
+          ))}
+        </div>
+      ) : (
+        <p className="inline-video-status">No curated video for this section yet.</p>
+      )}
+
+      {hiddenCuratedCount > 0 && (
+        <button
+          type="button"
+          className="video-more-toggle"
+          onClick={() => setIsExpanded((current) => !current)}
+          aria-expanded={isExpanded}
+          aria-controls={sectionVideoListId}
+        >
+          {isExpanded ? 'Hide extra videos' : `Show ${hiddenCuratedCount} more curated video${hiddenCuratedCount === 1 ? '' : 's'}`}
+        </button>
+      )}
+
+      {allowSearch && (
+        <div className="section-video-search-row">
+          <button
+            type="button"
+            className="btn-toggle-panel section-video-search"
+            onClick={() => onSearchMore({ className, category })}
+            disabled={isSearching}
+          >
+            {isSearching ? 'Searching YouTube…' : `Search YouTube for more in ${category}`}
+          </button>
+          <span className="section-video-search-hint">Use this if the curated pick is not enough.</span>
+        </div>
+      )}
+
+      {isSearching && !searchedVideos.length && !searchError && (
+        <p className="inline-video-status">Finding a YouTube result for this section…</p>
+      )}
+
+      {hasSearched && searchError && !isSearching && (
+        <p className="inline-video-status inline-video-status-error">{searchError}</p>
+      )}
+
+      {!!searchedVideos.length && (
+        <div className="section-video-results">
+          <div className="section-video-source-label">From YouTube search</div>
+          {searchedVideos.map((video) => (
+            <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={onOpen} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const FormulaSelection = ({ 
   classesData, 
   selectedClasses, 
   selectedCategories, 
   groupedFormulas,
-  videosByClass,
+  videosByTopic,
   toggleClass, 
   toggleCategory, 
   selectedCount, 
@@ -399,21 +489,37 @@ const FormulaSelection = ({
             const isSpecialClass = cls.is_special || (cls.categories.length === 1 && cls.categories[0].name === cls.name);
 
             if (isSpecialClass) {
+              const categoryName = cls.categories[0]?.name || cls.name;
+              const topicKey = getVideoTopicKey({ className: cls.name, category: categoryName });
+              const curatedVideos = videosByTopic[topicKey] || [];
+
               return (
                 <div key={cls.name} className="class-category-section">
                   <p className="inline-note">
                     ✓ {cls.name} selected - all formulas included
                   </p>
-                  {!!videosByClass[cls.name]?.length && (
-                    <div className="class-video-stack" aria-label={`${cls.name} video picks`}>
-                      {videosByClass[cls.name].map((video) => (
-                        <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={onOpenVideo} />
-                      ))}
+                  {!!curatedVideos.length && (
+                    <div className="class-section-video-groups">
+                      <SectionVideoPicks
+                        className={cls.name}
+                        category={categoryName}
+                        curatedVideos={curatedVideos}
+                        onOpen={onOpenVideo}
+                        compact
+                      />
                     </div>
                   )}
                 </div>
               );
             }
+
+            const selectedCategoryVideoGroups = cls.categories
+              .filter((cat) => selectedCategories[`${cls.name}:${cat.name}`])
+              .map((cat) => ({
+                category: cat.name,
+                videos: videosByTopic[getVideoTopicKey({ className: cls.name, category: cat.name })] || [],
+              }))
+              .filter((group) => group.videos.length > 0);
 
             return (
               <div key={cls.name} className="class-category-section">
@@ -451,10 +557,17 @@ const FormulaSelection = ({
                     );
                   })}
                 </div>
-                {!!videosByClass[cls.name]?.length && (
-                  <div className="class-video-stack" aria-label={`${cls.name} video picks`}>
-                    {videosByClass[cls.name].map((video) => (
-                      <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={onOpenVideo} />
+                {!!selectedCategoryVideoGroups.length && (
+                  <div className="class-section-video-groups">
+                    {selectedCategoryVideoGroups.map((group) => (
+                      <SectionVideoPicks
+                        key={group.category}
+                        className={cls.name}
+                        category={group.category}
+                        curatedVideos={group.videos}
+                        onOpen={onOpenVideo}
+                        compact
+                      />
                     ))}
                   </div>
                 )}
@@ -957,22 +1070,21 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     () => getCuratedVideosForTopics(selectedVideoTopics),
     [selectedVideoTopics],
   );
-  const { resources: searchedVideoResources, isLoading: isLoadingVideos, error: videoError, topicLimit } = useYouTubeResources(videoSearchRequest);
-  const videoResources = useMemo(() => {
-    const seen = new Set();
-
-    return [...curatedVideoResources, ...searchedVideoResources].filter((video) => {
-      const key = video.videoId || `${video.className}:${video.category}:${video.title}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }, [curatedVideoResources, searchedVideoResources]);
-  const curatedVideosByClass = useMemo(() => groupVideosByClass(curatedVideoResources), [curatedVideoResources]);
-  const videosByClass = useMemo(() => groupVideosByClass(videoResources), [videoResources]);
+  const { resources: searchedVideoResources, isLoading: isLoadingVideos, error: videoError } = useYouTubeResources(videoSearchRequest);
+  const curatedVideoKeys = useMemo(
+    () => new Set(curatedVideoResources.map((video) => getVideoResourceKey(video))),
+    [curatedVideoResources],
+  );
+  const visibleSearchedVideoResources = useMemo(
+    () => searchedVideoResources.filter((video) => !curatedVideoKeys.has(getVideoResourceKey(video))),
+    [curatedVideoKeys, searchedVideoResources],
+  );
+  const curatedVideosByTopic = useMemo(() => groupVideosByTopic(curatedVideoResources), [curatedVideoResources]);
+  const searchedVideosByTopic = useMemo(() => groupVideosByTopic(visibleSearchedVideoResources), [visibleSearchedVideoResources]);
   const getEmbedUrl  = (id) => `https://www.youtube.com/embed/${id}?autoplay=1`;
   const getWatchUrl = (id) => `https://www.youtube.com/watch?v=${id}`;
   const hasSearchedVideos = Boolean(videoSearchRequest?.key);
+  const searchedTopicKey = videoSearchRequest?.topicKey || '';
 
   const handleOpenVideo = useCallback((video, opener) => {
     lastVideoOpenerRef.current = opener || null;
@@ -1008,12 +1120,13 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     setVideoSearchRequest(null);
   }, [selectedVideoTopicKey]);
 
-  const handleSearchMoreVideos = () => {
-    if (!selectedVideoTopics.length) return;
+  const handleSearchMoreVideos = (topic) => {
+    if (!topic) return;
 
     setVideoSearchRequest({
       key: Date.now(),
-      topics: selectedVideoTopics,
+      topicKey: getVideoTopicKey(topic),
+      topics: [topic],
     });
   };
 
@@ -1234,7 +1347,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                 groupedFormulas={groupedFormulas}
                 toggleClass={handleToggleClass}
                 toggleCategory={toggleCategory}
-                videosByClass={curatedVideosByClass}
+                videosByTopic={curatedVideosByTopic}
                 selectedCount={selectedCount}
                 hasSelectedClasses={hasSelectedClasses}
                 onReorderClass={reorderClass}
@@ -1461,41 +1574,34 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                 {!selectedVideoTopics.length && (
                   <p className="right-panel-empty">Select one or more sections to see curated video picks here.</p>
                 )}
-                {selectedVideoTopics.length > 0 && (
-                  <div className="video-search-panel">
-                    <button
-                      type="button"
-                      className="btn-toggle-panel btn-video-search"
-                      onClick={handleSearchMoreVideos}
-                      disabled={isLoadingVideos}
-                    >
-                      {isLoadingVideos ? 'Searching YouTube…' : 'Search YouTube for more'}
-                    </button>
-                    <span className="video-search-hint">
-                      Curated picks show first. Search adds up to {Math.min(selectedVideoTopics.length, topicLimit)} current section result{Math.min(selectedVideoTopics.length, topicLimit) === 1 ? '' : 's'}.
-                    </span>
-                  </div>
-                )}
-                {selectedVideoTopics.length > 0 && hasSearchedVideos && videoError && !isLoadingVideos && (
-                  <p className="right-panel-empty">{videoError}</p>
-                )}
-                {selectedVideoTopics.length > 0 && isLoadingVideos && !searchedVideoResources.length && !videoError && (
-                  <p className="right-panel-empty right-panel-empty-subtle">Finding more YouTube picks…</p>
-                )}
-                {Object.keys(videosByClass).map((cls) => {
-                  const videos = videosByClass[cls] || [];
+                {selectedVideoTopics.map((topic) => {
+                  const topicKey = getVideoTopicKey(topic);
+                  const curatedVideos = curatedVideosByTopic[topicKey] || [];
+                  const searchedVideos = searchedVideosByTopic[topicKey] || [];
+                  const isSearchingTopic = isLoadingVideos && searchedTopicKey === topicKey;
+                  const hasSearchedTopic = hasSearchedVideos && searchedTopicKey === topicKey;
+
                   return (
-                    <div key={cls} className="subject-video-group">
-                      <div className="subject-video-label">{cls}</div>
-                      {videos.map((video) => (
-                        <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={handleOpenVideo} />
-                      ))}
+                    <div key={topicKey} className="subject-video-group">
+                      <div className="subject-video-label">
+                        <span>{topic.className}</span>
+                        <strong>{topic.category}</strong>
+                      </div>
+                      <SectionVideoPicks
+                        className={topic.className}
+                        category={topic.category}
+                        curatedVideos={curatedVideos}
+                        searchedVideos={searchedVideos}
+                        onOpen={handleOpenVideo}
+                        onSearchMore={handleSearchMoreVideos}
+                        isSearching={isSearchingTopic}
+                        searchError={hasSearchedTopic ? videoError : ''}
+                        hasSearched={hasSearchedTopic}
+                        allowSearch
+                      />
                     </div>
                   );
                 })}
-                {selectedVideoTopics.length > 0 && !isLoadingVideos && !videoError && !videoResources.length && (
-                  <p className="right-panel-empty">No curated videos have been added for these sections yet. Paste links into the subject video data file, or search YouTube for more.</p>
-                )}
               </div>
             </aside>
           )}

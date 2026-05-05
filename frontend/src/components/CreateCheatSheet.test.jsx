@@ -199,6 +199,32 @@ describe('CreateCheatSheet Component', () => {
     expect(screen.queryByRole('button', { name: /open geometry curated video/i })).not.toBeInTheDocument();
   });
 
+  it('shows one curated video per section until expanded', () => {
+    CURATED_SUBJECT_VIDEOS['Math 101'] = [
+      { url: 'https://youtu.be/abc123abc12', title: 'First Algebra Video', channel: 'Teacher Tube', categories: ['Algebra'] },
+      { url: 'https://youtu.be/def456def45', title: 'Second Algebra Video', channel: 'Teacher Tube', categories: ['Algebra'] },
+      { url: 'https://youtu.be/ghi789ghi78', title: 'Third Algebra Video', channel: 'Teacher Tube', categories: ['Algebra'] },
+    ];
+
+    useFormulas.mockReturnValue({
+      ...mockUseFormulas,
+      selectedClasses: { 'Math 101': true },
+      selectedCategories: { 'Math 101:Algebra': true },
+      hasSelectedClasses: true,
+    });
+
+    render(<CreateCheatSheet onSave={vi.fn()} onReset={vi.fn()} />);
+
+    const rightPanel = within(document.querySelector('.right-panel'));
+    expect(rightPanel.getByRole('button', { name: /open first algebra video/i })).toBeInTheDocument();
+    expect(rightPanel.queryByRole('button', { name: /open second algebra video/i })).not.toBeInTheDocument();
+
+    fireEvent.click(rightPanel.getByRole('button', { name: /show 2 more curated videos/i }));
+
+    expect(rightPanel.getByRole('button', { name: /open second algebra video/i })).toBeInTheDocument();
+    expect(rightPanel.getByRole('button', { name: /open third algebra video/i })).toBeInTheDocument();
+  });
+
   it('keeps searched videos out of the subject selector', () => {
     useYouTubeResources.mockReturnValue({
       resources: [
@@ -250,6 +276,29 @@ describe('CreateCheatSheet Component', () => {
 
     expect(useYouTubeResources).toHaveBeenLastCalledWith(expect.objectContaining({
       topics: [{ className: 'Math 101', category: 'Algebra' }],
+    }));
+  });
+
+  it('searches YouTube only for the clicked section', () => {
+    useFormulas.mockReturnValue({
+      ...mockUseFormulas,
+      classesData: [
+        {
+          name: 'Math 101',
+          categories: [{ name: 'Algebra', formulas: [] }, { name: 'Geometry', formulas: [] }],
+        },
+      ],
+      selectedClasses: { 'Math 101': true },
+      selectedCategories: { 'Math 101:Algebra': true, 'Math 101:Geometry': true },
+      hasSelectedClasses: true,
+    });
+
+    render(<CreateCheatSheet onSave={vi.fn()} onReset={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Search YouTube for more in Geometry/i }));
+
+    expect(useYouTubeResources).toHaveBeenLastCalledWith(expect.objectContaining({
+      topics: [{ className: 'Math 101', category: 'Geometry' }],
     }));
   });
 

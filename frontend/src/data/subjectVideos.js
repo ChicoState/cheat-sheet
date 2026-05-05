@@ -2,7 +2,7 @@
 // Paste subject links here as strings, or use objects when you want better labels:
 // 'ALGEBRA I': [
 //   'https://www.youtube.com/watch?v=VIDEO_ID',
-//   { url: 'https://youtu.be/VIDEO_ID', title: 'Linear Equations', channel: 'Khan Academy', category: 'Linear Equations' },
+//   { url: 'https://youtu.be/VIDEO_ID', title: 'Linear Equations', channel: 'Khan Academy', categories: ['Linear Equations'] },
 //   { url: 'https://youtu.be/VIDEO_ID', title: 'Algebra Review', channel: 'Khan Academy' }, // class-wide fallback
 // ],
 export const CURATED_SUBJECT_VIDEOS = {
@@ -310,17 +310,37 @@ export function getYouTubeVideoId(value = '') {
 
 const normalizeTopic = (value = '') => String(value || '').trim().toLowerCase();
 
+const getCategoryTargets = (video = {}) => {
+  if (Array.isArray(video.categories)) {
+    return video.categories.filter(Boolean);
+  }
+
+  return [];
+};
+
 function normalizeCuratedVideo(entry, className, index, selectedCategory = '') {
   const video = typeof entry === 'string' ? { url: entry } : entry;
   const videoId = video?.videoId || getYouTubeVideoId(video?.url);
   if (!videoId) return null;
 
   const explicitTopic = video.category || video.topic || '';
-  if (selectedCategory && explicitTopic && normalizeTopic(explicitTopic) !== normalizeTopic(selectedCategory)) {
-    return null;
+  const categoryTargets = getCategoryTargets(video);
+  let matchRank = 0;
+
+  if (selectedCategory) {
+    const normalizedSelectedCategory = normalizeTopic(selectedCategory);
+    const explicitTopicMatches = explicitTopic && normalizeTopic(explicitTopic) === normalizedSelectedCategory;
+    const categoryTargetMatches = categoryTargets.some((category) => normalizeTopic(category) === normalizedSelectedCategory);
+    const isClassWideFallback = !explicitTopic && categoryTargets.length === 0;
+
+    if (!explicitTopicMatches && !categoryTargetMatches && !isClassWideFallback) {
+      return null;
+    }
+
+    matchRank = isClassWideFallback ? 1 : 0;
   }
 
-  const topic = explicitTopic || selectedCategory || 'Curated pick';
+  const topic = selectedCategory || explicitTopic || categoryTargets[0] || 'Curated pick';
 
   return {
     className,
@@ -331,6 +351,7 @@ function normalizeCuratedVideo(entry, className, index, selectedCategory = '') {
     videoId,
     thumbnailUrl: video.thumbnailUrl || '',
     source: 'curated',
+    matchRank,
   };
 }
 
@@ -354,6 +375,7 @@ export function getCuratedVideosForTopics(topics) {
 
     return (CURATED_SUBJECT_VIDEOS[className] || [])
       .map((entry, index) => normalizeCuratedVideo(entry, className, index, category))
-      .filter(Boolean);
+      .filter(Boolean)
+      .sort((a, b) => a.matchRank - b.matchRank);
   });
 }
