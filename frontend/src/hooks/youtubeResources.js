@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-const YOUTUBE_TOPIC_LIMIT = 12;
+const YOUTUBE_TOPIC_LIMIT = 6;
 const REQUEST_DEBOUNCE_MS = 350;
 
 export function useYouTubeResources(searchRequest) {

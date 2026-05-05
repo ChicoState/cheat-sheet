@@ -78,7 +78,7 @@ describe('CreateCheatSheet Component', () => {
     CURATED_SUBJECT_VIDEOS['Math 101'] = [];
     useFormulas.mockReturnValue(mockUseFormulas);
     useLatex.mockReturnValue(mockUseLatex);
-    useYouTubeResources.mockReturnValue({ resources: [], isLoading: false, error: '', topicLimit: 12 });
+    useYouTubeResources.mockReturnValue({ resources: [], isLoading: false, error: '', topicLimit: 6 });
   });
 
   it('renders correctly with default state', () => {

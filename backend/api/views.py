@@ -22,7 +22,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .formula_data import get_formula_data, get_classes_with_details, get_special_class_formula, is_special_class
 from .latex_utils import build_latex_for_formulas, normalize_latex_layout
 
-YOUTUBE_MAX_TOPICS = 12
+YOUTUBE_MAX_TOPICS = 6
 YOUTUBE_SEARCH_RESULT_LIMIT = 5
 YOUTUBE_MIN_VIEW_COUNT = 10_000
 YOUTUBE_TOPIC_SET = None

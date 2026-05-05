@@ -30,6 +30,7 @@ const RESIZER_WIDTH = 10;
 const MIN_CENTER_WIDTH = 360;
 const MIN_PREVIEW_WIDTH = 260;
 const DEFAULT_PDF_ZOOM = 0.85;
+const MIN_SPLIT_CENTER_WIDTH = LATEX_PANEL_MIN_WIDTH + RESIZER_WIDTH + MIN_PREVIEW_WIDTH;
 
 function loadPanelLayout() {
   try {
@@ -893,9 +894,13 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     () => selectedVideoTopics.map((topic) => `${topic.className}:${topic.category}`).join('|'),
     [selectedVideoTopics],
   );
+  const selectedVideoClassNames = useMemo(
+    () => [...new Set(selectedVideoTopics.map((topic) => topic.className))],
+    [selectedVideoTopics],
+  );
   const curatedVideoResources = useMemo(
-    () => getCuratedVideosForClasses(selectedClassNames),
-    [selectedClassNames],
+    () => getCuratedVideosForClasses(selectedVideoClassNames),
+    [selectedVideoClassNames],
   );
   const { resources: searchedVideoResources, isLoading: isLoadingVideos, error: videoError, topicLimit } = useYouTubeResources(videoSearchRequest);
   const videoResources = useMemo(() => {
@@ -957,6 +962,19 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   }, [pdfBlob]);
 
   useEffect(() => {
+    if (!modalVideo) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setModalVideo(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [modalVideo]);
+
+  useEffect(() => {
     if (!pdfBlob || compileError || lastAutoSavedPdfRef.current === pdfBlob) {
       return;
     }
@@ -994,20 +1012,21 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     pendingPanelLayoutRef.current = startLayout;
     const bodyWidth = appBodyRef.current?.clientWidth || window.innerWidth;
     const centerWidth = centerPanelRef.current?.clientWidth || 0;
+    const minimumCenterWidth = showLatex ? MIN_SPLIT_CENTER_WIDTH : MIN_CENTER_WIDTH;
     const leftReserve = leftPanelVisible ? RESIZER_WIDTH : 0;
     const rightReserve = rightPanelVisible ? RESIZER_WIDTH : 0;
     const maxLeftWidth = Math.max(
       LEFT_PANEL_MIN_WIDTH,
       Math.min(
         LEFT_PANEL_MAX_WIDTH,
-        bodyWidth - (rightPanelVisible ? startLayout.rightWidth + rightReserve : 0) - leftReserve - MIN_CENTER_WIDTH,
+        bodyWidth - (rightPanelVisible ? startLayout.rightWidth + rightReserve : 0) - leftReserve - minimumCenterWidth,
       ),
     );
     const maxRightWidth = Math.max(
       RIGHT_PANEL_MIN_WIDTH,
       Math.min(
         RIGHT_PANEL_MAX_WIDTH,
-        bodyWidth - (leftPanelVisible ? startLayout.leftWidth + leftReserve : 0) - rightReserve - MIN_CENTER_WIDTH,
+        bodyWidth - (leftPanelVisible ? startLayout.leftWidth + leftReserve : 0) - rightReserve - minimumCenterWidth,
       ),
     );
     const maxLatexWidth = Math.max(
@@ -1053,7 +1072,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     document.body.classList.add('is-resizing-panels');
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
-  }, [leftPanelVisible, panelLayout, rightPanelVisible]);
+  }, [leftPanelVisible, panelLayout, rightPanelVisible, showLatex]);
 
   const appBodyGridTemplate = [
     leftPanelVisible ? `${panelLayout.leftWidth}px` : '0px',
@@ -1405,9 +1424,15 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       {/* ══ VIDEO MODAL ══ */}
       {modalVideo && (
         <div className="modal-overlay" onClick={() => setModalVideo(null)}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setModalVideo(null)}>✕</button>
-            <h4>{modalVideo.title}</h4>
+          <div
+            className="modal-box"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="video-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button className="modal-close" onClick={() => setModalVideo(null)} autoFocus>✕</button>
+            <h4 id="video-modal-title">{modalVideo.title}</h4>
             <iframe
               width="100%"
               height="400"

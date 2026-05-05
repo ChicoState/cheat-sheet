@@ -1587,7 +1587,7 @@ THREE COLUMN LAYOUT
   flex: 1;
   overflow: hidden;
   position: relative;
-  transition: grid-template-columns 300ms ease;
+  transition: grid-template-columns 160ms ease-out;
 }
 
 .is-resizing-panels,
@@ -2162,6 +2162,14 @@ center panel - latex drawer
   justify-content: flex-end;
 }
 
+@media (max-width: 1120px) {
+  .workspace-topbar-group-end {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}
+
 .btn-toggle-panel,
 .btn-toggle-latex {
   display: inline-flex;
@@ -2184,7 +2192,7 @@ center panel - latex drawer
 .btn-toggle-latex:hover {
   border-color: var(--primary);
   color: var(--primary);
-  transform: translateY(-1px);
+  transform: translateY(-0.5px);
   box-shadow: none;
 }
 
