@@ -484,3 +484,91 @@ export const SUBJECT_VIDEOS = {
     },
   ],
 };
+
+const MIN_CURATED_VIDEOS_PER_SECTION = 2;
+
+function normalizeCuratedVideo(entry, className, index, selectedCategory = '') {
+  const videoId = entry.videoId;
+  if (!videoId) return null;
+
+  const topic = entry.topic || '';
+  const isClassWideFallback = !topic;
+
+  if (selectedCategory) {
+    const normalizedSelected = selectedCategory.toLowerCase().trim();
+    const normalizedTopic = topic.toLowerCase().trim();
+    const topicMatches = normalizedTopic === normalizedSelected;
+
+    if (!topicMatches && !isClassWideFallback) return null;
+  }
+
+  return {
+    className,
+    category: selectedCategory || topic || 'General',
+    topic: selectedCategory || topic || 'General',
+    title: entry.title || `${className} video ${index + 1}`,
+    channel: entry.channel || 'YouTube',
+    videoId,
+    thumbnailUrl: '',
+    source: 'curated',
+    matchRank: isClassWideFallback ? 1 : 0,
+  };
+}
+
+export function getCuratedVideosForClasses(classNames) {
+  return [...new Set(classNames)].flatMap((className) =>
+    (SUBJECT_VIDEOS[className] || [])
+      .map((entry, index) => normalizeCuratedVideo(entry, className, index))
+      .filter(Boolean)
+  );
+}
+
+
+export function getCuratedVideosForTopics(topics) {
+  if (!topics || !topics.length) return [];
+
+  const seenTopics = new Set();
+  const seenClassWideVideos = new Set();
+  const topicMatches = [];
+
+  topics.forEach(({ className, category }, topicIndex) => {
+    const topicKey = `${className}:${category}`;
+    if (seenTopics.has(topicKey)) return;
+    seenTopics.add(topicKey);
+
+    const videos = (SUBJECT_VIDEOS[className] || [])
+      .map((entry, index) => normalizeCuratedVideo(entry, className, index, category))
+      .filter(Boolean)
+      .sort((a, b) => a.matchRank - b.matchRank);
+
+    topicMatches.push({
+      topicIndex,
+      className,
+      sectionSpecificVideos: videos.filter((v) => v.matchRank === 0),
+      fallbackVideos: videos.filter((v) => v.matchRank === 1),
+      selectedFallbackVideos: [],
+    });
+  });
+
+  [...topicMatches]
+    .filter(({ sectionSpecificVideos }) => sectionSpecificVideos.length < MIN_CURATED_VIDEOS_PER_SECTION)
+    .sort((a, b) => a.sectionSpecificVideos.length - b.sectionSpecificVideos.length || a.topicIndex - b.topicIndex)
+    .forEach((match) => {
+      const needed = MIN_CURATED_VIDEOS_PER_SECTION - match.sectionSpecificVideos.length;
+      match.selectedFallbackVideos = match.fallbackVideos
+        .filter((video) => {
+          const key = `${match.className}:${video.videoId}`;
+          if (seenClassWideVideos.has(key)) return false;
+          seenClassWideVideos.add(key);
+          return true;
+        })
+        .slice(0, needed);
+    });
+
+  return topicMatches
+    .sort((a, b) => a.topicIndex - b.topicIndex)
+    .flatMap(({ sectionSpecificVideos, selectedFallbackVideos }) => [
+      ...sectionSpecificVideos,
+      ...selectedFallbackVideos,
+    ]);
+}
