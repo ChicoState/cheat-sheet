@@ -321,14 +321,11 @@ const FormulaSelection = ({
                     const key = `${cls.name}:${cat.name}`;
                     const isChecked = !!selectedCategories[key];
                     return (
-                      <label key={cat.name} className={`category-checkbox-label ${isChecked ? 'checked' : ''}`} onClick={(e) => {
-                        e.preventDefault();
-                        toggleCategory(cls.name, cat.name);
-                      }}>
+                      <label key={cat.name} className={`category-checkbox-label ${isChecked ? 'checked' : ''}`}>
                         <input
                           type="checkbox"
                           checked={isChecked}
-                          readOnly
+                          onChange={() => toggleCategory(cls.name, cat.name)}
                         />
                         {cat.name} ({cat.formulas.length} formulas)
                       </label>
