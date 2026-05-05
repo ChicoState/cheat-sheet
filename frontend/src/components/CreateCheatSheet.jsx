@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { SUBJECT_VIDEOS } from '../data/subjectVideos';
@@ -11,6 +11,31 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
   import.meta.url,
 ).toString();
+
+const PANEL_LAYOUT_STORAGE_KEY = 'editorPanelLayout';
+const DEFAULT_PANEL_LAYOUT = {
+  leftWidth: 280,
+  rightWidth: 300,
+  latexWidth: 430,
+};
+
+function loadPanelLayout() {
+  try {
+    const saved = localStorage.getItem(PANEL_LAYOUT_STORAGE_KEY);
+    if (!saved) return DEFAULT_PANEL_LAYOUT;
+
+    const parsed = JSON.parse(saved);
+    return {
+      leftWidth: Number.isFinite(parsed.leftWidth) ? parsed.leftWidth : DEFAULT_PANEL_LAYOUT.leftWidth,
+      rightWidth: Number.isFinite(parsed.rightWidth) ? parsed.rightWidth : DEFAULT_PANEL_LAYOUT.rightWidth,
+      latexWidth: Number.isFinite(parsed.latexWidth) ? parsed.latexWidth : DEFAULT_PANEL_LAYOUT.latexWidth,
+    };
+  } catch {
+    return DEFAULT_PANEL_LAYOUT;
+  }
+}
+
+const clampPanelWidth = (value, min, max) => Math.min(max, Math.max(min, value));
 
 
 function SortableFormulaItem({ id, formula, onRemove, className }) {
@@ -474,28 +499,34 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
   const [numPages, setNumPages] = useState(null);
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(null);
+  const [containerHeight, setContainerHeight] = useState(null);
   const [zoom, setZoom] = useState(1);
-  const [fitToWidth, setFitToWidth] = useState(true);
+  const [viewMode, setViewMode] = useState('width');
 
   const clampZoom = (value) => Math.min(2, Math.max(0.5, value));
 
   const handleZoomOut = () => {
-    setFitToWidth(false);
+    setViewMode('custom');
     setZoom((currentZoom) => clampZoom(currentZoom - 0.15));
   };
 
   const handleZoomIn = () => {
-    setFitToWidth(false);
+    setViewMode('custom');
     setZoom((currentZoom) => clampZoom(currentZoom + 0.15));
   };
 
   const handleResetZoom = () => {
-    setFitToWidth(false);
+    setViewMode('custom');
     setZoom(1);
   };
 
   const handleFitToWidth = () => {
-    setFitToWidth(true);
+    setViewMode('width');
+    setZoom(1);
+  };
+
+  const handleFitToHeight = () => {
+    setViewMode('height');
     setZoom(1);
   };
 
@@ -503,12 +534,16 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
     if (!pdfBlob || compileError) return;
 
     event.preventDefault();
-    setFitToWidth(false);
+    setViewMode('custom');
     setZoom((currentZoom) => clampZoom(currentZoom + (event.deltaY < 0 ? 0.1 : -0.1)));
   };
 
-  const pageWidth = containerWidth
-    ? Math.max(240, Math.round(containerWidth * (fitToWidth ? 1 : zoom)))
+  const pageWidth = containerWidth && viewMode !== 'height'
+    ? Math.max(240, Math.round(containerWidth * (viewMode === 'width' ? 1 : zoom)))
+    : undefined;
+
+  const pageHeight = containerHeight && viewMode === 'height'
+    ? Math.max(320, Math.round((containerHeight - 24) * zoom))
     : undefined;
 
   useEffect(() => {
@@ -517,6 +552,7 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
     const resizeObserver = new window.ResizeObserver((entries) => {
       for (let entry of entries) {
         setContainerWidth(entry.contentRect.width);
+        setContainerHeight(entry.contentRect.height);
       }
     });
 
@@ -527,18 +563,22 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
   return (
     <div className="pdf-preview-shell">
       <div className="pdf-preview-toolbar">
+        <span className="pdf-toolbar-note">Scroll to zoom</span>
         <div className="pdf-zoom-controls" role="toolbar" aria-label="PDF zoom controls">
           <button type="button" className="pdf-zoom-btn" onClick={handleZoomOut} aria-label="Zoom out">
             −
           </button>
           <button type="button" className="pdf-zoom-btn pdf-zoom-readout" onClick={handleResetZoom}>
-            {fitToWidth ? 'Fit width' : `${Math.round(zoom * 100)}%`}
+            {viewMode === 'width' ? 'Fit width' : viewMode === 'height' ? 'Fit height' : `${Math.round(zoom * 100)}%`}
           </button>
           <button type="button" className="pdf-zoom-btn" onClick={handleZoomIn} aria-label="Zoom in">
             +
           </button>
           <button type="button" className="pdf-zoom-btn pdf-zoom-fit" onClick={handleFitToWidth}>
             Fit width
+          </button>
+          <button type="button" className="pdf-zoom-btn pdf-zoom-fit" onClick={handleFitToHeight}>
+            Fit height
           </button>
         </div>
       </div>
@@ -567,6 +607,7 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
                   renderAnnotationLayer={false}
                   className="pdf-page"
                   width={pageWidth}
+                  height={pageHeight}
                   />
 
               ))}
@@ -727,9 +768,66 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
   const [modalVideo, setModalVideo] = useState(null);
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
   const [rightPanelVisible, setRightPanelVisible] = useState(true);
+  const [panelLayout, setPanelLayout] = useState(() => loadPanelLayout());
   const getThumbnail = (id) => `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
   const getEmbedUrl  = (id) => `https://www.youtube.com/embed/${id}?autoplay=1`;
   const getWatchUrl = (id) => `https://www.youtube.com/watch?v=${id}`;
+
+  useEffect(() => {
+    localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(panelLayout));
+  }, [panelLayout]);
+
+  const startResize = useCallback((panel) => (event) => {
+    event.preventDefault();
+
+    const startX = event.clientX;
+    const startLayout = panelLayout;
+
+    const handlePointerMove = (moveEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+
+      setPanelLayout(() => {
+        if (panel === 'left') {
+          return {
+            ...startLayout,
+            leftWidth: clampPanelWidth(startLayout.leftWidth + deltaX, 220, 420),
+          };
+        }
+
+        if (panel === 'right') {
+          return {
+            ...startLayout,
+            rightWidth: clampPanelWidth(startLayout.rightWidth - deltaX, 240, 420),
+          };
+        }
+
+        return {
+          ...startLayout,
+          latexWidth: clampPanelWidth(startLayout.latexWidth + deltaX, 320, 760),
+        };
+      });
+    };
+
+    const handlePointerUp = () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      document.body.classList.remove('is-resizing-panels');
+    };
+
+    document.body.classList.add('is-resizing-panels');
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+  }, [panelLayout]);
+
+  const appBodyGridTemplate = [
+    leftPanelVisible ? `${panelLayout.leftWidth}px` : '0px',
+    leftPanelVisible ? '10px' : '0px',
+    'minmax(0, 1fr)',
+    rightPanelVisible ? '10px' : '0px',
+    rightPanelVisible ? `${panelLayout.rightWidth}px` : '0px',
+  ].join(' ');
+
+  const workspaceSplitTemplate = `${panelLayout.latexWidth}px 10px minmax(0, 1fr)`;
 
   const handleToggleClass = (className) => {
     toggleClass(className);
@@ -763,17 +861,11 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
     <>
       <div className="app-shell">
 
-       <div className="app-body" style={{gridTemplateColumns: `${leftPanelVisible ? '280px' : '0'} 1fr ${rightPanelVisible ? '300px' : '0'}`}}>
+       <div className="app-body" style={{ gridTemplateColumns: appBodyGridTemplate }}>
 
           {/* ══ LEFT PANEL ══ */}
           {leftPanelVisible && (
-          <aside className="left-panel" style={{ 
-            overflow: leftPanelVisible ? 'hidden' : 'hidden',
-            minWidth: 0, 
-            visibility: leftPanelVisible ? 'visible' : 'hidden',
-            opacity: leftPanelVisible ? 1 : 0, 
-            transition: 'opacity var(--transition-slow), visibility var(--transition-slow)',
-          }}>
+          <aside className="left-panel">
             <div className="left-panel-scroll">
 
               <div className="form-group left-panel-title-group">
@@ -874,6 +966,16 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
             </div>
           </aside>
 )}
+          {leftPanelVisible ? (
+            <button
+              type="button"
+              className="panel-resizer panel-resizer-vertical"
+              onPointerDown={startResize('left')}
+              aria-label="Resize subject panel"
+            />
+          ) : (
+            <div className="panel-resizer-slot" aria-hidden="true" />
+          )}
           {/* ══ CENTER PANEL — PDF main focus ══ */}
           <main className="center-panel">
             <div className="workspace-topbar">
@@ -911,7 +1013,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
 
              <div className="pdf-container">
                {showLatex ? (
-                 <div className="workspace-split">
+                 <div className="workspace-split" style={{ gridTemplateColumns: workspaceSplitTemplate }}>
                    <div className="workspace-split-pane workspace-split-pane-latex">
                      <LatexEditor
                        content={content}
@@ -920,6 +1022,12 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                        compileError={compileError}
                      />
                    </div>
+                   <button
+                     type="button"
+                     className="panel-resizer panel-resizer-vertical panel-resizer-inner"
+                     onPointerDown={startResize('latex')}
+                     aria-label="Resize LaTeX panel"
+                   />
                    <div className="workspace-split-pane workspace-split-pane-preview">
                      {pdfBlob || compileError ? (
                        <PdfPreview pdfBlob={pdfBlob} compileError={compileError} />
@@ -949,6 +1057,16 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                )}
              </div>
           </main>
+          {rightPanelVisible ? (
+            <button
+              type="button"
+              className="panel-resizer panel-resizer-vertical"
+              onPointerDown={startResize('right')}
+              aria-label="Resize video panel"
+            />
+          ) : (
+            <div className="panel-resizer-slot" aria-hidden="true" />
+          )}
 
           {/* ══ RIGHT PANEL — YouTube resources ══ */}
           {rightPanelVisible && (

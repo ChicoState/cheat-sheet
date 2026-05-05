@@ -1570,6 +1570,49 @@ THREE COLUMN LAYOUT
   transition: grid-template-columns 300ms ease;
 }
 
+.is-resizing-panels,
+.is-resizing-panels * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+.panel-resizer-slot {
+  width: 0;
+}
+
+.panel-resizer {
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  position: relative;
+}
+
+.panel-resizer-vertical {
+  width: 10px;
+  cursor: col-resize;
+}
+
+.panel-resizer-vertical::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 50%;
+  width: 3px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border) 82%, var(--bg) 18%);
+  transition: background-color var(--transition-fast), opacity var(--transition-fast);
+  opacity: 0.65;
+}
+
+.panel-resizer-vertical:hover::before,
+.panel-resizer-vertical:focus-visible::before {
+  background: color-mix(in srgb, var(--primary) 70%, var(--border) 30%);
+  opacity: 1;
+}
+
 /* 
   Left Panel
 */
@@ -1823,19 +1866,27 @@ pdf main focus - center panel
 
 .pdf-preview-toolbar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
   padding: 0 0.05rem;
 }
 
 .pdf-zoom-controls {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.24rem;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.28rem;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 14px;
   background: color-mix(in srgb, var(--card-bg) 92%, var(--bg) 8%);
   box-shadow: none;
+}
+
+.pdf-toolbar-note {
+  color: var(--text-muted);
+  font-size: 0.72rem;
 }
 
 .pdf-zoom-controls .pdf-zoom-btn {
@@ -1848,10 +1899,10 @@ pdf main focus - center panel
   border: 1px solid var(--border);
   background: var(--box-bg);
   color: var(--text);
-  min-width: 2rem;
-  height: 2rem;
-  padding: 0 0.65rem;
-  border-radius: var(--radius-sm);
+  min-width: 2.1rem;
+  height: 2.1rem;
+  padding: 0 0.72rem;
+  border-radius: 10px;
   font-size: 0.82rem;
   font-weight: 500;
   cursor: pointer;
@@ -1868,7 +1919,7 @@ pdf main focus - center panel
 
 .pdf-zoom-readout,
 .pdf-zoom-fit {
-  min-width: 5.5rem;
+  min-width: 5.9rem;
 }
 
 .pdf-zoom-readout {
@@ -1900,6 +1951,10 @@ pdf main focus - center panel
 
 .pdf-preview-scroll:hover {
   cursor: zoom-in;
+}
+
+.pdf-page {
+  margin-bottom: 0.75rem;
 }
 
 .pdf-placeholder {
@@ -2259,7 +2314,7 @@ three - column responsive
 
 @media (max-width: 1100px) {
   .app-body {
-    grid-template-columns: 240px 1fr 260px;
+    grid-template-columns: 240px 10px minmax(0, 1fr) 10px 260px;
   }
 }
 
@@ -2268,6 +2323,11 @@ three - column responsive
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr auto;
     overflow-y: auto;
+  }
+
+  .panel-resizer,
+  .panel-resizer-slot {
+    display: none;
   }
 
   .left-panel,
@@ -2340,7 +2400,7 @@ three - column responsive
 .workspace-split {
   display: grid;
   grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.25fr);
-  gap: 0.75rem;
+  gap: 0;
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -2368,5 +2428,9 @@ three - column responsive
 @media (max-width: 1180px) {
   .workspace-split {
     grid-template-columns: 1fr;
+  }
+
+  .panel-resizer-inner {
+    display: none;
   }
 }
