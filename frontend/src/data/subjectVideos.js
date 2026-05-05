@@ -2,7 +2,8 @@
 // Paste subject links here as strings, or use objects when you want better labels:
 // 'ALGEBRA I': [
 //   'https://www.youtube.com/watch?v=VIDEO_ID',
-//   { url: 'https://youtu.be/VIDEO_ID', title: 'Linear Equations', channel: 'Khan Academy', topic: 'Linear Equations' },
+//   { url: 'https://youtu.be/VIDEO_ID', title: 'Linear Equations', channel: 'Khan Academy', category: 'Linear Equations' },
+//   { url: 'https://youtu.be/VIDEO_ID', title: 'Algebra Review', channel: 'Khan Academy' }, // class-wide fallback
 // ],
 export const CURATED_SUBJECT_VIDEOS = {
   'PRE-ALGEBRA': [],
@@ -46,12 +47,19 @@ export function getYouTubeVideoId(value = '') {
   }
 }
 
-function normalizeCuratedVideo(entry, className, index) {
+const normalizeTopic = (value = '') => String(value || '').trim().toLowerCase();
+
+function normalizeCuratedVideo(entry, className, index, selectedCategory = '') {
   const video = typeof entry === 'string' ? { url: entry } : entry;
   const videoId = video?.videoId || getYouTubeVideoId(video?.url);
   if (!videoId) return null;
 
-  const topic = video.topic || video.category || 'Curated pick';
+  const explicitTopic = video.category || video.topic || '';
+  if (selectedCategory && explicitTopic && normalizeTopic(explicitTopic) !== normalizeTopic(selectedCategory)) {
+    return null;
+  }
+
+  const topic = explicitTopic || selectedCategory || 'Curated pick';
 
   return {
     className,
@@ -73,4 +81,18 @@ export function getCuratedVideosForClasses(classNames) {
       .map((entry, index) => normalizeCuratedVideo(entry, className, index))
       .filter(Boolean)
   ));
+}
+
+export function getCuratedVideosForTopics(topics) {
+  const seenTopics = new Set();
+
+  return topics.flatMap(({ className, category }) => {
+    const topicKey = `${className}:${category}`;
+    if (seenTopics.has(topicKey)) return [];
+    seenTopics.add(topicKey);
+
+    return (CURATED_SUBJECT_VIDEOS[className] || [])
+      .map((entry, index) => normalizeCuratedVideo(entry, className, index, category))
+      .filter(Boolean);
+  });
 }

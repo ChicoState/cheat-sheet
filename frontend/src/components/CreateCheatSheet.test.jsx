@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreateCheatSheet from './CreateCheatSheet';
 import { useFormulas } from '../hooks/formulas';
@@ -174,6 +174,57 @@ describe('CreateCheatSheet Component', () => {
 
     expect(screen.getAllByRole('button', { name: /open curated algebra video/i }).length).toBeGreaterThan(0);
     expect(useYouTubeResources).toHaveBeenCalledWith(null);
+  });
+
+  it('only shows curated videos for matching selected sections', () => {
+    CURATED_SUBJECT_VIDEOS['Math 101'] = [
+      { url: 'https://youtu.be/abc123abc12', title: 'Geometry Curated Video', channel: 'Teacher Tube', category: 'Geometry' },
+    ];
+
+    useFormulas.mockReturnValue({
+      ...mockUseFormulas,
+      classesData: [
+        {
+          name: 'Math 101',
+          categories: [{ name: 'Algebra', formulas: [] }, { name: 'Geometry', formulas: [] }],
+        },
+      ],
+      selectedClasses: { 'Math 101': true },
+      selectedCategories: { 'Math 101:Algebra': true },
+      hasSelectedClasses: true,
+    });
+
+    render(<CreateCheatSheet onSave={vi.fn()} onReset={vi.fn()} />);
+
+    expect(screen.queryByRole('button', { name: /open geometry curated video/i })).not.toBeInTheDocument();
+  });
+
+  it('keeps searched videos out of the subject selector', () => {
+    useYouTubeResources.mockReturnValue({
+      resources: [
+        {
+          className: 'Math 101',
+          category: 'Algebra',
+          title: 'API Algebra Video',
+          channel: 'YouTube',
+          videoId: 'api123api12',
+        },
+      ],
+      isLoading: false,
+      error: '',
+      topicLimit: 6,
+    });
+    useFormulas.mockReturnValue({
+      ...mockUseFormulas,
+      selectedClasses: { 'Math 101': true },
+      selectedCategories: { 'Math 101:Algebra': true },
+      hasSelectedClasses: true,
+    });
+
+    render(<CreateCheatSheet onSave={vi.fn()} onReset={vi.fn()} />);
+
+    expect(within(document.querySelector('.right-panel')).getByRole('button', { name: /open api algebra video/i })).toBeInTheDocument();
+    expect(within(document.querySelector('.left-panel')).queryByRole('button', { name: /open api algebra video/i })).not.toBeInTheDocument();
   });
 
   it('searches YouTube only when the user asks for more videos', () => {

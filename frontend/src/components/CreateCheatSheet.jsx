@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useFormulas } from '../hooks/formulas';
 import { useLatex } from '../hooks/latex';
 import { useYouTubeResources } from '../hooks/youtubeResources';
-import { getCuratedVideosForClasses } from '../data/subjectVideos';
+import { getCuratedVideosForTopics } from '../data/subjectVideos';
 import { Document, Page, pdfjs } from 'react-pdf';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -49,6 +49,54 @@ function loadPanelLayout() {
 }
 
 const clampPanelWidth = (value, min, max) => Math.min(max, Math.max(min, value));
+
+function constrainPanelLayout(layout, { bodyWidth, leftPanelVisible, rightPanelVisible, showLatex }) {
+  const minimumCenterWidth = showLatex ? MIN_SPLIT_CENTER_WIDTH : MIN_CENTER_WIDTH;
+  const leftReserve = leftPanelVisible ? RESIZER_WIDTH : 0;
+  const rightReserve = rightPanelVisible ? RESIZER_WIDTH : 0;
+  const next = {
+    leftWidth: clampPanelWidth(layout.leftWidth, LEFT_PANEL_MIN_WIDTH, LEFT_PANEL_MAX_WIDTH),
+    rightWidth: clampPanelWidth(layout.rightWidth, RIGHT_PANEL_MIN_WIDTH, RIGHT_PANEL_MAX_WIDTH),
+    latexWidth: clampPanelWidth(layout.latexWidth, LATEX_PANEL_MIN_WIDTH, LATEX_PANEL_MAX_WIDTH),
+  };
+
+  if (!Number.isFinite(bodyWidth) || bodyWidth <= 0) {
+    return next;
+  }
+
+  const maxLeftWidth = Math.max(
+    LEFT_PANEL_MIN_WIDTH,
+    Math.min(
+      LEFT_PANEL_MAX_WIDTH,
+      bodyWidth - (rightPanelVisible ? next.rightWidth + rightReserve : 0) - leftReserve - minimumCenterWidth,
+    ),
+  );
+  next.leftWidth = clampPanelWidth(next.leftWidth, LEFT_PANEL_MIN_WIDTH, maxLeftWidth);
+
+  const maxRightWidth = Math.max(
+    RIGHT_PANEL_MIN_WIDTH,
+    Math.min(
+      RIGHT_PANEL_MAX_WIDTH,
+      bodyWidth - (leftPanelVisible ? next.leftWidth + leftReserve : 0) - rightReserve - minimumCenterWidth,
+    ),
+  );
+  next.rightWidth = clampPanelWidth(next.rightWidth, RIGHT_PANEL_MIN_WIDTH, maxRightWidth);
+
+  const estimatedCenterWidth = bodyWidth
+    - (leftPanelVisible ? next.leftWidth + leftReserve : 0)
+    - (rightPanelVisible ? next.rightWidth + rightReserve : 0);
+  const maxLatexWidth = Math.max(
+    LATEX_PANEL_MIN_WIDTH,
+    Math.min(LATEX_PANEL_MAX_WIDTH, estimatedCenterWidth - RESIZER_WIDTH - MIN_PREVIEW_WIDTH),
+  );
+  next.latexWidth = clampPanelWidth(next.latexWidth, LATEX_PANEL_MIN_WIDTH, maxLatexWidth);
+
+  return next;
+}
+
+const samePanelLayout = (a, b) => (
+  a.leftWidth === b.leftWidth && a.rightWidth === b.rightWidth && a.latexWidth === b.latexWidth
+);
 
 
 function SortableFormulaItem({ id, formula, onRemove, className }) {
@@ -252,7 +300,7 @@ const VideoCard = ({ video, onOpen, className = '' }) => (
   <button
     type="button"
     className={`video-card-sm ${className}`.trim()}
-    onClick={() => onOpen(video)}
+    onClick={(event) => onOpen(video, event.currentTarget)}
     aria-label={`Open ${video.title}`}
   >
     <div className="video-thumb-sm">
@@ -269,14 +317,20 @@ const VideoCard = ({ video, onOpen, className = '' }) => (
   </button>
 );
 
+const groupVideosByClass = (resources) => resources.reduce((groups, resource) => {
+  if (!groups[resource.className]) {
+    groups[resource.className] = [];
+  }
+  groups[resource.className].push(resource);
+  return groups;
+}, {});
+
 const FormulaSelection = ({ 
   classesData, 
   selectedClasses, 
   selectedCategories, 
   groupedFormulas,
   videosByClass,
-  videoError,
-  isLoadingVideos,
   toggleClass, 
   toggleCategory, 
   selectedCount, 
@@ -347,9 +401,6 @@ const FormulaSelection = ({
                       ))}
                     </div>
                   )}
-                  {!isLoadingVideos && !videosByClass[cls.name]?.length && videoError && (
-                    <p className="inline-video-status">{videoError}</p>
-                  )}
                 </div>
               );
             }
@@ -396,9 +447,6 @@ const FormulaSelection = ({
                       <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={onOpenVideo} />
                     ))}
                   </div>
-                )}
-                {!isLoadingVideos && !videosByClass[cls.name]?.length && videoError && (
-                  <p className="inline-video-status">{videoError}</p>
                 )}
               </div>
             );
@@ -619,17 +667,17 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling }) => {
       <div className="pdf-preview-toolbar">
         <span className="pdf-toolbar-note">Use the controls to adjust the preview.</span>
         <div className="pdf-zoom-controls" role="toolbar" aria-label="PDF zoom controls">
-          <button type="button" className="pdf-zoom-btn pdf-zoom-fit" onClick={handleFitToWidth}>
+          <button type="button" className={`pdf-zoom-btn pdf-zoom-fit ${viewMode === 'width' ? 'active' : ''}`} onClick={handleFitToWidth} aria-pressed={viewMode === 'width'}>
             Fit width
           </button>
-          <button type="button" className="pdf-zoom-btn pdf-zoom-fit" onClick={handleFitToHeight}>
+          <button type="button" className={`pdf-zoom-btn pdf-zoom-fit ${viewMode === 'height' ? 'active' : ''}`} onClick={handleFitToHeight} aria-pressed={viewMode === 'height'}>
             Fit height
           </button>
           <div className="pdf-zoom-group">
             <button type="button" className="pdf-zoom-btn" onClick={handleZoomOut} aria-label="Zoom out">
               −
             </button>
-            <button type="button" className="pdf-zoom-btn pdf-zoom-readout" onClick={handleResetZoom}>
+            <button type="button" className={`pdf-zoom-btn pdf-zoom-readout ${viewMode === 'custom' ? 'active' : ''}`} onClick={handleResetZoom} aria-pressed={viewMode === 'custom'}>
               {viewMode === 'width' ? 'Fit width' : viewMode === 'height' ? 'Fit height' : `${Math.round(zoom * 100)}%`}
             </button>
             <button type="button" className="pdf-zoom-btn" onClick={handleZoomIn} aria-label="Zoom in">
@@ -875,6 +923,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const [videoSearchRequest, setVideoSearchRequest] = useState(null);
   const pendingPanelLayoutRef = useRef(panelLayout);
   const lastAutoSavedPdfRef = useRef(null);
+  const lastVideoOpenerRef = useRef(null);
   const appBodyRef = useRef(null);
   const centerPanelRef = useRef(null);
   const hasAutoOpenedLatexRef = useRef(false);
@@ -894,13 +943,9 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     () => selectedVideoTopics.map((topic) => `${topic.className}:${topic.category}`).join('|'),
     [selectedVideoTopics],
   );
-  const selectedVideoClassNames = useMemo(
-    () => [...new Set(selectedVideoTopics.map((topic) => topic.className))],
-    [selectedVideoTopics],
-  );
   const curatedVideoResources = useMemo(
-    () => getCuratedVideosForClasses(selectedVideoClassNames),
-    [selectedVideoClassNames],
+    () => getCuratedVideosForTopics(selectedVideoTopics),
+    [selectedVideoTopics],
   );
   const { resources: searchedVideoResources, isLoading: isLoadingVideos, error: videoError, topicLimit } = useYouTubeResources(videoSearchRequest);
   const videoResources = useMemo(() => {
@@ -913,18 +958,26 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       return true;
     });
   }, [curatedVideoResources, searchedVideoResources]);
-  const videosByClass = useMemo(() => (
-    videoResources.reduce((groups, resource) => {
-      if (!groups[resource.className]) {
-        groups[resource.className] = [];
-      }
-      groups[resource.className].push(resource);
-      return groups;
-    }, {})
-  ), [videoResources]);
+  const curatedVideosByClass = useMemo(() => groupVideosByClass(curatedVideoResources), [curatedVideoResources]);
+  const videosByClass = useMemo(() => groupVideosByClass(videoResources), [videoResources]);
   const getEmbedUrl  = (id) => `https://www.youtube.com/embed/${id}?autoplay=1`;
   const getWatchUrl = (id) => `https://www.youtube.com/watch?v=${id}`;
   const hasSearchedVideos = Boolean(videoSearchRequest?.key);
+
+  const handleOpenVideo = useCallback((video, opener) => {
+    lastVideoOpenerRef.current = opener || null;
+    setModalVideo(video);
+  }, []);
+
+  const handleCloseVideo = useCallback(() => {
+    setModalVideo(null);
+    const refocusOpener = () => lastVideoOpenerRef.current?.focus();
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(refocusOpener);
+    } else {
+      refocusOpener();
+    }
+  }, []);
 
   useEffect(() => {
     const hasCompiledBefore = Boolean(initialData?.compileHistory?.length || pdfBlob || content.trim());
@@ -966,13 +1019,41 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
 
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
-        setModalVideo(null);
+        handleCloseVideo();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [modalVideo]);
+  }, [handleCloseVideo, modalVideo]);
+
+  useEffect(() => {
+    const clampToViewport = () => {
+      const bodyWidth = appBodyRef.current?.clientWidth || window.innerWidth;
+
+      setPanelLayout((current) => {
+        const nextLayout = constrainPanelLayout(current, {
+          bodyWidth,
+          leftPanelVisible,
+          rightPanelVisible,
+          showLatex,
+        });
+
+        if (samePanelLayout(current, nextLayout)) {
+          return current;
+        }
+
+        pendingPanelLayoutRef.current = nextLayout;
+        localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(nextLayout));
+        return nextLayout;
+      });
+    };
+
+    clampToViewport();
+    window.addEventListener('resize', clampToViewport);
+
+    return () => window.removeEventListener('resize', clampToViewport);
+  }, [leftPanelVisible, rightPanelVisible, showLatex]);
 
   useEffect(() => {
     if (!pdfBlob || compileError || lastAutoSavedPdfRef.current === pdfBlob) {
@@ -1143,16 +1224,14 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                 groupedFormulas={groupedFormulas}
                 toggleClass={handleToggleClass}
                 toggleCategory={toggleCategory}
-                videosByClass={videosByClass}
-                videoError={hasSearchedVideos ? videoError : ''}
-                isLoadingVideos={isLoadingVideos}
+                videosByClass={curatedVideosByClass}
                 selectedCount={selectedCount}
                 hasSelectedClasses={hasSelectedClasses}
                 onReorderClass={reorderClass}
                 onReorderFormula={reorderFormula}
                 onRemoveClass={removeClassFromOrder}
                 onRemoveFormula={removeSingleFormula}
-                onOpenVideo={setModalVideo}
+                onOpenVideo={handleOpenVideo}
               />
 
               <LayoutOptions
@@ -1407,13 +1486,13 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                     <div key={cls} className="subject-video-group">
                       <div className="subject-video-label">{cls}</div>
                       {videos.map((video) => (
-                        <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={setModalVideo} />
+                        <VideoCard key={`${video.className}:${video.category}:${video.videoId}`} video={video} onOpen={handleOpenVideo} />
                       ))}
                     </div>
                   );
                 })}
                 {selectedVideoTopics.length > 0 && !isLoadingVideos && !videoError && !videoResources.length && (
-                  <p className="right-panel-empty">No curated videos have been added for this class yet. Paste links into the subject video data file, or search YouTube for more.</p>
+                  <p className="right-panel-empty">No curated videos have been added for these sections yet. Paste links into the subject video data file, or search YouTube for more.</p>
                 )}
               </div>
             </aside>
@@ -1423,7 +1502,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
 
       {/* ══ VIDEO MODAL ══ */}
       {modalVideo && (
-        <div className="modal-overlay" onClick={() => setModalVideo(null)}>
+        <div className="modal-overlay" onClick={handleCloseVideo}>
           <div
             className="modal-box"
             role="dialog"
@@ -1431,7 +1510,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
             aria-labelledby="video-modal-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <button className="modal-close" onClick={() => setModalVideo(null)} autoFocus>✕</button>
+            <button className="modal-close" onClick={handleCloseVideo} autoFocus>✕</button>
             <h4 id="video-modal-title">{modalVideo.title}</h4>
             <iframe
               width="100%"
