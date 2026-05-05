@@ -769,6 +769,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
   const [rightPanelVisible, setRightPanelVisible] = useState(true);
   const [panelLayout, setPanelLayout] = useState(() => loadPanelLayout());
+  const lastAutoSavedPdfRef = useRef(null);
   const getThumbnail = (id) => `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
   const getEmbedUrl  = (id) => `https://www.youtube.com/embed/${id}?autoplay=1`;
   const getWatchUrl = (id) => `https://www.youtube.com/watch?v=${id}`;
@@ -776,6 +777,36 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
   useEffect(() => {
     localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(panelLayout));
   }, [panelLayout]);
+
+  useEffect(() => {
+    if (!pdfBlob || compileError || lastAutoSavedPdfRef.current === pdfBlob) {
+      return;
+    }
+
+    lastAutoSavedPdfRef.current = pdfBlob;
+
+    onSave({
+      title,
+      content,
+      columns,
+      fontSize,
+      spacing,
+      margins,
+      selectedFormulas: getSelectedFormulasList(),
+      compileSnapshot: {
+        title,
+        content,
+        columns,
+        fontSize,
+        spacing,
+        margins,
+        selectedFormulas: getSelectedFormulasList(),
+        compiledAt: new Date().toISOString(),
+      },
+    }, false).catch((error) => {
+      console.error('Failed to autosave compiled sheet', error);
+    });
+  }, [columns, compileError, content, fontSize, getSelectedFormulasList, margins, onSave, pdfBlob, spacing, title]);
 
   const startResize = useCallback((panel) => (event) => {
     event.preventDefault();

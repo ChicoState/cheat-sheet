@@ -9,6 +9,27 @@ import Dashboard from './components/Dashboard';
 import './App.css'
 import CreateCheatSheet from './components/CreateCheatSheet';
 
+const CURRENT_SHEET_STORAGE_KEY = 'currentCheatSheet';
+const UNTITLED_COUNTER_STORAGE_KEY = 'untitledSheetCounter';
+
+const getNextUntitledTitle = () => {
+  const currentValue = Number(localStorage.getItem(UNTITLED_COUNTER_STORAGE_KEY) || '0');
+  const nextValue = Number.isFinite(currentValue) ? currentValue + 1 : 1;
+  localStorage.setItem(UNTITLED_COUNTER_STORAGE_KEY, String(nextValue));
+  return `Untitled Sheet (${nextValue})`;
+};
+
+const createDefaultSheet = () => ({
+  title: getNextUntitledTitle(),
+  content: '',
+  columns: 2,
+  fontSize: '10pt',
+  spacing: 'large',
+  margins: '0.25in',
+  selectedFormulas: [],
+  compileHistory: [],
+});
+
 const isTestEnv = Boolean(
   import.meta.env?.VITEST
   ||
@@ -23,16 +44,6 @@ const subtleMotion = {
   whileTap: { scale: 0.985 },
 };
 const motionInteractionProps = isTestEnv ? {} : subtleMotion;
-
-const DEFAULT_SHEET = {
-  title: '',
-  content: '',
-  columns: 2,
-  fontSize: '10pt',
-  spacing: 'large',
-  margins: '0.25in',
-  selectedFormulas: [],
-};
 
 const PrivateRoute = ({ children }) => {
   const { user } = useContext(AuthContext);
@@ -54,7 +65,7 @@ function App() {
   };
 
   const [cheatSheet, setCheatSheet] = useState(() => {
-    const saved = localStorage.getItem('currentCheatSheet');
+    const saved = localStorage.getItem(CURRENT_SHEET_STORAGE_KEY);
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -62,7 +73,7 @@ function App() {
         console.error("Failed to parse sheet", e);
       }
     }
-    return { title: '', content: '', columns: 2, fontSize: '10pt', spacing: 'large' };
+    return createDefaultSheet();
   });
 
   const [editorSessionKey, setEditorSessionKey] = useState(0);
@@ -81,15 +92,16 @@ function App() {
   const { user, authTokens, logoutUser } = useContext(AuthContext);
 
   const handleReset = () => {
-    setCheatSheet(DEFAULT_SHEET);
+    const nextSheet = createDefaultSheet();
+    setCheatSheet(nextSheet);
     setEditorSessionKey((prev) => prev + 1);
-    localStorage.setItem('currentCheatSheet', JSON.stringify(DEFAULT_SHEET));
+    localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(nextSheet));
     localStorage.removeItem('cheatSheetData');
     localStorage.removeItem('cheatSheetLatex');
   };
 
   useEffect(() => {
-    const savedSheet = localStorage.getItem('currentCheatSheet');
+    const savedSheet = localStorage.getItem(CURRENT_SHEET_STORAGE_KEY);
     if (savedSheet) {
       try {
         setCheatSheet(JSON.parse(savedSheet));
@@ -100,20 +112,30 @@ function App() {
   }, []);
 
   const handleSave = async (data, showFeedback = true) => {
+    const previousHistory = Array.isArray(cheatSheet.compileHistory) ? cheatSheet.compileHistory : [];
+    const nextHistory = data.compileSnapshot
+      ? [...previousHistory, data.compileSnapshot]
+      : previousHistory;
     const nextSheet = {
       ...cheatSheet,
       ...data,
       selectedFormulas: data.selectedFormulas ?? cheatSheet.selectedFormulas ?? [],
+      compileHistory: nextHistory,
     };
+    delete nextSheet.compileSnapshot;
 
     setCheatSheet(nextSheet);
-    localStorage.setItem('currentCheatSheet', JSON.stringify(nextSheet));
+    localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(nextSheet));
 
-    if (!showFeedback) {
+    const shouldPersistRemotely = Boolean(authTokens?.access);
+
+    if (!showFeedback && !shouldPersistRemotely) {
       return nextSheet;
     }
 
-    setIsSaving(true);
+    if (showFeedback) {
+      setIsSaving(true);
+    }
 
     try {
       const sheetId = nextSheet.id;
@@ -148,15 +170,23 @@ function App() {
       };
 
       setCheatSheet(persistedSheet);
-      localStorage.setItem('currentCheatSheet', JSON.stringify(persistedSheet));
-      alert('Progress saved!');
+      localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(persistedSheet));
+      if (showFeedback) {
+        alert('Progress saved!');
+      }
       return persistedSheet;
     } catch (error) {
       console.error('Failed to save cheat sheet', error);
-      alert(`Failed to save progress: ${error.message}`);
+      if (showFeedback) {
+        alert(`Failed to save progress: ${error.message}`);
+      } else {
+        return nextSheet;
+      }
       throw error;
     } finally {
-      setIsSaving(false);
+      if (showFeedback) {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -169,10 +199,11 @@ function App() {
       margins: sheet.margins,
       fontSize: sheet.font_size,
       selectedFormulas: sheet.selected_formulas || [],
+      compileHistory: [],
     };
     setCheatSheet(editSheet);
     setEditorSessionKey((prev) => prev + 1);
-    localStorage.setItem('currentCheatSheet', JSON.stringify(editSheet));
+    localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(editSheet));
     localStorage.removeItem('cheatSheetData');
     localStorage.removeItem('cheatSheetLatex');
   };

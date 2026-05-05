@@ -4,6 +4,12 @@ import AuthContext from '../context/AuthContext';
 const STORAGE_KEY = 'cheatSheetLatex';
 const SAVE_DEBOUNCE_MS = 500;
 const AUTO_COMPILE_DEBOUNCE_MS = 450;
+const DEFAULT_LAYOUT = {
+  columns: 2,
+  fontSize: '10pt',
+  spacing: 'large',
+  margins: '0.25in',
+};
 
 function loadLatexStorage() {
   try {
@@ -106,12 +112,9 @@ export function useLatex(initialData) {
     setHistory(prev => {
       const newHistory = prev.slice(0, historyIndex + 1);
       newHistory.push({ content: newContent, timestamp: Date.now() });
-      if (newHistory.length > 7) {
-        newHistory.shift();
-      }
       return newHistory;
     });
-    setHistoryIndex(prev => Math.min(prev + 1, 6));
+    setHistoryIndex(historyIndex + 1);
   }, [historyIndex]);
 
   useEffect(() => {
@@ -190,25 +193,6 @@ export function useLatex(initialData) {
     setPdfBlob(pdfBlobUrlRef.current);
   }, [authTokens]);
 
-  const normalizeLatexContent = useCallback(async (latexContent, layoutOptions = {}) => {
-    const response = await fetch('/api/compile/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(authTokens ? { 'Authorization': `Bearer ${authTokens.access}` } : {})
-      },
-      body: JSON.stringify({ content: latexContent, normalize_only: true, ...layoutOptions }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(formatCompileError(errorData));
-    }
-
-    const data = await response.json();
-    return data.tex_code || latexContent;
-  }, [authTokens]);
-
   const generateLatexContent = useCallback(async (selectedList) => {
     const response = await fetch('/api/generate-sheet/', {
       method: 'POST',
@@ -260,14 +244,7 @@ export function useLatex(initialData) {
         contentToCompile = generatedContent;
       }
 
-      const normalizedContent = await normalizeLatexContent(contentToCompile, {
-        columns,
-        font_size: fontSize,
-        spacing,
-        margins,
-      });
-      setContent(normalizedContent);
-      await compileLatexContent(normalizedContent, {
+      await compileLatexContent(contentToCompile, {
         columns,
         font_size: fontSize,
         spacing,
@@ -281,7 +258,7 @@ export function useLatex(initialData) {
       setIsCompiling(false);
       isCompilingRef.current = false;
     }
-  }, [clearAutoCompileTimer, columns, compileLatexContent, content, fontSize, generateLatexContent, margins, normalizeLatexContent, saveToHistory, spacing]);
+  }, [clearAutoCompileTimer, columns, compileLatexContent, content, fontSize, generateLatexContent, margins, saveToHistory, spacing]);
 
   useEffect(() => {
     if (!initialLoaded.current) return;
@@ -430,20 +407,20 @@ export function useLatex(initialData) {
 
   const clearLatex = () => {
     clearAutoCompileTimer();
-    setTitle('');
+    setTitle(initialData?.title ?? '');
     setContent('');
     setContentModified(false);
-    setColumns(2);
-    setFontSize('10pt');
-    setSpacing('large');
-    setMargins('0.25in');
+    setColumns(initialData?.columns ?? DEFAULT_LAYOUT.columns);
+    setFontSize(initialData?.fontSize ?? DEFAULT_LAYOUT.fontSize);
+    setSpacing(initialData?.spacing ?? DEFAULT_LAYOUT.spacing);
+    setMargins(initialData?.margins ?? DEFAULT_LAYOUT.margins);
     setHistory([]);
     setHistoryIndex(-1);
     lastCompiledLayoutRef.current = {
-      columns: 2,
-      fontSize: '10pt',
-      spacing: 'large',
-      margins: '0.25in',
+      columns: initialData?.columns ?? DEFAULT_LAYOUT.columns,
+      fontSize: initialData?.fontSize ?? DEFAULT_LAYOUT.fontSize,
+      spacing: initialData?.spacing ?? DEFAULT_LAYOUT.spacing,
+      margins: initialData?.margins ?? DEFAULT_LAYOUT.margins,
     };
     if (pdfBlobUrlRef.current) {
       URL.revokeObjectURL(pdfBlobUrlRef.current);

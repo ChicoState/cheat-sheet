@@ -138,10 +138,6 @@ describe('useLatex hook', () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ tex_code: 'normalized content' })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
         blob: async () => new Blob(['fake pdf data'])
       });
 
@@ -149,8 +145,8 @@ describe('useLatex hook', () => {
       await result.current.handleCompileOnly(selectedFormulas);
     });
 
-    expect(global.fetch).toHaveBeenCalledTimes(3);
-    expect(result.current.content).toBe('normalized content');
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(result.current.content).toBe('generated content');
     expect(result.current.pdfBlob).toBe('blob:test-url');
     expect(result.current.compileError).toBeNull();
   });
@@ -166,7 +162,8 @@ describe('useLatex hook', () => {
     })
     .mockResolvedValueOnce({
       ok: false,
-      json: async () => ({ details: 'Syntax error on line 1' })
+      json: async () => ({ details: 'Syntax error on line 1' }),
+      blob: async () => new Blob()
     });
 
     await act(async () => {
