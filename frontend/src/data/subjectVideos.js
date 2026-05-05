@@ -465,10 +465,10 @@ export const SUBJECT_VIDEOS = {
   ],
   "STATISTICS II": [
     {
-      title: "Chi-Square Tests: Crash Course #29",
-      videoId: "Hp21BeaMUv8",
-      channel: "CrashCourse",
-      topic: "Chi-Square"
+      title: "Chi Square Test",
+      videoId: "HKDqlYSLt68",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Chi-Square Tests"
     },
     {
       title: "Linear Regression Explained",
@@ -481,6 +481,19 @@ export const SUBJECT_VIDEOS = {
       videoId: "0oc49DyA3hU",
       channel: "The Organic Chemistry Tutor",
       topic: "Hypothesis Testing"
+    },
+    {
+      title: "ANOVA: Crash Course Statistics #33",
+      videoId: "oOuu8IBd-yo",
+      channel: "CrashCourse",
+      topic: "ANOVA (Analysis of Variance)"
+    },
+    {
+      title: "Test Statistics: Crash Course Statistics #26",
+      videoId: "QZ7kgmhdIwA",
+      channel: "CrashCourse",
+      topic: "Two-Sample Inference"
+
     },
   ],
 };
