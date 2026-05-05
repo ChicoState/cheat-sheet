@@ -1589,20 +1589,35 @@ center panel - latex drawer
   flex-shrink: 0;
 }
 
-.pdf-topbar {
+.workspace-topbar {
   display: flex;
   align-items: center;
-  padding: 0.35rem 0.75rem;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
   background: var(--panel-bg);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
+.workspace-topbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.workspace-topbar-group-end {
+  margin-left: auto;
+  justify-content: flex-end;
+}
+
+.btn-toggle-panel,
 .btn-toggle-latex {
   background: var(--box-bg);
   color: var(--text);
   border: 1px solid var(--border);
-  padding: 0.3rem 0.85rem;
+  padding: 0.38rem 0.85rem;
   border-radius: var(--radius-md);
   font-size: 0.78rem;
   font-weight: 500;
@@ -1610,6 +1625,7 @@ center panel - latex drawer
   transition: all var(--transition-fast);
 }
 
+.btn-toggle-panel:hover,
 .btn-toggle-latex:hover {
   border-color: var(--primary);
   color: var(--primary);
@@ -1693,7 +1709,7 @@ right panel - youtube resources
 .right-panel-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem 0.75rem;
 }
 
 .right-panel-scroll::-webkit-scrollbar {
@@ -1840,6 +1856,19 @@ video modal
   margin-top: var(--space-sm);
 }
 
+.modal-link {
+  display: inline-flex;
+  margin-top: 0.75rem;
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.modal-link:hover {
+  text-decoration: underline;
+}
+
 
 /* 
 three - column responsive
@@ -1889,28 +1918,6 @@ three - column responsive
   margin-bottom: 0.4rem;
   border-bottom: 1px solid var(--border);
 }
-
-.btn-toggle-left {
-  flex-shrink: 0;
-  align-self: flex-start;
-  margin: 0.4rem 0.4rem 0;
-  padding: 0.3rem 0.75rem;
-  background: var(--panel-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  color: var(--text);
-  font-size: 0.75rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  z-index: 10;
-}
-
-.btn-toggle-left:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
 
 .latex-fullscreen {
   width: 100%;

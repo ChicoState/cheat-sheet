@@ -22,7 +22,7 @@ export const SUBJECT_VIDEOS = {
       title: "Algebra Basics - Solving Basic Equations - Quick Review!",
       videoId: "kWOTmyoaWJg",
       channel: "The Organic Chemistry Tutor",
-      Topic: "Solving Equations"
+      topic: "Solving Equations"
     },
   ],
   "ALGEBRA I": [
@@ -134,7 +134,7 @@ export const SUBJECT_VIDEOS = {
     {
       title: "Factor Theorem and Synthetic Division of Polynomial Functions",
       videoId: "zAGP46nR6-0",
-      channel: "The Organic Chemsistry Tutor",
+      channel: "The Organic Chemistry Tutor",
       topic: "Polynomial Theorems and Binomial Expansion"
     },
     {
@@ -150,14 +150,7 @@ export const SUBJECT_VIDEOS = {
       topic: "Sequences and Series",
     },
   ],
-  "GEOMETRY": [
-    {
-      title: "Geometry Introduction",
-      videoId: "302sBERMVwY",
-      channel: "Professor Leonard",
-      topic: "Angle Relationships"
-    },
-  ],
+  "GEOMETRY": [],
   "TRIGONOMETRY": [
     {
       title: "Right Triangle Trigonometry",
@@ -228,25 +221,13 @@ export const SUBJECT_VIDEOS = {
   ],
   "PHYSICS II": [
     {
-      videoId: "uHvs-G-njo8",
+      videoId: "oH_V1WipnmE",
       title: "Physics 2 Final Exam Review",
       channel: "The Organic Chemistry Tutor",
       topic: "E&M and Optics"
-    },
-    {
-      videoId: "mdVYqvLAtoQ",
-      title: "Electric Fields: Crash Course #26",
-      channel: "CrashCourse",
-      topic: "Electrostatics"
     }
   ],
   "STATISTICS I": [
-    {
-      videoId: "xxpc-HPWX28",
-      title: "Statistics Exam 1 Review",
-      channel: "The Organic Chemistry Tutor",
-      topic: "Descriptive Stats"
-    },
     {
       videoId: "zouPoc49xbk",
       title: "What Is Statistics: Crash Course #1",
@@ -255,12 +236,6 @@ export const SUBJECT_VIDEOS = {
     }
   ],
   "STATISTICS II": [
-    {
-      videoId: "Hp21BeaMUv8",
-      title: "Chi-Square Tests: Crash Course #29",
-      channel: "CrashCourse",
-      topic: "Chi-Square"
-    },
     {
       videoId: "zITIFTsivN8",
       title: "Linear Regression Explained",

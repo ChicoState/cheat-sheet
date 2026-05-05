@@ -548,22 +548,6 @@ const PdfPreview = ({ pdfBlob, compileError }) => {
   );
 };
 
-const ActionToolbar = ({ handleDownloadTex, handleDownloadPDF, isLoading, isSaving, content, handleClear }) => (
-  <div className="actions">
-    <button type="submit" className="btn primary" disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Progress'}</button>
-    <button type="button" onClick={handleDownloadTex} className="btn download">Download .tex</button>
-    <button
-      type="button"
-      onClick={handleDownloadPDF}
-      className="btn download"
-      disabled={isLoading || !content}
-    >
-      {isLoading ? 'Compiling...' : 'Download PDF'}
-    </button>
-    <button type="button" onClick={handleClear} className="btn clear">Clear</button>
-  </div>
-);
-
 const FONT_SIZE_PRESETS = ['8pt', '9pt', '10pt', '11pt', '12pt'];
 const SPACING_PRESETS = ['tiny', 'small', 'medium', 'large'];
 
@@ -696,7 +680,6 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
     pdfBlob,
     isGenerating,
     isCompiling,
-    isLoading,
     compileError,
     canGoBack,
     canGoForward,
@@ -712,8 +695,10 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
   const [showLatex, setShowLatex] = useState(false);
   const [modalVideo, setModalVideo] = useState(null);
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
+  const [rightPanelVisible, setRightPanelVisible] = useState(true);
   const getThumbnail = (id) => `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
   const getEmbedUrl  = (id) => `https://www.youtube.com/embed/${id}?autoplay=1`;
+  const getWatchUrl = (id) => `https://www.youtube.com/watch?v=${id}`;
 
   const handleToggleClass = (className) => {
     toggleClass(className);
@@ -752,14 +737,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
     <>
       <div className="app-shell">
 
-       <div className="app-body" style={{gridTemplateColumns: leftPanelVisible ? '280px 1fr 300px' : '0 1fr 300px'}}>
-          <button
-            className="panel-toggle-btn"
-            onClick={() =>setLeftPanelVisible(v => !v)}
-            title={leftPanelVisible ? 'Hide subjects' : 'Show subjects'}
-          >
-            {leftPanelVisible ? '◀ Hide' : '▶ Show'}
-          </button>
+       <div className="app-body" style={{gridTemplateColumns: `${leftPanelVisible ? '280px' : '0'} 1fr ${rightPanelVisible ? '300px' : '0'}`}}>
 
           {/* ══ LEFT PANEL ══ */}
           {leftPanelVisible && (
@@ -878,26 +856,39 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
 )}
           {/* ══ CENTER PANEL — PDF main focus ══ */}
           <main className="center-panel">
-            <button 
-              className="btn-toggle-left"
-              onClick={() => setLeftPanelVisible(v => !v)}
-              title={leftPanelVisible ? 'Hide subjects' : 'Show subjects'}
-            >
-              {leftPanelVisible ? '◀ Hide' : '▶ Show'}
-            </button>
-
-            {content && (
-              <div className="pdf-topbar">
-                <div style={{ flex: 1 }} />
-                  <button
+            <div className="workspace-topbar">
+              <div className="workspace-topbar-group">
+                <button
                   type="button"
-                  className="btn-toggle-latex"
-                  onClick={() => setShowLatex(v => !v)}
+                  className="btn-toggle-panel"
+                  onClick={() => setLeftPanelVisible(v => !v)}
+                  title={leftPanelVisible ? 'Hide subjects' : 'Show subjects'}
                 >
-                 {showLatex ? '📄 Show PDF' : '{ } Show LaTeX'}
-              </button>
+                  {leftPanelVisible ? '◀ Hide subjects' : '▶ Show subjects'}
+                </button>
+              </div>
+
+              <div className="workspace-topbar-group workspace-topbar-group-end">
+                {content && (
+                  <button
+                    type="button"
+                    className="btn-toggle-latex"
+                    onClick={() => setShowLatex(v => !v)}
+                  >
+                    {showLatex ? '📄 Show PDF' : '{ } Show LaTeX'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn-toggle-panel"
+                  onClick={() => setRightPanelVisible(v => !v)}
+                  title={rightPanelVisible ? 'Hide videos' : 'Show videos'}
+                >
+                  {rightPanelVisible ? 'Hide videos ▶' : 'Show videos ◀'}
+                </button>
+              </div>
             </div>
-           )}
+
              <div className="pdf-container">
               {showLatex ? (
               <div className="latex-fullscreen">
@@ -926,6 +917,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
           </main>
 
           {/* ══ RIGHT PANEL — YouTube resources ══ */}
+          {rightPanelVisible && (
           <aside className="right-panel">
             <div className="right-panel-header">
               📺 Check Out These Resources!
@@ -968,6 +960,7 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                 })}
               </div>
           </aside>
+          )}
 
         </div>
       </div>
@@ -987,7 +980,15 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             />
-            <div className="modal-meta">{modalVideo.channel} · {modalVideo.topic}</div>
+            <div className="modal-meta">{modalVideo.channel} · {modalVideo.topic || 'General review'}</div>
+            <a
+              className="modal-link"
+              href={getWatchUrl(modalVideo.videoId)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open on YouTube
+            </a>
           </div>
         </div>
       )}
