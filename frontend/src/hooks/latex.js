@@ -32,12 +32,36 @@ function saveLatexStorage(data) {
 }
 
 function formatCompileError(errorData = {}) {
-  return (errorData.details || errorData.error || 'Failed to compile LaTeX')
+  const rawMessage = typeof errorData === 'string'
+    ? errorData
+    : (errorData.details || errorData.error || 'Failed to compile LaTeX');
+
+  return rawMessage
     .replace(/See the LaTeX manual or LaTeX Companion for explanation\.?/ig, '')
     .replace(/Type\s+H <return>\s+for immediate help\.?/ig, '')
     .replace(/error:\s*halted on potentially-recoverable error as specified\.?/ig, '')
     .replace(/\n\s*\n/g, '\n')
-    .trim();
+    .trim() || 'Failed to compile LaTeX';
+}
+
+async function readErrorResponse(response) {
+  if (typeof response.text !== 'function') {
+    const fallbackJson = typeof response.json === 'function'
+      ? await response.json().catch(() => ({}))
+      : {};
+    return fallbackJson;
+  }
+
+  const rawText = await response.text().catch(() => '');
+  if (!rawText) {
+    return { error: 'Failed to compile LaTeX' };
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    return { details: rawText };
+  }
 }
 
 export function useLatex(initialData) {
@@ -182,7 +206,7 @@ export function useLatex(initialData) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      const errorData = await readErrorResponse(response);
       throw new Error(formatCompileError(errorData));
     }
 
@@ -208,7 +232,8 @@ export function useLatex(initialData) {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to generate sheet');
+      const errorData = await readErrorResponse(response);
+      throw new Error(formatCompileError(errorData));
     }
 
     const data = await response.json();
@@ -233,7 +258,7 @@ export function useLatex(initialData) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      const errorData = await readErrorResponse(response);
       throw new Error(formatCompileError(errorData));
     }
 
@@ -425,7 +450,10 @@ export function useLatex(initialData) {
           margins,
         }),
       });
-      if (!response.ok) throw new Error('Failed to compile LaTeX');
+      if (!response.ok) {
+        const errorData = await readErrorResponse(response);
+        throw new Error(formatCompileError(errorData));
+      }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

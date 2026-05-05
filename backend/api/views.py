@@ -287,10 +287,23 @@ def compile_latex(request):
                 text=True,
                 check=True,
             )
+        except FileNotFoundError:
+            return Response(
+                {"error": "Tectonic is not installed on the backend."},
+                status=500,
+            )
         except subprocess.CalledProcessError as e:
             return Response(
-                {"error": "Failed to compile LaTeX", "details": e.stderr},
+                {
+                    "error": "Failed to compile LaTeX",
+                    "details": e.stderr or e.stdout or "LaTeX compilation failed without additional output.",
+                },
                 status=400,
+            )
+        except Exception as e:
+            return Response(
+                {"error": "Failed to compile LaTeX", "details": str(e)},
+                status=500,
             )
         
         pdf_file_path = os.path.join(tempdir, "document.pdf")

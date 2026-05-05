@@ -255,14 +255,11 @@ const FormulaSelection = ({
           {classesData.map((cls) => {
             const isChecked = !!selectedClasses[cls.name];
             return (
-              <label key={cls.name} className={`class-checkbox-label ${isChecked ? 'checked' : ''}`} onClick={(e) => {
-                e.preventDefault();
-                toggleClass(cls.name);
-              }}>
+              <label key={cls.name} className={`class-checkbox-label ${isChecked ? 'checked' : ''}`}>
                 <input
                   type="checkbox"
                   checked={isChecked}
-                  readOnly
+                  onChange={() => toggleClass(cls.name)}
                 />
                 {cls.name}
               </label>
