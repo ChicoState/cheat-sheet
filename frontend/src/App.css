@@ -364,20 +364,24 @@ label {
 }
 
 .btn.history-btn {
-  padding: 4px 8px;
-  font-size: 0.875rem;
-  background: var(--box-bg);
+  min-height: 2.25rem;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.84rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--box-bg) 96%, white 4%) 0%, var(--box-bg) 100%);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn.history-btn:hover:not(:disabled) {
-  background: var(--btn-primary);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--btn-primary) 82%, white 18%) 0%, var(--btn-primary) 100%);
   color: white;
-  border-color: var(--btn-primary);
+  border-color: var(--btn-primary-hover);
+  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.16);
+  transform: translateY(-1px);
 }
 
 .btn.history-btn:disabled {
@@ -588,20 +592,25 @@ label {
 }
 
 .layout-select {
-  padding: 0.5rem 0.75rem;
+  padding: 0.55rem 0.8rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--input-border);
   background: var(--input-bg);
   color: var(--input-text);
   font-size: 0.875rem;
   cursor: pointer;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast), background-color var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
 .layout-select:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14), var(--shadow-sm);
+}
+
+.layout-select:hover {
+  border-color: var(--primary);
 }
 
 /* ==========================================================================
@@ -612,39 +621,42 @@ label {
   align-items: center;
   justify-content: center;
   gap: var(--space-xs);
-  padding: 0.625rem 1.25rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--card-bg);
+  padding: 0.68rem 1.05rem;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, var(--text) 18%);
+  border-radius: 11px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--card-bg) 96%, white 4%) 0%, var(--card-bg) 100%);
   color: var(--text);
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.875rem;
   letter-spacing: 0.01em;
   text-decoration: none;
-  transition: all var(--transition-fast);
-  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast), filter var(--transition-fast);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02), var(--shadow-sm);
 }
 
 .btn:hover {
-  background-color: var(--border-subtle);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--card-bg) 88%, white 12%) 0%, var(--border-subtle) 100%);
   border-color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18), var(--shadow-sm);
 }
 
 .btn.primary {
-  background: linear-gradient(180deg, #4f8ff7 0%, var(--btn-primary) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--btn-primary) 90%, white 10%) 0%, var(--btn-primary) 100%);
   color: white;
   border-color: var(--btn-primary-hover);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 18px rgba(37, 99, 235, 0.18);
 }
 
 .btn.primary:hover {
-  background: linear-gradient(180deg, #6ba3f9 0%, #4f8ff7 100%);
-  box-shadow: var(--shadow-md);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--btn-primary) 78%, white 22%) 0%, var(--btn-primary-hover) 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12), 0 12px 22px rgba(37, 99, 235, 0.24);
   transform: translateY(-1px);
 }
 
@@ -654,14 +666,15 @@ label {
 }
 
 .btn.download {
-  background: linear-gradient(180deg, #34d399 0%, var(--btn-download) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--btn-download) 88%, white 12%) 0%, var(--btn-download) 100%);
   color: white;
   border-color: var(--btn-download-hover);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 18px rgba(16, 185, 129, 0.14);
 }
 
 .btn.download:hover {
-  background: linear-gradient(180deg, #4ade80 0%, #34d399 100%);
-  box-shadow: var(--shadow-md);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--btn-download) 76%, white 24%) 0%, var(--btn-download-hover) 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12), 0 12px 22px rgba(16, 185, 129, 0.2);
   transform: translateY(-1px);
 }
 
@@ -670,15 +683,15 @@ label {
 }
 
 .btn.clear {
-  background: transparent;
+  background: color-mix(in srgb, var(--box-bg) 78%, transparent);
   color: var(--btn-clear);
   border: 1px solid var(--btn-clear);
 }
 
 .btn.clear:hover {
-  background: var(--btn-clear);
+  background: color-mix(in srgb, var(--btn-clear) 92%, black 8%);
   color: white;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 12px 20px rgba(239, 68, 68, 0.18);
   transform: translateY(-1px);
 }
 
@@ -687,14 +700,14 @@ label {
 }
 
 .btn.preview {
-  background: linear-gradient(180deg, #4f8ff7 0%, var(--btn-primary) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--btn-primary) 90%, white 10%) 0%, var(--btn-primary) 100%);
   color: white;
   border-color: var(--btn-primary-hover);
 }
 
 .btn.preview:hover {
-  background: linear-gradient(180deg, #6ba3f9 0%, #4f8ff7 100%);
-  box-shadow: var(--shadow-md);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--btn-primary) 78%, white 22%) 0%, var(--btn-primary-hover) 100%);
+  box-shadow: 0 12px 22px rgba(37, 99, 235, 0.2);
   transform: translateY(-1px);
 }
 
@@ -709,7 +722,10 @@ label {
 .generate-btn {
   margin-top: var(--space-sm);
   font-size: 0.9375rem;
-  padding: 0.75rem 1.5rem;
+  padding: 0.82rem 1.35rem;
+  border-radius: 12px;
+  width: 100%;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.18);
 }
 
 .generate-btn:disabled {
@@ -717,12 +733,16 @@ label {
   cursor: not-allowed;
 }
 
+.generate-btn:hover:not(:disabled) {
+  box-shadow: 0 14px 24px rgba(37, 99, 235, 0.22);
+}
+
 /* Circular compile button */
 .compile-circle {
   width: 48px;
   height: 48px;
   border-radius: var(--radius-full);
-  background: linear-gradient(180deg, #4f8ff7 0%, var(--btn-primary) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--btn-primary) 90%, white 10%) 0%, var(--btn-primary) 100%);
   color: white;
   font-size: 1.375rem;
   display: flex;
@@ -731,7 +751,7 @@ label {
   padding: 0;
   border: none;
   cursor: pointer;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 18px rgba(37, 99, 235, 0.18);
   transition: all var(--transition-base);
 }
 
@@ -743,9 +763,9 @@ label {
 }
 
 .compile-circle:hover:not(:disabled) {
-  background: linear-gradient(180deg, #6ba3f9 0%, #4f8ff7 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--btn-primary) 78%, white 22%) 0%, var(--btn-primary-hover) 100%);
   transform: rotate(90deg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 14px 24px rgba(37, 99, 235, 0.24);
 }
 
 .compile-circle:disabled {
@@ -792,25 +812,28 @@ label {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
-  padding: 0.5rem 0.875rem;
-  background: var(--box-bg);
+  padding: 0.55rem 0.9rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--box-bg) 96%, white 4%) 0%, var(--box-bg) 100%);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 999px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.875rem;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
   user-select: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .class-checkbox-label:hover {
   border-color: var(--primary);
-  background: var(--panel-bg);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 94%, white 6%) 0%, var(--panel-bg) 100%);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .class-checkbox-label.checked {
   border-color: var(--primary);
-  background: rgba(59, 130, 246, 0.1);
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.16) 0%, rgba(59, 130, 246, 0.1) 100%);
   color: var(--primary);
 }
 
@@ -818,24 +841,27 @@ label {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
-  padding: 0.375rem 0.75rem;
-  background: var(--box-bg);
+  padding: 0.42rem 0.75rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--box-bg) 96%, white 4%) 0%, var(--box-bg) 100%);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   cursor: pointer;
   font-size: 0.8125rem;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
   user-select: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .category-checkbox-label:hover {
   border-color: var(--primary);
-  background: var(--panel-bg);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 94%, white 6%) 0%, var(--panel-bg) 100%);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .category-checkbox-label.checked {
   border-color: var(--primary);
-  background: rgba(59, 130, 246, 0.1);
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.16) 0%, rgba(59, 130, 246, 0.1) 100%);
   color: var(--primary);
 }
 
@@ -943,14 +969,15 @@ label {
   align-items: center;
   justify-content: space-between;
   padding: 0.625rem 0.875rem;
-  background: linear-gradient(180deg, #4f8ff7 0%, var(--btn-primary) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--btn-primary) 88%, white 12%) 0%, var(--btn-primary) 100%);
   color: white;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .class-group-header:hover {
-  filter: brightness(1.08);
+  filter: brightness(1.04);
 }
 
 .class-group-header:active {
@@ -970,26 +997,29 @@ label {
 }
 
 .class-group-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 0.2rem 0.48rem;
+  font-size: 0.72rem;
+  font-weight: 700;
   cursor: pointer;
   color: white;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
 .class-group-btn:hover {
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
 }
 
 .class-group-btn.remove {
-  background: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.22);
 }
 
 .class-group-btn.remove:hover {
-  background: var(--btn-clear);
+  background: rgba(239, 68, 68, 0.42);
 }
 
 .sortable-formula-item {
@@ -1022,9 +1052,9 @@ label {
 }
 
 .drag-handle {
-  padding: 0 var(--space-sm);
+  padding: 0 0.4rem;
   color: var(--text-muted);
-  font-size: 1.125rem;
+  font-size: 1rem;
   cursor: grab;
 }
 
@@ -1033,7 +1063,7 @@ label {
 }
 
 .class-group-header .drag-handle {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .formula-name {
@@ -1060,17 +1090,29 @@ label {
 }
 
 .remove-formula {
-  background: none;
-  border: none;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--box-bg) 85%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 999px;
   color: var(--btn-clear);
-  font-size: 1.125rem;
+  font-size: 1rem;
+  line-height: 1;
   cursor: pointer;
-  padding: 0 var(--space-xs);
-  transition: color var(--transition-fast);
+  padding: 0;
+  margin-left: 0.25rem;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .remove-formula:hover {
-  color: var(--btn-clear-hover);
+  color: white;
+  background: var(--btn-clear);
+  border-color: var(--btn-clear-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(239, 68, 68, 0.18);
 }
 
 .reorder-instructions {
@@ -1216,26 +1258,107 @@ THREE COLUMN LAYOUT
 }
 
 .app-header {
-  padding: 0.75rem 1.5rem;
+  padding: 0.65rem 1.15rem;
   background: var(--panel-bg);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   gap: var(--space-md);
   flex-shrink: 0;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02), var(--shadow-md);
 }
 
+.app-header-inner {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  width: 100%;
+  gap: 0.75rem;
+}
+
+.app-header-nav,
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.app-header-actions {
+  justify-content: flex-end;
+}
+
+.app-header-brand {
+  text-align: center;
+  min-width: 0;
+}
+
+.app-header-brand h1 {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: -0.03em;
+}
+
+.app-header-brand p {
+  margin: 0.125rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.app-header-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.app-header-link:hover {
+  background: color-mix(in srgb, var(--box-bg) 82%, transparent);
+  border-color: var(--border);
+  color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-header-link:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
+}
+
+.app-header-logout {
+  background: color-mix(in srgb, var(--box-bg) 74%, transparent);
+}
+
+.app-theme-select,
 .app-header input {
   background: var(--input-bg);
   border: 1px solid var(--input-border);
   color: var(--input-text);
   padding: 0.4rem 0.75rem;
   border-radius: var(--radius-md);
-  font-size: 0.9 rem;
+  font-size: 0.9rem;
   width: 220px;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 
+}
+
+.app-theme-select {
+  width: auto;
+  min-width: 9.5rem;
+  padding-right: 2rem;
 }
 
 .app-header input:focus {
@@ -1410,22 +1533,22 @@ left panel - footer buttons
 */
 
 .btn-compile {
-  background: linear-gradient(180deg, #4f8ff7 0%, var(--btn-primary) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--btn-primary) 90%, white 10%) 0%, var(--btn-primary) 100%);
   color: white;
   border: 1px solid var(--btn-primary-hover);
-  padding: 0.65rem;
-  border-radius: var(--radius-md);
+  padding: 0.72rem 0.85rem;
+  border-radius: 12px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   width: 100%;
-  transition: all var(--transition-fast);
-  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 18px rgba(37, 99, 235, 0.16);
 }
 
 .btn-compile:hover:not(:disabled) {
-  background: linear-gradient(180deg, #6ba3f9 0%, #4f8ff7 100%);
-  box-shadow: var(--shadow-md);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--btn-primary) 78%, white 22%) 0%, var(--btn-primary-hover) 100%);
+  box-shadow: 0 12px 22px rgba(37, 99, 235, 0.22);
   transform: translateY(-1px);
 }
 
@@ -1442,22 +1565,22 @@ left panel - footer buttons
 
 .btn-dl {
   flex: 1;
-  background: linear-gradient(180deg, #34d399 0%, var(--btn-download) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--btn-download) 88%, white 12%) 0%, var(--btn-download) 100%);
   color: white;
   border: 1px solid var(--btn-download-hover);
-  padding: 0.45rem;
-  border-radius: var(--radius-md);
+  padding: 0.5rem;
+  border-radius: 12px;
   font-size: 0.8rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   text-align: center;
-  transition: all var(--transition-fast);
-  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 18px rgba(16, 185, 129, 0.12);
 }
 
 .btn-dl:hover {
-  background: linear-gradient(180deg, #4ade80 0%, #34d399 100%);
-  box-shadow: var(--shadow-md);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--btn-download) 76%, white 24%) 0%, var(--btn-download-hover) 100%);
+  box-shadow: 0 12px 22px rgba(16, 185, 129, 0.18);
   transform: translateY(-1px);
 }
 
@@ -1502,12 +1625,12 @@ pdf main focus - center panel
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--panel-bg) 88%, transparent);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02), var(--shadow-sm);
 }
 
 .pdf-zoom-btn {
-  border: 1px solid transparent;
-  background: var(--box-bg);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--box-bg) 96%, white 4%) 0%, var(--box-bg) 100%);
   color: var(--text);
   min-width: 2rem;
   height: 2rem;
@@ -1516,17 +1639,29 @@ pdf main focus - center panel
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
 .pdf-zoom-btn:hover {
   border-color: var(--primary);
   color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .pdf-zoom-readout,
 .pdf-zoom-fit {
   min-width: 5.5rem;
+}
+
+.pdf-zoom-btn:focus-visible,
+.btn-toggle-panel:focus-visible,
+.btn-toggle-latex:focus-visible,
+.class-group-btn:focus-visible,
+.remove-formula:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18), var(--shadow-sm);
 }
 
 .pdf-preview-scroll {
@@ -1614,21 +1749,24 @@ center panel - latex drawer
 
 .btn-toggle-panel,
 .btn-toggle-latex {
-  background: var(--box-bg);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--box-bg) 96%, white 4%) 0%, var(--box-bg) 100%);
   color: var(--text);
   border: 1px solid var(--border);
-  padding: 0.38rem 0.85rem;
-  border-radius: var(--radius-md);
+  padding: 0.42rem 0.92rem;
+  border-radius: 999px;
   font-size: 0.78rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-toggle-panel:hover,
 .btn-toggle-latex:hover {
   border-color: var(--primary);
   color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .latex-line-count {

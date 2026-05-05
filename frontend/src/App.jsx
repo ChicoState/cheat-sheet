@@ -163,27 +163,26 @@ function App() {
   return (
     <div className="App">
       <header className="app-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 1rem', width: '100%' }}>
-          <div style={{ flex: 1, display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <Link to="/" style={{ textDecoration: 'none', color: 'var(--text)' }}>Home</Link>
-            {user && <Link to="/dashboard" style={{ textDecoration: 'none', color: 'var(--text)' }}>Dashboard</Link>}
-            {user && <button onClick={logoutUser} style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: 0, font: 'inherit' }}>Logout ({user.username})</button>}
-            {!user && <Link to="/login" style={{ textDecoration: 'none', color: 'var(--text)' }}>Login</Link>}
+        <div className="app-header-inner">
+          <div className="app-header-nav">
+            <Link to="/" className="app-header-link">Home</Link>
+            {user && <Link to="/dashboard" className="app-header-link">Dashboard</Link>}
+            {user && <button type="button" onClick={logoutUser} className="app-header-link app-header-logout">Logout ({user.username})</button>}
+            {!user && <Link to="/login" className="app-header-link">Login</Link>}
           </div>
 
-          <div style={{ textAlign: 'center' }}>
-            <h1 style={{ margin: 0 }}>Cheat Sheet Generator</h1>
-            <p style={{ margin: 0, fontSize: '0.8543m', color: 'var(--text-muted)'}}>
+          <div className="app-header-brand">
+            <h1>Cheat Sheet Generator</h1>
+            <p>
               Write Cheat Sheets With Integrated LaTeX Support!
             </p>
           </div>
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-          <select
-          value={theme}
-          onChange={(e) => setTheme(e.target.value)}
-          className="layout-select"
-          style={{ fontSize: '0.85rem', cursor: 'pointer' }}
-          >
+          <div className="app-header-actions">
+           <select
+           value={theme}
+           onChange={(e) => setTheme(e.target.value)}
+           className="layout-select app-theme-select"
+           >
         {THEMES.map(t => (
         <option key={t.id} value={t.id}>{t.label}</option>
       ))}
