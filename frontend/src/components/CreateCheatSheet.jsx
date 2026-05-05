@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useId } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -133,21 +133,31 @@ function SortableFormulaItem({ id, formula, onRemove, className }) {
 }
 
 function CollapsiblePanelSection({ title, isOpen, onToggle, children, countBadge = null, className = '' }) {
+  const sectionId = useId();
+  const toggleId = `${sectionId}-toggle`;
+  const panelId = `${sectionId}-panel`;
+
   return (
     <section className={`left-panel-section ${className}`.trim()}>
       <button
+        id={toggleId}
         type="button"
         className={`left-panel-section-toggle ${isOpen ? 'open' : ''}`}
         onClick={onToggle}
         aria-expanded={isOpen}
+        aria-controls={panelId}
       >
         <span className="left-panel-section-title-row">
           <span className="left-panel-section-title">{title}</span>
           {countBadge ? <span className="left-panel-section-badge">{countBadge}</span> : null}
         </span>
-        <span className="left-panel-section-icon">{isOpen ? '−' : '+'}</span>
+        <span className="left-panel-section-icon" aria-hidden="true">▸</span>
       </button>
-      {isOpen ? <div className="left-panel-section-body">{children}</div> : null}
+      {isOpen ? (
+        <div id={panelId} className="left-panel-section-body" role="region" aria-labelledby={toggleId}>
+          {children}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -1347,14 +1357,6 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
               </div>
 
               <div className="workspace-topbar-group workspace-topbar-group-end">
-                <button
-                  type="button"
-                  className="btn-compile btn-compile-inline"
-                  onClick={handleCompileClick}
-                  disabled={isCompiling}
-                >
-                  {isCompiling ? 'Rebuilding…' : 'Rebuild preview'}
-                </button>
                 <button
                   type="button"
                   className="btn-toggle-panel"
