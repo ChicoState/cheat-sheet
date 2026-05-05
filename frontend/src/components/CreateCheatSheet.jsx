@@ -683,7 +683,7 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
             value={content}
             onChange={(e) => onChange(e.target.value)}
             onScroll={handleScroll}
-            placeholder='Select classes and categories above, then click "Compile PDF" to see the LaTeX code here.'
+            placeholder='Select classes and categories above, then click "GET CHEAT SHEET" to see the LaTeX code here.'
             className={`textarea-field ${isModified ? 'modified' : ''}`}
             rows={15}
             spellCheck="false"
@@ -1410,7 +1410,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                 className="btn-compile"
                 disabled={isCompiling}
               >
-                {isCompiling ? 'Compiling…' : 'Compile PDF'}
+                {isCompiling ? 'Compiling…' : 'GET CHEAT SHEET'}
               </button>
 
               <div className="button-row">
