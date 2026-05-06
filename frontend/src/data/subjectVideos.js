@@ -637,9 +637,9 @@ export function getCuratedVideosForTopics(topics) {
 
  return topicMatches
    .sort((a, b) => a.topicIndex - b.topicIndex)
-   .flatMap(({ sectionSpecificVideos, selectedFallbackVideos }) => [
-     ...sectionSpecificVideos,
-     ...selectedFallbackVideos.map(video) => ({ ...video, category}),
-   ]);
+   .flatMap(({ category, sectionSpecificVideos, selectedFallbackVideos }) => [
+      ...sectionSpecificVideos,
+      ...selectedFallbackVideos.map((video) => ({ ...video, category })),
+    ]);
 }
 
