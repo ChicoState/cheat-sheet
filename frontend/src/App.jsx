@@ -148,6 +148,7 @@ const THEMES = [
   { id: 'coolGrey',    label: '❄️ Cool Grey'}, 
   { id: 'neon',         label:     '🩵 neon'},
   { id: 'galaxy',     label: '🌌 Galaxy'    },
+  {id: 'crimson', label: '❤️ Red'           },
 ];
 
 function App() {

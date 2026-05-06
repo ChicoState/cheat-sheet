@@ -160,6 +160,33 @@
   --shadow-inset: inset 0 1px 3px rgba(0,0,0,0.5);
 }
 
+/* new crimson/red theme */
+[data-theme="crimson"] {
+  --bg: #0d0608;
+  --text: #f5e6e8;
+  --text-muted: #a87880;
+  --panel-bg: #1a0a0d;
+  --border: #3d1018;
+  --border-subtle: #2a0b10;
+  --primary: #c0392b;
+  --primary-hover: #96281b;
+  --card-bg: #1a0a0d;
+  --box-bg: #120608;
+  --input-bg: #0a0305;
+  --input-border: #5c1520;
+  --input-text: #f5e6e8;
+  --btn-primary: #c0392b;
+  --btn-primary-hover: #96281b;
+  --btn-download: #8e2020;
+  --btn-download-hover: #6b1818;
+  --btn-clear: #e74c3c;
+  --btn-clear-hover: #c0392b;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.5);
+  --shadow-md: 0 4px 12px rgba(180,0,30,0.2);
+  --shadow-lg: 0 8px 24px rgba(180,0,30,0.25);
+  --shadow-inset: inset 0 1px 3px rgba(0,0,0,0.6);
+}
+
 /* cool grey theme */
 [data-theme="coolGrey"] {
   --bg: #2e3440;
