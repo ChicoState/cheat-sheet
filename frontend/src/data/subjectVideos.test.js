@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { SUBJECT_VIDEOS, getCuratedVideosForTopics, getYouTubeVideoId } from './subjectVideos';
+import { CURATED_SUBJECT_VIDEOS, getCuratedVideosForTopics, getYouTubeVideoId } from './subjectVideos';
 
 describe('subjectVideos helpers', () => {
   afterEach(() => {
-    delete SUBJECT_VIDEOS['TEST CLASS'];
+    delete CURATED_SUBJECT_VIDEOS['TEST CLASS'];
   });
 
   it('only extracts IDs from recognized YouTube hosts', () => {
@@ -17,7 +17,7 @@ describe('subjectVideos helpers', () => {
   });
 
   it('shows each class-wide fallback only once across selected sections', () => {
-    SUBJECT_VIDEOS['TEST CLASS'] = [
+    CURATED_SUBJECT_VIDEOS['TEST CLASS'] = [
       { videoId: 'abcdefghijk', title: 'Class overview', channel: 'YouTube' },
     ];
 
@@ -35,7 +35,7 @@ describe('subjectVideos helpers', () => {
   });
 
   it('assigns class-wide fallback videos to sparse sections first', () => {
-    SUBJECT_VIDEOS['TEST CLASS'] = [
+    CURATED_SUBJECT_VIDEOS['TEST CLASS'] = [
       { videoId: 'firstfirst1', title: 'First section', channel: 'YouTube', categories: ['First Section'] },
       { videoId: 'fallback123', title: 'Class overview', channel: 'YouTube' },
     ];
