@@ -3299,3 +3299,26 @@ select:focus:not(:focus-visible) {
   background: var(--text-muted);
 }
 
+/* Muted text contrast improvement */
+.text-muted,
+.v-channel,
+.right-panel-empty,
+.reorder-instructions,
+.subtle-copy,
+.pdf-toolbar-note,
+.snapshot-card-meta,
+.inline-video-status {
+  color: var(--text-muted);
+  opacity: 1;
+
+}
+[data-theme="dark"] .text-muted,
+[data-theme="dark"] .v-channel,
+[data-theme="dark"] .right-panel-empty {
+  color: #a1a1aa;
+}
+[data-theme="light"] .text-muted,
+[data-theme="light"] .v-channel,
+[data-theme="light"] .right-panel-empty {
+  color: #52525b;
+}
