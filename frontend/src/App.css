@@ -3393,3 +3393,15 @@ right-panel-scroll::-webkit-scrollbar-thumb:hover,
   color: var(--btn-clear);
   background: rgba(239, 68, 68, 0.08);
 }
+
+.title-char-counter {
+  text-align: right;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.tile-char-counter-warn {
+  color: var (--btn-clear);
+  font-weight: 600;
+}

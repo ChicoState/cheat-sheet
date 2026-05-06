@@ -1466,7 +1466,15 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                   placeholder="My Math Cheat Sheet"
                   required
                   className="input-field"
+                  maxLength={80}
+                  autoComplete="off"
+                  spellCheck={false}
                 />
+                <div className="title-char-counter">
+                  <span className={title.length > 70 ? 'title-char-counter-warn' : ''}>
+                    {title.length}/80
+                  </span>
+                </div>
               </div>
 
               <FormulaSelection
