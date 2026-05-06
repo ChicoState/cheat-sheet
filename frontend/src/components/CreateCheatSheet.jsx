@@ -1066,6 +1066,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const [videoSearchRequest, setVideoSearchRequest] = useState(null);
   const [saveStatus, setSaveStatus] = useState('idle');
   const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [toast, setToast] = useState(null);
   const [classesCollapseSignal, setClassesCollapseSignal] = useState(0);
   const pendingPanelLayoutRef = useRef(panelLayout);
   const hasCollapsedLeftPanelOnceRef = useRef(false);
@@ -1107,6 +1108,10 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const handleClearVideoSearch = () => {
     setVideoSearchRequest(null);
   };
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  })
   const curatedVideosByTopic = useMemo(() => groupVideosByTopic(curatedVideoResources), [curatedVideoResources]);
   const searchedVideosByTopic = useMemo(() => groupVideosByTopic(visibleSearchedVideoResources), [visibleSearchedVideoResources]);
   const getEmbedUrl  = (id) => `https://www.youtube.com/embed/${id}?autoplay=1`;
@@ -1424,6 +1429,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
 
   const handleSave = async (e) => {
     e?.preventDefault?.();
+    try { 
     await onSave({
       title,
       content,
@@ -1435,7 +1441,12 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       orientation,
       selectedFormulas: getSelectedFormulasList(),
     });
-  };
+    setLastSaved(new Date());
+    showToast('Cheat sheet saved successfully!');
+  } catch {
+    showToast('Failed to save. Please try again.', 'error');
+  }
+};
 
   const handleClear = () => {
     if (window.confirm('Are you sure you want to clear everything? This cannot be undone.')) {
@@ -1558,6 +1569,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                   onClick={handleSave}
                   className="btn history-btn"
                   disabled={isSaving}
+                  title="Save (Ctrl + S)"
                 >
                   {isSaving ? 'Saving…' : 'Save'}
                 </button>
@@ -1809,6 +1821,14 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
               Open on YouTube
             </a>
           </div>
+        </div>
+      )}
+      {toast && (
+        <div className={`toast toast-${toast.type}`} role="alert" aria-live="polite">
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✓' : '✕'}
+          </span>
+          <span className="toast=message">{toast.message}</span>
         </div>
       )}
     </>
