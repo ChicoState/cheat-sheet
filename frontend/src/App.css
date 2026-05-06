@@ -3173,3 +3173,13 @@ three - column responsive
 .save-status.saved {
   color: #16a34a; 
 }
+
+/* video card hover transitions */
+.video-card-sm {
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.video-card-sm:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
