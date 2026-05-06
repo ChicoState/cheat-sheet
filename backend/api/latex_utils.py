@@ -30,7 +30,6 @@ SPACING_MAP = {
     "large": ("1.2pt", "1.2pt"),
 }
 
-
 FONT_SIZE_PATTERN = re.compile(r"^(\d+(?:\.\d+)?)pt$")
 SPACING_PATTERN = re.compile(r"^(\d+(?:\.\d+)?)pt$")
 BODY_FONT_COMMAND_PATTERN = re.compile(
@@ -47,7 +46,7 @@ LEGACY_PROBLEM_LABEL_PATTERN = re.compile(r"\\textbf\{Problem ([^}]*)\}\s*")
 LEGACY_ANSWER_LABEL_PATTERN = re.compile(r"\\textbf\{Answer:\}\s*")
 APP_LAYOUT_COMMENT_LINE_PATTERN = re.compile(r"(?m)^% @cheatsheet-layout .*\n?")
 APP_LAYOUT_COMMENT_BLOCK_PATTERN = re.compile(
-    r"(?m)(?:^% @cheatsheet-layout .*\n){4}^%\n?"
+    r"(?m)(?:^% @cheatsheet-layout .*\n){5}^%\n?"
 )
 
 
@@ -130,27 +129,33 @@ def append_text_heading(lines, text):
     lines.append(r"\noindent " + text + r"\par")
 
 
-def build_layout_comment_block(columns=2, font_size="10pt", margins="0.25in", spacing="large"):
+def build_layout_comment_block(columns=2, font_size="10pt", margins="0.25in", spacing="large", orientation="portrait"):
     return [
         f"% @cheatsheet-layout columns: {columns} | change layout options up top to update columns",
         f"% @cheatsheet-layout font_size: {font_size} | change layout options up top to update text size",
         f"% @cheatsheet-layout spacing: {spacing} | change layout options up top to update spacing",
         f"% @cheatsheet-layout margins: {margins} | change layout options up top to update margins",
+        f"% @cheatsheet-layout orientation: {orientation} | change layout options up top to update orientation",
         "%",
     ]
 
 
-def build_dynamic_header(columns=2, font_size="10pt", margins="0.25in", spacing="large"):
+def build_dynamic_header(columns=2, font_size="10pt", margins="0.25in", spacing="large", orientation="portrait"):
     """
     Build a dynamic LaTeX header based on user-selected options.
     """
     size_command = get_body_font_command(font_size)
     spacing_values = get_spacing_values(spacing, font_size)
     doc_class, doc_class_size = get_document_class(font_size)
+    
+    # Inject landscape orientation if selected
+    geometry_options = f"margin={margins}"
+    if orientation == "landscape":
+        geometry_options += ", landscape"
 
     header_lines = [
         f"\\documentclass[{doc_class_size},fleqn]{{{doc_class}}}",
-        f"\\usepackage[margin={margins}]{{geometry}}",
+        f"\\usepackage[{geometry_options}]{{geometry}}",
         "\\usepackage{amsmath, amssymb}",
         "\\usepackage{enumitem}",
         "\\usepackage{multicol}",
@@ -188,12 +193,12 @@ def build_dynamic_footer(columns=2):
     return "\n".join(footer_lines)
 
 
-def normalize_latex_layout(content, columns=2, font_size="10pt", margins="0.25in", spacing="large"):
+def normalize_latex_layout(content, columns=2, font_size="10pt", margins="0.25in", spacing="large", orientation="portrait"):
     """Rebuild document wrappers so current layout controls apply to existing LaTeX content."""
     if not content:
         return content
 
-    header = build_dynamic_header(columns, font_size, margins, spacing)
+    header = build_dynamic_header(columns, font_size, margins, spacing, orientation)
     footer = build_dynamic_footer(columns)
 
     if r"\begin{document}" not in content or r"\end{document}" not in content:
@@ -219,18 +224,18 @@ def normalize_latex_layout(content, columns=2, font_size="10pt", margins="0.25in
         body = re.sub(r"(?m)^\\vspace\{[^}]+\}\s*$", rf"\\vspace{{{formula_gap}}}", body)
     body = body.strip("\n")
 
-    layout_comment_block = "\n".join(build_layout_comment_block(columns, font_size, margins, spacing))
+    layout_comment_block = "\n".join(build_layout_comment_block(columns, font_size, margins, spacing, orientation))
     body = layout_comment_block + ("\n" + body if body else "")
 
     return header + body + ("\n" if body else "") + footer
 
 
-def build_latex_for_formulas(selected_formulas, columns=2, font_size="10pt", margins="0.25in", spacing="large"):
+def build_latex_for_formulas(selected_formulas, columns=2, font_size="10pt", margins="0.25in", spacing="large", orientation="portrait"):
     """
     Given a list of selected formulas (each with class_name, category, name, latex),
     build a complete LaTeX document.
     """
-    header = build_dynamic_header(columns, font_size, margins, spacing)
+    header = build_dynamic_header(columns, font_size, margins, spacing, orientation)
     footer = build_dynamic_footer(columns)
     formula_gap = get_spacing_values(spacing, font_size)["formula_gap"]
     
@@ -238,7 +243,7 @@ def build_latex_for_formulas(selected_formulas, columns=2, font_size="10pt", mar
         return header + footer
     
     body_lines = []
-    body_lines.extend(build_layout_comment_block(columns, font_size, margins, spacing))
+    body_lines.extend(build_layout_comment_block(columns, font_size, margins, spacing, orientation))
     current_class = None
     current_category = None
     in_flushleft = False

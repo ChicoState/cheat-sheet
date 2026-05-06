@@ -23,6 +23,7 @@ from .latex_utils import build_latex_for_formulas, normalize_latex_layout
 VALID_FONT_SIZES = {"8pt", "9pt", "10pt", "11pt", "12pt"}
 VALID_SPACING = {"tiny", "small", "medium", "large"}
 VALID_MARGINS = {"0.15in", "0.25in", "0.5in", "0.75in", "1in", "1.5in", "2in"}
+VALID_ORIENTATION = {"portrait", "landscape"} 
 
 
 def is_valid_custom_pt(value, min_value, max_value):
@@ -43,7 +44,7 @@ def is_truthy(value):
         return value.strip().lower() in {"1", "true", "yes", "on"}
     return bool(value)
 
-def validate_layout_params(columns, font_size, margins, spacing):
+def validate_layout_params(columns, font_size, margins, spacing, orientation="portrait"):
     try:
         columns = max(1, min(5, int(columns)))
     except (TypeError, ValueError):
@@ -57,8 +58,11 @@ def validate_layout_params(columns, font_size, margins, spacing):
     
     if spacing not in VALID_SPACING and not is_valid_custom_pt(spacing, 0, 6):
         spacing = "large"
+        
+    if orientation not in VALID_ORIENTATION:
+        orientation = "portrait"
     
-    return columns, font_size, margins, spacing
+    return columns, font_size, margins, spacing, orientation
 
 # ------------------------------------------------------------------
 # API endpoints
@@ -93,21 +97,18 @@ def get_classes(request):
 def generate_sheet(request):
     """
     POST /api/generate-sheet/
-    Accepts { "formulas": [...], "columns": 2, "font_size": "10pt", "margins": "0.25in", "spacing": "large" }
-    Each formula: { "class": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula" }
-    Or for special classes (like UNIT CIRCLE): { "class": "UNIT CIRCLE", "name": "Unit Circle (Key Angles)" }
-    Returns { "tex_code": "..." }
     """
     selected = request.data.get("formulas", [])
     columns = request.data.get("columns", 2)
     font_size = request.data.get("font_size", "10pt")
     margins = request.data.get("margins", "0.25in")
     spacing = request.data.get("spacing", "large")
+    orientation = request.data.get("orientation", "portrait") 
     
-    columns, font_size, margins, spacing = validate_layout_params(columns, font_size, margins, spacing)
+    columns, font_size, margins, spacing, orientation = validate_layout_params(columns, font_size, margins, spacing, orientation)
     
     if not selected:
-        tex_code = build_latex_for_formulas([], columns, font_size, margins, spacing)
+        tex_code = build_latex_for_formulas([], columns, font_size, margins, spacing, orientation)
         return Response({"tex_code": tex_code})
     
     formula_data = get_formula_data()
@@ -154,7 +155,7 @@ def generate_sheet(request):
     if not selected_formulas:
         return Response({"error": "No valid formulas found"}, status=400)
     
-    tex_code = build_latex_for_formulas(selected_formulas, columns, font_size, margins, spacing)
+    tex_code = build_latex_for_formulas(selected_formulas, columns, font_size, margins, spacing, orientation)
     return Response({"tex_code": tex_code})
 
 
@@ -163,10 +164,6 @@ def generate_sheet(request):
 def compile_latex(request):
     """
     POST /api/compile/
-    Accepts either:
-      - { "content": "...full LaTeX code..." }
-      - { "cheat_sheet_id": 123 }
-    Compiles with Tectonic on the backend and returns the PDF.
     """
     content = request.data.get("content", "")
     cheat_sheet_id = request.data.get("cheat_sheet_id")
@@ -175,9 +172,10 @@ def compile_latex(request):
     font_size = request.data.get("font_size", "10pt")
     margins = request.data.get("margins", "0.25in")
     spacing = request.data.get("spacing", "large")
-    columns, font_size, margins, spacing = validate_layout_params(columns, font_size, margins, spacing)
+    orientation = request.data.get("orientation", "portrait") # <-- Extract orientation
     
-    # If cheat_sheet_id is provided, get content from the cheat sheet
+    columns, font_size, margins, spacing, orientation = validate_layout_params(columns, font_size, margins, spacing, orientation)
+    
     if cheat_sheet_id:
         cheatsheet = get_object_or_404(CheatSheet, pk=cheat_sheet_id, user=request.user)
         content = cheatsheet.build_full_latex()
@@ -185,7 +183,7 @@ def compile_latex(request):
     if not content:
         return Response({"error": "No LaTeX content provided"}, status=400)
 
-    content = normalize_latex_layout(content, columns, font_size, margins, spacing)
+    content = normalize_latex_layout(content, columns, font_size, margins, spacing, orientation)
 
     if normalize_only:
         return Response({
@@ -195,6 +193,7 @@ def compile_latex(request):
                 "font_size": font_size,
                 "margins": margins,
                 "spacing": spacing,
+                "orientation": orientation,
             },
         })
     
@@ -233,10 +232,6 @@ def compile_latex(request):
 # ------------------------------------------------------------------
 
 class TemplateViewSet(viewsets.ModelViewSet):
-    """
-    CRUD API for Templates
-    Get/Post/Put/Delete /api/templates/
-    """
     queryset = Template.objects.all()
     serializer_class = TemplateSerializer
 
@@ -249,10 +244,6 @@ class TemplateViewSet(viewsets.ModelViewSet):
 
 
 class CheatSheetViewSet(viewsets.ModelViewSet):
-    """
-    CRUD API for CheatSheets
-    Get/Post/Put/Delete /api/cheatsheets/
-    """
     queryset = CheatSheet.objects.all()
     serializer_class = CheatSheetSerializer
     permission_classes = [IsAuthenticated]
@@ -265,10 +256,6 @@ class CheatSheetViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='from-template')
     def from_template(self, request):
-        """
-        POST /api/cheatsheets/from-template/ 
-        Create cheat sheet from template
-        """
         template_id = request.data.get("template_id")
         title = request.data.get("title", "Untitled")
         
@@ -291,10 +278,6 @@ class CheatSheetViewSet(viewsets.ModelViewSet):
 
 
 class PracticeProblemViewSet(viewsets.ModelViewSet):
-    """
-    CRUD API for Practice Problems
-    Get/Post/Put/Delete /api/problems/
-    """
     queryset = PracticeProblem.objects.all()
     serializer_class = PracticeProblemSerializer
 

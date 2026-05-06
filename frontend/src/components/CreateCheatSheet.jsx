@@ -522,7 +522,7 @@ const ActionToolbar = ({ handleDownloadTex, handleDownloadPDF, isLoading, isSavi
 const FONT_SIZE_PRESETS = ['8pt', '9pt', '10pt', '11pt', '12pt'];
 const SPACING_PRESETS = ['tiny', 'small', 'medium', 'large'];
 
-const LayoutOptions = ({ columns, setColumns, fontSize, setFontSize, spacing, setSpacing, margins, setMargins }) => {
+const LayoutOptions = ({ columns, setColumns, fontSize, setFontSize, spacing, setSpacing, margins, setMargins, orientation, setOrientation }) => {
   const fontSizeMode = FONT_SIZE_PRESETS.includes(fontSize) ? fontSize : 'custom';
   const spacingMode = SPACING_PRESETS.includes(spacing) ? spacing : 'custom';
 
@@ -610,6 +610,20 @@ const LayoutOptions = ({ columns, setColumns, fontSize, setFontSize, spacing, se
           <option value="0.75in">Extra Wide (0.75in)</option>
         </select>
       </div>
+      {/* NEW ORIENTATION CONTROL */}
+      <div className="layout-control">
+        <label htmlFor="orientation">Orientation:</label>
+        <select 
+          id="orientation" 
+          value={orientation} 
+          onChange={(e) => setOrientation(e.target.value)}
+          className="layout-select"
+        >
+          <option value="portrait">Portrait</option>
+          <option value="landscape">Landscape</option>
+        </select>
+      </div>
+      {/* END NEW CONTROL */}
     </div>
   </div>
   );
@@ -648,6 +662,8 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
     setSpacing,
     margins,
     setMargins,
+    orientation,
+    setOrientation,
     pdfBlob,
     isGenerating,
     isCompiling,
@@ -766,6 +782,8 @@ const CreateCheatSheet = ({ onSave, onReset, initialData, isSaving = false }) =>
                 setSpacing={setSpacing}
                 margins={margins}
                 setMargins={setMargins}
+                orientation={orientation}
+                setOrientation={setOrientation}
               />
 
             </div>
