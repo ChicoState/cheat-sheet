@@ -3259,3 +3259,43 @@ input:focus:not(:focus-visible),
 select:focus:not(:focus-visible) {
   outline: none;
 }
+
+/*scrollbar styling */
+.left-panel-scroll,
+.right-panel-scroll,
+.pdf-preview-scroll,
+.formula-reorder-panel {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.left-panel-scroll::-webkit-scrollbar,
+.right-panel-scroll::-webkit-scrollbar,
+.pdf-preview-scroll::-webkit-scrollbar,
+.formula-reorder-panel::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.left-panel-scroll::-webkit-scrollbar-track,
+.right-panel-scroll::-webkit-scrollbar-track,
+.pdf-preview-scroll::-webkit-scrollbar-track,
+.formula-reorder-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.left-panel-scroll::-webkit-scrollbar-thumb,
+.right-panel-scroll::-webkit-scrollbar-thumb,
+.pdf-preview-scroll::-webkit-scrollbar-thumb,
+.formula-reorder-panel::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--radius-full);
+}
+
+.left-panel-scroll::-webkit-scrollbar-thumb:hover,
+.right-panel-scroll::-webkit-scrollbar-thumb:hover,
+.pdf-preview-scroll::-webkit-scrollbar-thumb:hover,
+.formula-reorder-panel::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
