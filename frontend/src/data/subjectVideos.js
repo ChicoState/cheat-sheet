@@ -439,15 +439,9 @@ export const CURATED_SUBJECT_VIDEOS = {
  ],
  "STATISTICS I": [
    {
-     title: "Statistics Exam 1 Review",
-     videoId: "xxpc-HPWX28",
+     title: "Descriptive Statistics vs Inferential Statistics",
+     videoId: "VHYOuWu9jQI",
      channel: "The Organic Chemistry Tutor",
-     topic: "Descriptive Statistics"
-   },
-   {
-     title: "What Is Statistics: Crash Course #1",
-     videoId: "zouPoc49xbk",
-     channel: "CrashCourse",
      topic: "Descriptive statistics"
    },
    {
@@ -461,6 +455,18 @@ export const CURATED_SUBJECT_VIDEOS = {
      videoId: "y2G03Lumhe0",
      channel: "The Organic Chemistry Tutor",
      topic: "Probability"
+   },
+   {
+      title: "Standard Normal Distribution Tables, Z Scores, Probability & Empirical Rule - Stats",
+      videoId: "CjF_yQ2N638",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Distributions"
+   },
+   {
+      title: "What is inferential statistics? Explained in 6 simple Steps.",
+      videoId: "idZHQwVohOo",
+      channel: "numiqo",
+      topic: "Inferential Statistics"
    },
  ],
  "STATISTICS II": [
