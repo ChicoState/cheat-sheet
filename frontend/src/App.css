@@ -3353,3 +3353,24 @@ right-panel-scroll::-webkit-scrollbar-thumb:hover,
   line-height: 1.5;
 }
 
+/*count badge for right panel */
+.right-panel-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.right-panel-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  line-height: 1;
+}

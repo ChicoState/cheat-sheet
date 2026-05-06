@@ -1687,7 +1687,11 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
             <aside className="right-panel">
               <div className="right-panel-header">
                 Videos
-                
+                {selectedVideoTopics.length > 0 && (
+                 <span className="right-panel-count-badge">
+                    {selectedVideoTopics.length}
+                 </span>
+                )}
               </div>
               <div className="right-panel-scroll">
                 {!selectedVideoTopics.length && (
