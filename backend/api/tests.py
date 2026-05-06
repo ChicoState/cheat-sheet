@@ -193,7 +193,7 @@ class TestCheatSheetModel(TestCase):
 
         full = sheet.build_full_latex()
 
-        assert "\\documentclass[8pt]{extarticle}" in full
+        assert "\\documentclass[8pt,fleqn,letterpaper]{extarticle}" in full
 
     def test_build_full_latex_custom_font_size_uses_supported_wrapper(self):
         sheet = CheatSheet.objects.create(
@@ -205,7 +205,7 @@ class TestCheatSheetModel(TestCase):
 
         full = sheet.build_full_latex()
 
-        assert "\\documentclass[10pt]{article}" in full
+        assert "\\documentclass[10pt,fleqn,letterpaper]{article}" in full
         assert "\\fontsize{10.5pt}{11.3pt}\\selectfont" in full
 
     def test_build_full_latex_includes_saved_spacing(self):
@@ -389,6 +389,12 @@ class TestLatexUtils:
         assert "\\setlength{\\baselineskip}{11.1pt}" in header
         assert "\\setlength{\\parskip}{0.6pt}" in header
         assert "\\begin{multicols}{5}" in header
+
+    def test_build_dynamic_header_landscape_includes_landscape_options(self):
+        header = build_dynamic_header(columns=4, font_size="9pt", margins="0.15in", spacing="small", orientation="landscape")
+        assert "landscape" in header
+        assert "\\documentclass[9pt,fleqn,letterpaper,landscape]{extarticle}" in header
+        assert "letterpaper,margin=0.15in,landscape" in header
 
     def test_build_latex_for_formulas_includes_editable_layout_comments(self):
         tex = build_latex_for_formulas(
