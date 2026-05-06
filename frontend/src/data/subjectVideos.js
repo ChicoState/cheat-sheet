@@ -419,22 +419,28 @@ export const CURATED_SUBJECT_VIDEOS = {
  ],
  "PHYSICS II": [
    {
-     title: "Physics 2 Final Exam Review",
-     videoId: "uHvs-G-njo8",
+     title: "Transverse and Longitudinal Waves",
+     videoId: "XY0RJu4sDHk",
      channel: "The Organic Chemistry Tutor",
      topic: "Waves & Optics"
    },
    {
-     title: "Electric Fields: Crash Course #26",
-     videoId: "mdVYqvLAtoQ",
-     channel: "CrashCourse",
+     title: "Charging By Induction - Electrostatics",
+     videoId: "ZbBHnod_Mew",
+     channel: "The Organic Chemistry Tutor",
      topic: "Electrostatics"
    },
    {
-     title: "Faraday's and Lenz's Law of Electromagnetic Induction",
-     videoId: "b9-RpGUSRe8",
+     title: "Magnetism, Magnetic Field Force, Right Hand Rule, Ampere's Law, Torque, Solenoid, Physics Problems",
+     videoId: "csMqfwJRjCs",
      channel: "The Organic Chemistry Tutor",
      topic: "Magnetism"
+   },
+   {
+    title: "Electric Current & Circuits Explained, Ohm's Law, Charge, Power, Physics Problems, Basic Electricity",
+    videoId: "r-SCyD7f_zI",
+    channel: "The Organic Chemistry Tutor",
+    topic: "Circuits"
    },
  ],
  "STATISTICS I": [
