@@ -349,16 +349,28 @@ export const CURATED_SUBJECT_VIDEOS = {
      topic: "Limits"
    },
    {
-     title: "Optimization Problems - Calculus",
-     videoId: "ZjbDmy7RO6E",
+     title: "Basic Differentiation Rules For Derivatives",
+     videoId: "IvLpN1G1Ncg",
      channel: "The Organic Chemistry Tutor",
-     topic: "Derivatives"
+     topic: "Derivative Definitions and Rules"
    },
    {
-     title: "Calculus 1 Full Course",
+     title: "Calculus 1 - Derivatives",
      videoId: "5yfh5cf4-0w",
-     channel: "Professor Leonard",
-     topic: "Derivatives"
+     channel: "The Organic Chemistry Tutor",
+     topic: "Common Derivatives"
+   },
+   {
+    title: "Fundamental Theorem of Calculus Part 1",
+    videoId: "aeB5BWY0RlE",
+    channel: "The Organic Chemistry Tutor",
+    topic: "Core Theorems of Calculus"
+   },
+   {
+     title: "Antiderivatives",
+     videoId: "xaCPDMEkbig",
+     channel: "The Organic Chemistry Tutor",
+     topic: "Basic Antiderivatives"
    },
  ],
  "CALCULUS II": [
