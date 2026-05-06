@@ -624,14 +624,15 @@ export function getCuratedVideosForTopics(topics) {
    .sort((a, b) => a.sectionSpecificVideos.length - b.sectionSpecificVideos.length || a.topicIndex - b.topicIndex)
    .forEach((match) => {
      const needed = MIN_CURATED_VIDEOS_PER_SECTION - match.sectionSpecificVideos.length;
-     match.selectedFallbackVideos = match.fallbackVideos
-       .filter((video) => {
-         const key = `${match.className}:${video.videoId}`;
-         if (seenClassWideVideos.has(key)) return false;
-         seenClassWideVideos.add(key);
-         return true;
-       })
-       .slice(0, needed);
+
+      match.selectedFallbackVideos = match.fallbackVideos
+        .filter((video) => {
+        const key = video.videoId; 
+        if (seenClassWideVideos.has(key)) return false;
+        seenClassWideVideos.add(key);
+        return true;
+      })
+      .slice(0, needed);
    });
 
 

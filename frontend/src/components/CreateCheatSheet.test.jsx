@@ -287,7 +287,7 @@ describe('CreateCheatSheet Component', () => {
     expect(rightPanel.getByRole('button', { name: /open first algebra video/i })).toBeInTheDocument();
     expect(rightPanel.queryByRole('button', { name: /open second algebra video/i })).not.toBeInTheDocument();
 
-    fireEvent.click(rightPanel.getByRole('button', { name: /show 2 more videos/i }));
+    fireEvent.click(rightPanel.getByRole('button', { name: /show 1 more videos/i }));
 
     expect(rightPanel.getByRole('button', { name: /open second algebra video/i })).toBeInTheDocument();
     expect(rightPanel.getByRole('button', { name: /open third algebra video/i })).toBeInTheDocument();
