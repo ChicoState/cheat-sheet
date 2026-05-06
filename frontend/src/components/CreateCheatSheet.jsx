@@ -1475,9 +1475,10 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                 ref={compileBtnRef}
                 type="button"
                 onClick={handleCompileClick}
-                className="btn-compile"
+                className={`btn-compile ${isCompiling ? 'is-compiling' : ''}`}
                 disabled={isCompiling}
                 aria-label="Compile PDF"
+                title="Generate LaTeX and compile to PDF. First compile will auto-generate from your current selected subjects."
               >
                 <span className="btn-compile-icon">{isCompiling ? '↻' : '⚡'}</span>
                 <span className="btn-compile-text">
@@ -1686,10 +1687,17 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
             <aside className="right-panel">
               <div className="right-panel-header">
                 Videos
+                
               </div>
               <div className="right-panel-scroll">
                 {!selectedVideoTopics.length && (
-                  <p className="right-panel-empty">Select sections</p>
+                  <div className="right-panel-empty-state">
+                    <span className="right-panel-empty-icon">🎬</span>
+                    <p className="right-panel-empty-title">No sections selected</p>
+                    <p className="right-panel-empty-hint">
+                    Select a subject and check some sections on the left to see related videos here.
+                      </p>
+                  </div>
                 )}
                 {selectedVideoTopics.map((topic) => {
                   const topicKey = getVideoTopicKey(topic);
