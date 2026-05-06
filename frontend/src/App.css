@@ -3374,3 +3374,22 @@ right-panel-scroll::-webkit-scrollbar-thumb:hover,
   border-radius: var(--radius-full);
   line-height: 1;
 }
+
+/* clear search button*/
+.btn-clear-search {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  padding: 2px 5px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  line-height: 1;
+}
+
+.btn-clear-search:hover {
+  border-color: var(--btn-clear);
+  color: var(--btn-clear);
+  background: rgba(239, 68, 68, 0.08);
+}

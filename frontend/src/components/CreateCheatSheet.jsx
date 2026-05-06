@@ -352,6 +352,7 @@ const SectionVideoPicks = ({
   searchedVideos = [],
   onOpen,
   onSearchMore,
+  onClearSearch,
   isSearching = false,
   searchError = '',
   hasSearched = false,
@@ -392,19 +393,30 @@ const SectionVideoPicks = ({
       )}
 
       {allowSearch && (
-        <div className="section-video-search-row">
-          <button
-            type="button"
-            className="btn-toggle-panel section-video-search"
-            onClick={() => onSearchMore({ className, category })}
-            disabled={isSearching}
-            aria-label={`Search YouTube for more in ${category}`}
-            title={`Search YouTube for more in ${category}`}
-          >
-            {isSearching ? '↻' : '⌕'}
-          </button>
-        </div>
-      )}
+  <div className="section-video-search-row">
+    <button
+      type="button"
+      className="btn-toggle-panel section-video-search"
+      onClick={() => onSearchMore({ className, category })}
+      disabled={isSearching}
+      aria-label={`Search YouTube for more in ${category}`}
+      title={`Search YouTube for more in ${category}`}
+    >
+      {isSearching ? '↻' : '⌕'}
+    </button>
+    {hasSearched && !isSearching && searchedVideos.length > 0 && (
+      <button
+        type="button"
+        className="btn-clear-search"
+        onClick={onClearSearch}
+        aria-label={`Clear search results for ${category}`}
+        title="Clear search results"
+      >
+        ✕
+      </button>
+    )}
+  </div>
+)}
 
       {isSearching && !searchedVideos.length && !searchError && (
         <p className="inline-video-status">Searching…</p>
@@ -1092,6 +1104,9 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     () => searchedVideoResources.filter((video) => !curatedVideoKeys.has(getVideoResourceKey(video))),
     [curatedVideoKeys, searchedVideoResources],
   );
+  const handleClearVideoSearch = () => {
+    setVideoSearchRequest(null);
+  };
   const curatedVideosByTopic = useMemo(() => groupVideosByTopic(curatedVideoResources), [curatedVideoResources]);
   const searchedVideosByTopic = useMemo(() => groupVideosByTopic(visibleSearchedVideoResources), [visibleSearchedVideoResources]);
   const getEmbedUrl  = (id) => `https://www.youtube.com/embed/${id}?autoplay=1`;
@@ -1722,6 +1737,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                         searchedVideos={searchedVideos}
                         onOpen={handleOpenVideo}
                         onSearchMore={handleSearchMoreVideos}
+                        onClearSearch={handleClearVideoSearch}
                         isSearching={isSearchingTopic}
                         searchError={hasSearchedTopic ? videoError : ''}
                         hasSearched={hasSearchedTopic}
