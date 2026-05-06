@@ -1,4 +1,4 @@
-export const SUBJECT_VIDEOS = {
+export const CURATED_SUBJECT_VIDEOS = {
  "PRE-ALGEBRA": [
    {
      title: "Order of Operations (PEMDAS)",
@@ -589,7 +589,7 @@ export function getCuratedVideosForClasses(classNames) {
   const uniqueClassNames = [...new Set(classNames)];
 
   return uniqueClassNames.flatMap((className) => (
-    (SUBJECT_VIDEOS[className] || [])
+    (CURATED_SUBJECT_VIDEOS[className] || [])
       .map((entry, index) => normalizeCuratedVideo(entry, className, index))
       .filter(Boolean)
   ));
@@ -605,7 +605,7 @@ export function getCuratedVideosForTopics(topics) {
     if (seenTopics.has(topicKey)) return;
     seenTopics.add(topicKey);
 
-    const videos = (SUBJECT_VIDEOS[className] || [])
+    const videos = (CURATED_SUBJECT_VIDEOS[className] || [])
       .map((entry, index) => normalizeCuratedVideo(entry, className, index, category))
       .filter(Boolean)
       .sort((a, b) => a.matchRank - b.matchRank);
