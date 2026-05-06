@@ -1043,6 +1043,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const modalDialogRef = useRef(null);
   const appBodyRef = useRef(null);
   const centerPanelRef = useRef(null);
+  const compileBtnRef = useRef(null);
   const snapshots = useMemo(() => [...(initialData?.compileHistory || [])].reverse(), [initialData?.compileHistory]);
   const selectedClassNames = useMemo(
     () => classesData.filter((cls) => selectedClasses[cls.name]).map((cls) => cls.name),
@@ -1300,7 +1301,16 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
 
   const workspaceSplitTemplate = `minmax(${LATEX_PANEL_MIN_WIDTH}px, ${panelLayout.latexWidth}px) 10px minmax(${MIN_PREVIEW_WIDTH}px, 1fr)`;
   const previewLayoutSignature = `${appBodyGridTemplate}|${workspaceSplitTemplate}|${leftPanelVisible}|${rightPanelVisible}|${showLatex}`;
-
+    useEffect(() => {
+      if (!pdfBlob || isCompiling) return;
+      const btn = compileBtnRef.current;
+      if (!btn) return;
+      btn.classList.add('compile-success');
+      const timer = setTimeout(() => {
+        btn.classList.remove('compile-success');
+      }, 600);
+      return () => clearTimeout(timer);
+    }, [pdfBlob, isCompiling]);
   const handleCompileClick = () => {
     if (!hasCollapsedLeftPanelOnceRef.current) {
       // First compile: keep controls reachable while reclaiming preview space.
@@ -1405,12 +1415,17 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
             {/* Footer buttons */}
             <div className="left-panel-footer">
               <button
+                ref={compileBtnRef}
                 type="button"
                 onClick={handleCompileClick}
                 className="btn-compile"
                 disabled={isCompiling}
+                aria-label="Compile PDF"
               >
+                <span className="btn-compile-icon">{isCompiling ? '↻' : '⚡'}</span>
+                <span className="btn-compile-text">
                 {isCompiling ? 'Compiling…' : 'GET CHEAT SHEET'}
+                </span>
               </button>
 
               <div className="button-row">

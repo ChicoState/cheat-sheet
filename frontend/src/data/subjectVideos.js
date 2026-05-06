@@ -571,6 +571,7 @@ export function getCuratedVideosForTopics(topics) {
    topicMatches.push({
      topicIndex,
      className,
+     category,
      sectionSpecificVideos: videos.filter((v) => v.matchRank === 0),
      fallbackVideos: videos.filter((v) => v.matchRank === 1),
      selectedFallbackVideos: [],
@@ -598,7 +599,7 @@ export function getCuratedVideosForTopics(topics) {
    .sort((a, b) => a.topicIndex - b.topicIndex)
    .flatMap(({ sectionSpecificVideos, selectedFallbackVideos }) => [
      ...sectionSpecificVideos,
-     ...selectedFallbackVideos,
+     ...selectedFallbackVideos.map((video) => ({ ...video, category})),
    ]);
 }
 
