@@ -6,7 +6,7 @@ services:
       POSTGRES_DB: cheatsheet_db
       POSTGRES_USER: cheatsheet_user
       POSTGRES_PASSWORD: cheatsheet_pass
-    # ports: comment out for now we'e not using atm
+    # Database stays internal to Compose for local development.
     #   - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -18,8 +18,11 @@ services:
       - ./backend/.env.docker
     environment:
       - DATABASE_URL=postgres://cheatsheet_user:cheatsheet_pass@db:5432/cheatsheet_db
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,backend
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
     volumes:
       - ./backend:/app
+      - tectonic_cache:/root/.cache/Tectonic
     depends_on:
       - db
     healthcheck:
@@ -32,12 +35,15 @@ services:
     ports:
       - "5173:5173"
     environment:
+      # Vite uses this from inside the container to proxy browser /api calls to Django.
       - VITE_API_URL=http://backend:8000
     volumes:
       - ./frontend:/app
-      - /app/node_modules
+      - frontend_node_modules:/app/node_modules
     depends_on:
       backend:
         condition: service_healthy
 volumes:
   postgres_data:
+  frontend_node_modules:
+  tectonic_cache:

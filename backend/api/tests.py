@@ -4,11 +4,15 @@ Run with: pytest  (from the backend/ directory)
 """
 
 import pytest
+from unittest.mock import patch
+from urllib.error import HTTPError
+from io import BytesIO
 from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIClient
 from api.latex_utils import LATEX_HEADER, build_dynamic_header, build_latex_for_formulas, normalize_latex_layout
 from api.models import Template, CheatSheet, PracticeProblem
+from api.views import YOUTUBE_RESOURCE_CACHE, fetch_top_youtube_video, get_youtube_http_error_message
 
 
 @pytest.fixture
@@ -44,6 +48,7 @@ def sample_sheet(db, sample_template, auth_client):
         template=sample_template,
         user=auth_client.handler._force_user,  # the user force_authenticate() set
         latex_content="Some content here",
+        content_source="manual",
         margins="0.75in",
         columns=2,
         font_size="10pt",
@@ -201,6 +206,18 @@ class TestCheatSheetModel(TestCase):
 
         assert "\\documentclass[10pt]{article}" in full
         assert "\\fontsize{10.5pt}{11.3pt}\\selectfont" in full
+
+    def test_build_full_latex_includes_saved_spacing(self):
+        sheet = CheatSheet.objects.create(
+            title="Spaced",
+            latex_content="Content",
+            spacing="tiny",
+            user=self.user,
+        )
+
+        full = sheet.build_full_latex()
+
+        assert "\\setlength{\\parskip}{0pt}" in full
 
     def test_static_latex_header_includes_adjustbox(self):
         assert "\\usepackage{adjustbox}" in LATEX_HEADER
@@ -507,6 +524,147 @@ class TestTemplateAPI:
 
 
 @pytest.mark.django_db
+class TestYouTubeResourcesAPI:
+    def setup_method(self):
+        YOUTUBE_RESOURCE_CACHE.clear()
+
+    @patch('api.views.fetch_top_youtube_video')
+    def test_youtube_resources_configured(self, mock_fetch, api_client, monkeypatch):
+        mock_fetch.return_value = {
+            'className': 'ALGEBRA I',
+            'category': 'Linear Equations',
+            'title': 'Algebra walkthrough',
+            'channel': 'YouTube',
+            'description': '',
+            'videoId': 'abc123',
+            'thumbnailUrl': 'https://example.com/thumb.jpg',
+        }
+        monkeypatch.setenv('YOUTUBE_API_KEY', 'test-key')
+
+        response = api_client.post('/api/youtube-resources/', {'topics': [{'className': 'ALGEBRA I', 'category': 'Linear Equations'}]}, format='json')
+
+        assert response.status_code == 200
+        assert response.data['configured'] is True
+        assert len(response.data['resources']) == 1
+
+    @patch('api.views.fetch_top_youtube_video')
+    def test_youtube_resources_reuses_cached_results(self, mock_fetch, api_client, monkeypatch):
+        mock_fetch.return_value = {
+            'className': 'ALGEBRA I',
+            'category': 'Linear Equations',
+            'title': 'Algebra walkthrough',
+            'channel': 'YouTube',
+            'description': '',
+            'videoId': 'abc123',
+            'thumbnailUrl': 'https://example.com/thumb.jpg',
+        }
+        monkeypatch.setenv('YOUTUBE_API_KEY', 'test-key')
+        payload = {'topics': [{'className': 'ALGEBRA I', 'category': 'Linear Equations'}]}
+
+        first_response = api_client.post('/api/youtube-resources/', payload, format='json')
+        second_response = api_client.post('/api/youtube-resources/', payload, format='json')
+
+        assert first_response.status_code == 200
+        assert second_response.status_code == 200
+        assert first_response.data['resources'] == second_response.data['resources']
+        assert mock_fetch.call_count == 1
+
+    def test_youtube_resources_missing_key(self, api_client, monkeypatch):
+        monkeypatch.delenv('YOUTUBE_API_KEY', raising=False)
+
+        response = api_client.post('/api/youtube-resources/', {'topics': [{'className': 'ALGEBRA I', 'category': 'Linear Equations'}]}, format='json')
+
+        assert response.status_code == 200
+        assert response.data['configured'] is False
+
+    def test_youtube_resources_invalid_payload(self, api_client, monkeypatch):
+        monkeypatch.setenv('YOUTUBE_API_KEY', 'test-key')
+
+        response = api_client.post('/api/youtube-resources/', {'topics': 'nope'}, format='json')
+
+        assert response.status_code == 400
+
+    def test_youtube_resources_invalid_topic(self, api_client, monkeypatch):
+        monkeypatch.setenv('YOUTUBE_API_KEY', 'test-key')
+
+        response = api_client.post('/api/youtube-resources/', {'topics': [{'className': 'ALGEBRA I', 'category': 'Not Real'}]}, format='json')
+
+        assert response.status_code == 400
+
+    @patch('api.views.fetch_top_youtube_video', side_effect=RuntimeError('YouTube search failed'))
+    def test_youtube_resources_upstream_failure(self, _mock_fetch, api_client, monkeypatch):
+        monkeypatch.setenv('YOUTUBE_API_KEY', 'test-key')
+
+        response = api_client.post('/api/youtube-resources/', {'topics': [{'className': 'ALGEBRA I', 'category': 'Linear Equations'}]}, format='json')
+
+        assert response.status_code == 200
+        assert response.data['configured'] is True
+        assert response.data['resources'] == []
+        assert response.data['errors']
+
+    def test_youtube_http_error_message_includes_google_reason(self):
+        payload = (
+            b'{"error":{"message":"API has not been used in project",'
+            b'"errors":[{"reason":"accessNotConfigured",'
+            b'"message":"YouTube Data API v3 has not been used"}]}}'
+        )
+        error = HTTPError(
+            'https://www.googleapis.com/youtube/v3/search',
+            403,
+            'Forbidden',
+            hdrs=None,
+            fp=BytesIO(payload),
+        )
+
+        message = get_youtube_http_error_message(error)
+
+        assert '403: accessNotConfigured' in message
+        assert 'YouTube Data API v3 has not been used' in message
+
+    def test_youtube_http_error_message_strips_html(self):
+        payload = (
+            b'{"error":{"message":"quota hit",'
+            b'"errors":[{"reason":"quotaExceeded",'
+            b'"message":"The request exceeded <a href=\\"/youtube/v3/getting-started#quota\\">quota</a>."}]}}'
+        )
+        error = HTTPError(
+            'https://www.googleapis.com/youtube/v3/search',
+            403,
+            'Forbidden',
+            hdrs=None,
+            fp=BytesIO(payload),
+        )
+
+        message = get_youtube_http_error_message(error)
+
+        assert '<a' not in message
+        assert 'quotaExceeded' in message
+        assert 'quota.' in message
+
+    @patch('api.views.fetch_youtube_json')
+    def test_fetch_top_youtube_video_prefers_first_result_with_enough_views(self, mock_fetch_json):
+        mock_fetch_json.side_effect = [
+            {
+                'items': [
+                    {'id': {'videoId': 'lowviews123'}, 'snippet': {'title': 'Low views', 'channelTitle': 'Small Channel'}},
+                    {'id': {'videoId': 'highviews12'}, 'snippet': {'title': 'High views', 'channelTitle': 'Large Channel'}},
+                ]
+            },
+            {
+                'items': [
+                    {'id': 'lowviews123', 'statistics': {'viewCount': '25'}, 'snippet': {'title': 'Low views', 'channelTitle': 'Small Channel'}},
+                    {'id': 'highviews12', 'statistics': {'viewCount': '25000'}, 'snippet': {'title': 'High views', 'channelTitle': 'Large Channel'}},
+                ]
+            },
+        ]
+
+        video = fetch_top_youtube_video('ALGEBRA I', 'Linear Equations', 'test-key')
+
+        assert video['videoId'] == 'highviews12'
+        assert video['viewCount'] == 25000
+
+
+@pytest.mark.django_db
 class TestCheatSheetAPI:
     def test_list_cheatsheets(self, auth_client, sample_sheet):
         resp = auth_client.get("/api/cheatsheets/")
@@ -518,6 +676,7 @@ class TestCheatSheetAPI:
             {
                 "title": "Brand New Sheet",
                 "latex_content": "Hello",
+                "content_source": "manual",
                 "margins": "1in",
                 "columns": 1,
                 "font_size": "12pt",
@@ -526,7 +685,23 @@ class TestCheatSheetAPI:
         )
         assert resp.status_code == 201
         assert resp.json()["title"] == "Brand New Sheet"
+        assert resp.json()["content_source"] == "manual"
         assert "full_latex" in resp.json()
+        assert resp.json()["spacing"] == "small"
+
+    def test_create_cheatsheet_infers_manual_content_source_for_legacy_payload(self, auth_client):
+        resp = auth_client.post(
+            "/api/cheatsheets/",
+            {
+                "title": "Generated Sheet",
+                "latex_content": "Generated LaTeX",
+                "selected_formulas": [{"class": "ALGEBRA I", "category": "Linear Equations", "name": "Slope"}],
+            },
+            format="json",
+        )
+
+        assert resp.status_code == 201
+        assert resp.json()["content_source"] == "manual"
 
     def test_retrieve_cheatsheet_has_full_latex(self, auth_client, sample_sheet):
         resp = auth_client.get(f"/api/cheatsheets/{sample_sheet.id}/")
@@ -537,12 +712,14 @@ class TestCheatSheetAPI:
     def test_update_cheatsheet(self, auth_client, sample_sheet):
         resp = auth_client.patch(
             f"/api/cheatsheets/{sample_sheet.id}/",
-            {"margins": "0.25in", "columns": 3},
+            {"margins": "0.25in", "columns": 3, "spacing": "small", "content_source": "generated"},
             format="json",
         )
         assert resp.status_code == 200
         assert resp.json()["margins"] == "0.25in"
         assert resp.json()["columns"] == 3
+        assert resp.json()["spacing"] == "small"
+        assert resp.json()["content_source"] == "generated"
 
     def test_delete_cheatsheet(self, auth_client, sample_sheet):
         resp = auth_client.delete(f"/api/cheatsheets/{sample_sheet.id}/")
@@ -607,6 +784,20 @@ class TestCheatSheetAccessControl:
             format="json",
         )
         assert resp.status_code == 404
+
+    def test_compile_sheet_uses_saved_spacing_layout(self, auth_client, sample_sheet):
+        sample_sheet.spacing = "tiny"
+        sample_sheet.save(update_fields=["spacing"])
+
+        resp = auth_client.post(
+            "/api/compile/",
+            {"cheat_sheet_id": sample_sheet.id, "normalize_only": True, "spacing": "large"},
+            format="json",
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["layout"]["spacing"] == "tiny"
+        assert "\\setlength{\\parskip}{0pt}" in resp.json()["tex_code"]
 
 
 @pytest.mark.django_db
@@ -820,7 +1011,7 @@ class TestGenerateSheetEndpoint:
         )
         assert resp.status_code == 200
         tex = resp.json()["tex_code"]
-        assert "\\setlength{\\baselineskip}{10.2pt}" in tex
+        assert "\\setlength{\\baselineskip}{9.2pt}" in tex
 
     def test_generate_sheet_with_custom_font_size(self, auth_client):
         """Custom pt body sizes should be accepted."""
@@ -848,7 +1039,7 @@ class TestGenerateSheetEndpoint:
         )
         assert resp.status_code == 200
         tex = resp.json()["tex_code"]
-        assert "\\setlength{\\baselineskip}{10.6pt}" in tex
+        assert "\\setlength{\\baselineskip}{9.6pt}" in tex
         assert "\\vspace{0.6pt}" in tex
 
     def test_generate_sheet_invalid_font_size_defaults(self, auth_client):
@@ -863,7 +1054,7 @@ class TestGenerateSheetEndpoint:
         )
         assert resp.status_code == 200
         tex = resp.json()["tex_code"]
-        assert "\\documentclass[10pt" in tex
+        assert "\\documentclass[9pt" in tex
 
     def test_generate_sheet_invalid_margins_defaults(self, auth_client):
         """Invalid margins should be replaced with default."""
@@ -877,10 +1068,10 @@ class TestGenerateSheetEndpoint:
         )
         assert resp.status_code == 200
         tex = resp.json()["tex_code"]
-        assert "margin=0.25in" in tex
+        assert "margin=0.15in" in tex
 
     def test_generate_sheet_invalid_spacing_defaults(self, auth_client):
-        """Invalid spacing should be replaced with default (large preset)."""
+        """Invalid spacing should be replaced with default (small preset)."""
         resp = auth_client.post(
             "/api/generate-sheet/",
             {
@@ -893,7 +1084,7 @@ class TestGenerateSheetEndpoint:
         tex = resp.json()["tex_code"]
         assert "\\usepackage{titlesec}" not in tex
         assert "\\titleformat{" not in tex
-        assert "\\setlength{\\baselineskip}{11.2pt}" in tex
+        assert "\\setlength{\\baselineskip}{9.4pt}" in tex
 
     def test_generate_sheet_10pt_uses_plain_text_headings(self, auth_client):
         """Generated sheets should use plain bold text headings instead of LaTeX section commands."""

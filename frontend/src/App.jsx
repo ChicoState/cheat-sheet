@@ -1,5 +1,7 @@
-import { useState, useEffect, useContext } from 'react'
+import { useState, useEffect, useContext, useRef } from 'react'
 import { Routes, Route, Link, Navigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Home, LayoutDashboard, LogIn, LogOut, Palette } from 'lucide-react';
 import AuthContext from './context/AuthContext';
 import Login from './components/Login';
 import SignUp from './components/SignUp';
@@ -7,15 +9,131 @@ import Dashboard from './components/Dashboard';
 import './App.css'
 import CreateCheatSheet from './components/CreateCheatSheet';
 
-const DEFAULT_SHEET = {
-  title: '',
-  content: '',
-  columns: 2,
-  fontSize: '10pt',
-  spacing: 'large',
-  margins: '0.25in',
-  selectedFormulas: [],
+const CURRENT_SHEET_STORAGE_KEY = 'currentCheatSheet';
+const UNTITLED_COUNTER_STORAGE_KEY = 'untitledSheetCounter';
+const COMPILE_HISTORY_STORAGE_PREFIX = 'cheatSheetCompileHistory';
+const CONTENT_SOURCE_STORAGE_PREFIX = 'cheatSheetContentSource';
+
+const getNextUntitledTitle = () => {
+  const currentValue = Number(localStorage.getItem(UNTITLED_COUNTER_STORAGE_KEY) || '0');
+  const nextValue = Number.isFinite(currentValue) ? currentValue + 1 : 1;
+  localStorage.setItem(UNTITLED_COUNTER_STORAGE_KEY, String(nextValue));
+  return `Untitled Sheet (${nextValue})`;
 };
+
+const createDefaultSheet = () => ({
+  title: getNextUntitledTitle(),
+  content: '',
+  contentSource: 'empty',
+  columns: 4,
+  fontSize: '9pt',
+  spacing: 'small',
+  margins: '0.15in',
+  selectedFormulas: [],
+  compileHistory: [],
+});
+
+const inferContentSource = ({ content = '' } = {}) => {
+  if (!content?.trim()) return 'empty';
+  return 'manual';
+};
+
+const sameFormulas = (left = [], right = []) => JSON.stringify(left) === JSON.stringify(right);
+
+const sameSnapshot = (left, right) => {
+  if (!left || !right) return false;
+
+  return (
+    left.title === right.title
+    && left.content === right.content
+    && left.contentSource === right.contentSource
+    && left.columns === right.columns
+    && left.fontSize === right.fontSize
+    && left.spacing === right.spacing
+    && left.margins === right.margins
+    && sameFormulas(left.selectedFormulas, right.selectedFormulas)
+  );
+};
+
+const buildRestoredSheet = (baseSheet, snapshot) => ({
+  ...baseSheet,
+  title: snapshot.title ?? baseSheet.title,
+  content: snapshot.content ?? '',
+  contentSource: snapshot.contentSource ?? baseSheet.contentSource ?? 'generated',
+  columns: snapshot.columns ?? baseSheet.columns,
+  fontSize: snapshot.fontSize ?? baseSheet.fontSize,
+  spacing: snapshot.spacing ?? baseSheet.spacing,
+  margins: snapshot.margins ?? baseSheet.margins,
+  selectedFormulas: snapshot.selectedFormulas ?? [],
+  compileHistory: Array.isArray(baseSheet.compileHistory) ? baseSheet.compileHistory : [],
+});
+
+const loadStoredSheet = () => {
+  const saved = localStorage.getItem(CURRENT_SHEET_STORAGE_KEY);
+  if (!saved) return null;
+
+  try {
+    return JSON.parse(saved);
+  } catch (e) {
+    console.error('Failed to parse sheet', e);
+    return null;
+  }
+};
+
+const getCompileHistoryStorageKey = (sheetId) => `${COMPILE_HISTORY_STORAGE_PREFIX}:${sheetId}`;
+const getContentSourceStorageKey = (sheetId) => `${CONTENT_SOURCE_STORAGE_PREFIX}:${sheetId}`;
+
+const getStoredCompileHistory = (sheetId) => {
+  if (!sheetId) return [];
+
+  const savedHistory = localStorage.getItem(getCompileHistoryStorageKey(sheetId));
+  if (savedHistory) {
+    try {
+      const parsedHistory = JSON.parse(savedHistory);
+      if (Array.isArray(parsedHistory)) return parsedHistory;
+    } catch (e) {
+      console.error('Failed to parse compile history', e);
+    }
+  }
+
+  const storedSheet = loadStoredSheet();
+  if (storedSheet?.id !== sheetId) {
+    return [];
+  }
+
+  return Array.isArray(storedSheet.compileHistory) ? storedSheet.compileHistory : [];
+};
+
+const saveStoredCompileHistory = (sheetId, compileHistory = []) => {
+  if (!sheetId) return;
+  localStorage.setItem(getCompileHistoryStorageKey(sheetId), JSON.stringify(compileHistory));
+};
+
+const getStoredContentSource = (sheetId) => {
+  if (!sheetId) return null;
+  const savedSource = localStorage.getItem(getContentSourceStorageKey(sheetId));
+  return ['generated', 'manual', 'empty'].includes(savedSource) ? savedSource : null;
+};
+
+const saveStoredContentSource = (sheetId, contentSource) => {
+  if (!sheetId || !['generated', 'manual', 'empty'].includes(contentSource)) return;
+  localStorage.setItem(getContentSourceStorageKey(sheetId), contentSource);
+};
+
+const isTestEnv = Boolean(
+  import.meta.env?.VITEST
+  ||
+  (typeof globalThis !== 'undefined' && globalThis.process?.env?.VITEST === 'true')
+  || (typeof globalThis !== 'undefined' && globalThis.process?.env?.NODE_ENV === 'test')
+  || import.meta.env?.MODE === 'test'
+);
+const MotionLink = isTestEnv ? Link : motion(Link);
+const MotionButton = isTestEnv ? 'button' : motion.button;
+const subtleMotion = {
+  whileHover: { y: -1 },
+  whileTap: { scale: 0.985 },
+};
+const motionInteractionProps = isTestEnv ? {} : subtleMotion;
 
 const PrivateRoute = ({ children }) => {
   const { user } = useContext(AuthContext);
@@ -37,7 +155,7 @@ function App() {
   };
 
   const [cheatSheet, setCheatSheet] = useState(() => {
-    const saved = localStorage.getItem('currentCheatSheet');
+    const saved = localStorage.getItem(CURRENT_SHEET_STORAGE_KEY);
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -45,11 +163,13 @@ function App() {
         console.error("Failed to parse sheet", e);
       }
     }
-    return { title: '', content: '', columns: 2, fontSize: '10pt', spacing: 'large' };
+    return createDefaultSheet();
   });
 
   const [editorSessionKey, setEditorSessionKey] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const cheatSheetRef = useRef(cheatSheet);
+  const pendingCreatePromiseRef = useRef(null);
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('theme');
     return normalizeTheme(saved);
@@ -60,51 +180,78 @@ function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    cheatSheetRef.current = cheatSheet;
+  }, [cheatSheet]);
+
   
   const { user, authTokens, logoutUser } = useContext(AuthContext);
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-  };
-
   const handleReset = () => {
-    setCheatSheet(DEFAULT_SHEET);
+    const nextSheet = createDefaultSheet();
+    setCheatSheet(nextSheet);
     setEditorSessionKey((prev) => prev + 1);
-    localStorage.setItem('currentCheatSheet', JSON.stringify(DEFAULT_SHEET));
+    localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(nextSheet));
     localStorage.removeItem('cheatSheetData');
     localStorage.removeItem('cheatSheetLatex');
   };
 
   useEffect(() => {
-    const savedSheet = localStorage.getItem('currentCheatSheet');
+    const savedSheet = loadStoredSheet();
     if (savedSheet) {
-      try {
-        setCheatSheet(JSON.parse(savedSheet));
-      } catch (e) {
-        console.error("Failed to parse sheet", e);
-      }
+      setCheatSheet(savedSheet);
     }
   }, []);
 
   const handleSave = async (data, showFeedback = true) => {
+    const currentSheet = cheatSheetRef.current;
+    const nextContentSource = data.contentSource ?? currentSheet.contentSource ?? inferContentSource(data);
+    const previousHistory = Array.isArray(currentSheet.compileHistory) ? currentSheet.compileHistory : [];
+    const latestSnapshot = previousHistory[previousHistory.length - 1];
+    const nextHistory = data.compileSnapshot
+      ? (sameSnapshot(latestSnapshot, data.compileSnapshot)
+          ? previousHistory
+          : [...previousHistory, data.compileSnapshot])
+      : previousHistory;
     const nextSheet = {
-      ...cheatSheet,
+      ...currentSheet,
       ...data,
-      selectedFormulas: data.selectedFormulas ?? cheatSheet.selectedFormulas ?? [],
+      contentSource: nextContentSource,
+      selectedFormulas: data.selectedFormulas ?? currentSheet.selectedFormulas ?? [],
+      compileHistory: nextHistory,
     };
+    delete nextSheet.compileSnapshot;
 
+    cheatSheetRef.current = nextSheet;
     setCheatSheet(nextSheet);
-    localStorage.setItem('currentCheatSheet', JSON.stringify(nextSheet));
+    localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(nextSheet));
+    saveStoredCompileHistory(nextSheet.id, nextHistory);
+    saveStoredContentSource(nextSheet.id, nextSheet.contentSource);
 
     if (!showFeedback) {
+      return nextSheet;
+    }
+
+    const shouldPersistRemotely = Boolean(authTokens?.access);
+
+    if (!shouldPersistRemotely) {
+      alert('Saved to this browser. Sign in if you want this sheet synced to your account.');
       return nextSheet;
     }
 
     setIsSaving(true);
 
     try {
-      const sheetId = nextSheet.id;
-      const response = await fetch(sheetId ? `/api/cheatsheets/${sheetId}/` : '/api/cheatsheets/', {
+      let sheetId = nextSheet.id;
+
+      if (!sheetId && pendingCreatePromiseRef.current) {
+        const pendingSheet = await pendingCreatePromiseRef.current.catch(() => null);
+        if (pendingSheet?.id) {
+          sheetId = pendingSheet.id;
+        }
+      }
+
+      const requestPromise = fetch(sheetId ? `/api/cheatsheets/${sheetId}/` : '/api/cheatsheets/', {
         method: sheetId ? 'PATCH' : 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -113,12 +260,35 @@ function App() {
         body: JSON.stringify({
           title: nextSheet.title,
           latex_content: nextSheet.content,
+          content_source: nextSheet.contentSource,
           columns: nextSheet.columns,
           margins: nextSheet.margins,
           font_size: nextSheet.fontSize,
+          spacing: nextSheet.spacing,
           selected_formulas: nextSheet.selectedFormulas,
         }),
       });
+
+      if (!sheetId) {
+        pendingCreatePromiseRef.current = requestPromise
+          .then(async (response) => {
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(errorData.detail || errorData.error || 'Failed to save cheat sheet');
+            }
+            return response.clone().json();
+          })
+          .then((savedSheet) => ({
+            ...nextSheet,
+            id: savedSheet.id,
+            content: savedSheet.latex_content ?? nextSheet.content,
+            contentSource: savedSheet.content_source ?? nextSheet.contentSource,
+            fontSize: savedSheet.font_size ?? nextSheet.fontSize,
+            spacing: savedSheet.spacing ?? nextSheet.spacing,
+            selectedFormulas: savedSheet.selected_formulas ?? nextSheet.selectedFormulas,
+          }));
+      }
+      const response = await requestPromise;
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -130,12 +300,17 @@ function App() {
         ...nextSheet,
         id: savedSheet.id,
         content: savedSheet.latex_content ?? nextSheet.content,
+        contentSource: savedSheet.content_source ?? nextSheet.contentSource,
         fontSize: savedSheet.font_size ?? nextSheet.fontSize,
+        spacing: savedSheet.spacing ?? nextSheet.spacing,
         selectedFormulas: savedSheet.selected_formulas ?? nextSheet.selectedFormulas,
       };
 
+      cheatSheetRef.current = persistedSheet;
       setCheatSheet(persistedSheet);
-      localStorage.setItem('currentCheatSheet', JSON.stringify(persistedSheet));
+      localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(persistedSheet));
+      saveStoredCompileHistory(persistedSheet.id, persistedSheet.compileHistory);
+      saveStoredContentSource(persistedSheet.id, persistedSheet.contentSource);
       alert('Progress saved!');
       return persistedSheet;
     } catch (error) {
@@ -143,23 +318,42 @@ function App() {
       alert(`Failed to save progress: ${error.message}`);
       throw error;
     } finally {
+      if (pendingCreatePromiseRef.current) {
+        pendingCreatePromiseRef.current = null;
+      }
       setIsSaving(false);
     }
   };
 
   const handleEditSheet = (sheet) => {
+    const selectedFormulas = sheet.selected_formulas || [];
     const editSheet = {
       id: sheet.id,
       title: sheet.title,
       content: sheet.latex_content,
+      contentSource: sheet.content_source ?? getStoredContentSource(sheet.id) ?? inferContentSource({
+        content: sheet.latex_content,
+        selectedFormulas,
+      }),
       columns: sheet.columns,
       margins: sheet.margins,
       fontSize: sheet.font_size,
-      selectedFormulas: sheet.selected_formulas || [],
+      spacing: sheet.spacing,
+      selectedFormulas,
+      compileHistory: getStoredCompileHistory(sheet.id),
     };
     setCheatSheet(editSheet);
     setEditorSessionKey((prev) => prev + 1);
-    localStorage.setItem('currentCheatSheet', JSON.stringify(editSheet));
+    localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(editSheet));
+    localStorage.removeItem('cheatSheetData');
+    localStorage.removeItem('cheatSheetLatex');
+  };
+
+  const handleRestoreSnapshot = (snapshot) => {
+    const restoredSheet = buildRestoredSheet(cheatSheet, snapshot);
+    setCheatSheet(restoredSheet);
+    setEditorSessionKey((prev) => prev + 1);
+    localStorage.setItem(CURRENT_SHEET_STORAGE_KEY, JSON.stringify(restoredSheet));
     localStorage.removeItem('cheatSheetData');
     localStorage.removeItem('cheatSheetLatex');
   };
@@ -167,32 +361,68 @@ function App() {
   return (
     <div className="App">
       <header className="app-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 1rem', width: '100%' }}>
-          <div style={{ flex: 1, display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <Link to="/" style={{ textDecoration: 'none', color: 'var(--text)' }}>Home</Link>
-            {user && <Link to="/dashboard" style={{ textDecoration: 'none', color: 'var(--text)' }}>Dashboard</Link>}
-            {user && <button onClick={logoutUser} style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: 0, font: 'inherit' }}>Logout ({user.username})</button>}
-            {!user && <Link to="/login" style={{ textDecoration: 'none', color: 'var(--text)' }}>Login</Link>}
+        <div className="app-header-inner">
+          <div className="app-header-nav">
+            <MotionLink to="/" className="app-header-link" {...motionInteractionProps} aria-label="Home">
+              <Home size={14} strokeWidth={1.8} aria-hidden="true" />
+              <span>Home</span>
+            </MotionLink>
+            {user && (
+              <MotionLink to="/dashboard" className="app-header-link" {...motionInteractionProps} aria-label="Dashboard">
+                <LayoutDashboard size={14} strokeWidth={1.8} aria-hidden="true" />
+                <span>Dashboard</span>
+              </MotionLink>
+            )}
+            {user && (
+              <MotionButton
+                type="button"
+                onClick={logoutUser}
+                className="app-header-link app-header-logout"
+                {...motionInteractionProps}
+                aria-label={`Logout ${user.username}`}
+              >
+                <LogOut size={14} strokeWidth={1.8} aria-hidden="true" />
+                <span>Logout</span>
+              </MotionButton>
+            )}
+            {!user && (
+              <MotionLink to="/login" className="app-header-link" {...motionInteractionProps} aria-label="Login">
+                <LogIn size={14} strokeWidth={1.8} aria-hidden="true" />
+                <span>Login</span>
+              </MotionLink>
+            )}
           </div>
 
-          <div style={{ textAlign: 'center' }}>
-            <h1 style={{ margin: 0 }}>Cheat Sheet Generator</h1>
-            <p style={{ margin: 0, fontSize: '0.8543m', color: 'var(--text-muted)'}}>
-              Write Cheat Sheets With Integrated LaTeX Support!
-            </p>
+          <div className="app-header-brand">
+            <motion.img
+              src="/math_webicon.png"
+              alt=""
+              aria-hidden="true"
+              className="app-logo"
+              initial={{ opacity: 0, scale: 0.94 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+            />
+            <div className="app-header-brand-copy">
+              <h1>Cheat Sheet Generator</h1>
+              <p>Write cheat sheets with integrated LaTeX support.</p>
+            </div>
           </div>
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-          <select
-          value={theme}
-          onChange={(e) => setTheme(e.target.value)}
-          className="layout-select"
-          style={{ fontSize: '0.85rem', cursor: 'pointer' }}
-          >
-        {THEMES.map(t => (
-        <option key={t.id} value={t.id}>{t.label}</option>
-      ))}
-    </select>
-  </div>
+          <div className="app-header-actions">
+            <div className="app-theme-control">
+              <Palette size={14} strokeWidth={1.8} aria-hidden="true" />
+              <select
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+                className="layout-select app-theme-select"
+                aria-label="Select theme"
+              >
+                {THEMES.map(t => (
+                  <option key={t.id} value={t.id}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
       </header>
       <main>
@@ -203,6 +433,7 @@ function App() {
               initialData={cheatSheet} 
               onSave={handleSave} 
               onReset={handleReset}
+              onRestoreSnapshot={handleRestoreSnapshot}
               isSaving={isSaving}
               onCancel={() => {}} 
             />

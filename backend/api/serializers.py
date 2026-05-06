@@ -78,9 +78,11 @@ class CheatSheetSerializer(serializers.ModelSerializer):
             "title",
             "template",
             "latex_content",
+            "content_source",
             "margins",
             "columns",
             "font_size",
+            "spacing",
             "selected_formulas",
             "problems",
             "full_latex",
@@ -93,6 +95,19 @@ class CheatSheetSerializer(serializers.ModelSerializer):
     def get_full_latex(self, obj):
         """Return the fully-assembled LaTeX document string."""
         return obj.build_full_latex()
+
+    def validate(self, attrs):
+        if "content_source" in attrs:
+            return attrs
+
+        current_content = getattr(self.instance, "latex_content", "")
+        latex_content = attrs.get("latex_content", current_content) or ""
+
+        if not latex_content.strip():
+            attrs["content_source"] = "empty"
+        else:
+            attrs["content_source"] = "manual"
+        return attrs
 
 
 class CompileRequestSerializer(serializers.Serializer):
