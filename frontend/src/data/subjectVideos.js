@@ -499,37 +499,38 @@ export const SUBJECT_VIDEOS = {
  ],
 };
 
+const YOUTUBE_HOSTS = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be']);
+const YOUTUBE_VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{11}$/;
+const MIN_CURATED_VIDEOS_PER_SECTION = 2;
+
+function isYouTubeHost(hostname = '') {
+  return YOUTUBE_HOSTS.has(String(hostname).toLowerCase());
+}
+
 export function getYouTubeVideoId(value = '') {
   const text = String(value).trim();
   if (!text) return '';
 
-  // If it's already a video ID (11 chars, alphanumeric with - and _)
-  if (/^[a-zA-Z0-9_-]{11}$/.test(text)) {
+  if (YOUTUBE_VIDEO_ID_REGEX.test(text)) {
     return text;
   }
 
   try {
     const url = new URL(text);
-    const hostname = url.hostname.toLowerCase();
-
-    // Check if it's a YouTube URL
-    if (!['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be'].includes(hostname)) {
+    if (!isYouTubeHost(url.hostname)) {
       return '';
     }
 
-    // Handle youtu.be/VIDEO_ID
-    if (hostname === 'youtu.be') {
+    if (url.hostname.toLowerCase() === 'youtu.be') {
       const videoId = url.pathname.split('/').filter(Boolean)[0] || '';
-      return /^[a-zA-Z0-9_-]{11}$/.test(videoId) ? videoId : '';
+      return YOUTUBE_VIDEO_ID_REGEX.test(videoId) ? videoId : '';
     }
 
-    // Handle youtube.com/watch?v=VIDEO_ID
     if (url.searchParams.has('v')) {
       const videoId = url.searchParams.get('v') || '';
-      return /^[a-zA-Z0-9_-]{11}$/.test(videoId) ? videoId : '';
+      return YOUTUBE_VIDEO_ID_REGEX.test(videoId) ? videoId : '';
     }
 
-    // Handle youtube.com/shorts/VIDEO_ID and youtube.com/embed/VIDEO_ID
     const embedMatch = url.pathname.match(/\/(embed|shorts)\/([a-zA-Z0-9_-]{11})/);
     return embedMatch?.[2] || '';
   } catch {
@@ -537,110 +538,104 @@ export function getYouTubeVideoId(value = '') {
   }
 }
 
-const MIN_CURATED_VIDEOS_PER_SECTION = 2;
+const normalizeTopic = (value = '') => String(value || '').trim().toLowerCase();
 
+const getCategoryTargets = (video = {}) => {
+  if (Array.isArray(video.categories)) {
+    return video.categories.filter(Boolean);
+  }
+
+  return [];
+};
 
 function normalizeCuratedVideo(entry, className, index, selectedCategory = '') {
- const videoId = entry.videoId || getYouTubeVideoId(entry.url || '');
- if (!videoId) return null;
+  const video = typeof entry === 'string' ? { url: entry } : entry;
+  const videoId = video?.videoId || getYouTubeVideoId(video?.url);
+  if (!videoId) return null;
 
+  const explicitTopic = video.category || video.topic || '';
+  const categoryTargets = getCategoryTargets(video);
+  let matchRank = 0;
 
- const topic = entry.topic || '';
- const categoryTargets = Array.isArray(entry.categories) ? entry.categories : [];
- const isClassWideFallback = !topic;
+  if (selectedCategory) {
+    const normalizedSelectedCategory = normalizeTopic(selectedCategory);
+    const explicitTopicMatches = explicitTopic && normalizeTopic(explicitTopic) === normalizedSelectedCategory;
+    const categoryTargetMatches = categoryTargets.some((category) => normalizeTopic(category) === normalizedSelectedCategory);
+    const isClassWideFallback = !explicitTopic && categoryTargets.length === 0;
 
+    if (!explicitTopicMatches && !categoryTargetMatches && !isClassWideFallback) {
+      return null;
+    }
 
- if (selectedCategory) {
-   const normalizedSelected = selectedCategory.toLowerCase().trim();
-   const normalizedTopic = topic.toLowerCase().trim();
-   const topicMatches = normalizedTopic === normalizedSelected;
-   const categoryMatches = categoryTargets.some(
-    (c) => c.toLowerCase().trim() === normalizedSelected
-   );
+    matchRank = isClassWideFallback ? 1 : 0;
+  }
 
-   if (!topicMatches && !categoryMatches && !isClassWideFallback) return null;
- }
+  const topic = selectedCategory || explicitTopic || categoryTargets[0] || 'Curated pick';
 
-
- return {
-   className,
-   category: selectedCategory || topic || 'General',
-   topic: selectedCategory || topic || 'General',
-   title: entry.title || `${className} video ${index + 1}`,
-   channel: entry.channel || 'YouTube',
-   videoId,
-   thumbnailUrl: '',
-   source: 'curated',
-   matchRank: isClassWideFallback ? 1 : 0,
- };
+  return {
+    className,
+    category: topic,
+    topic,
+    title: video.title || `${className} video ${index + 1}`,
+    channel: video.channel || 'YouTube',
+    videoId,
+    thumbnailUrl: video.thumbnailUrl || '',
+    source: 'curated',
+    matchRank,
+  };
 }
-
 
 export function getCuratedVideosForClasses(classNames) {
- return [...new Set(classNames)].flatMap((className) =>
-   (SUBJECT_VIDEOS[className] || [])
-     .map((entry, index) => normalizeCuratedVideo(entry, className, index))
-     .filter(Boolean)
- );
+  const uniqueClassNames = [...new Set(classNames)];
+
+  return uniqueClassNames.flatMap((className) => (
+    (SUBJECT_VIDEOS[className] || [])
+      .map((entry, index) => normalizeCuratedVideo(entry, className, index))
+      .filter(Boolean)
+  ));
 }
-
-
-
 
 export function getCuratedVideosForTopics(topics) {
- if (!topics || !topics.length) return [];
+  const seenTopics = new Set();
+  const seenClassWideVideos = new Set();
+  const topicMatches = [];
 
+  topics.forEach(({ className, category }, topicIndex) => {
+    const topicKey = `${className}:${category}`;
+    if (seenTopics.has(topicKey)) return;
+    seenTopics.add(topicKey);
 
- const seenTopics = new Set();
- const seenClassWideVideos = new Set();
- const topicMatches = [];
+    const videos = (SUBJECT_VIDEOS[className] || [])
+      .map((entry, index) => normalizeCuratedVideo(entry, className, index, category))
+      .filter(Boolean)
+      .sort((a, b) => a.matchRank - b.matchRank);
 
+    topicMatches.push({
+      topicIndex,
+      className,
+      sectionSpecificVideos: videos.filter((video) => video.matchRank === 0),
+      fallbackVideos: videos.filter((video) => video.matchRank === 1),
+      selectedFallbackVideos: [],
+    });
+  });
 
- topics.forEach(({ className, category }, topicIndex) => {
-   const topicKey = `${className}:${category}`;
-   if (seenTopics.has(topicKey)) return;
-   seenTopics.add(topicKey);
-
-
-   const videos = (SUBJECT_VIDEOS[className] || [])
-     .map((entry, index) => normalizeCuratedVideo(entry, className, index, category))
-     .filter(Boolean)
-     .sort((a, b) => a.matchRank - b.matchRank);
-
-
-   topicMatches.push({
-     topicIndex,
-     className,
-     category,
-     sectionSpecificVideos: videos.filter((v) => v.matchRank === 0),
-     fallbackVideos: videos.filter((v) => v.matchRank === 1),
-     selectedFallbackVideos: [],
-   });
- });
-
-
- [...topicMatches]
-   .filter(({ sectionSpecificVideos }) => sectionSpecificVideos.length < MIN_CURATED_VIDEOS_PER_SECTION)
-   .sort((a, b) => a.sectionSpecificVideos.length - b.sectionSpecificVideos.length || a.topicIndex - b.topicIndex)
-   .forEach((match) => {
-     const needed = MIN_CURATED_VIDEOS_PER_SECTION - match.sectionSpecificVideos.length;
-
-      match.selectedFallbackVideos = match.fallbackVideos
-        .filter((video) => {
-        const key = video.videoId; 
-        if (seenClassWideVideos.has(key)) return false;
-        seenClassWideVideos.add(key);
+  [...topicMatches]
+    .filter(({ sectionSpecificVideos }) => sectionSpecificVideos.length < MIN_CURATED_VIDEOS_PER_SECTION)
+    .sort((left, right) => left.sectionSpecificVideos.length - right.sectionSpecificVideos.length || left.topicIndex - right.topicIndex)
+    .forEach((match) => {
+      const neededFallbackCount = MIN_CURATED_VIDEOS_PER_SECTION - match.sectionSpecificVideos.length;
+      match.selectedFallbackVideos = match.fallbackVideos.filter((video) => {
+        const fallbackKey = `${match.className}:${video.videoId}`;
+        if (seenClassWideVideos.has(fallbackKey)) return false;
+        seenClassWideVideos.add(fallbackKey);
         return true;
-      })
-      .slice(0, needed);
-   });
+      }).slice(0, neededFallbackCount);
+    });
 
-
- return topicMatches
-   .sort((a, b) => a.topicIndex - b.topicIndex)
-   .flatMap(({ category, sectionSpecificVideos, selectedFallbackVideos }) => [
+  return topicMatches
+    .sort((left, right) => left.topicIndex - right.topicIndex)
+    .flatMap(({ sectionSpecificVideos, selectedFallbackVideos }) => [
       ...sectionSpecificVideos,
-      ...selectedFallbackVideos.map((video) => ({ ...video, category })),
+      ...selectedFallbackVideos,
     ]);
 }
-
