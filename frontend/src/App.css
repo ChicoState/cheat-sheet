@@ -3127,3 +3127,22 @@ three - column responsive
   70%  { transform: scale(0.97); }
   100% { transform: scale(1); }
 }
+
+.save-status {
+  font-size: 12px;
+  opacity: 0.75;
+  margin-left: 10px;
+  transition: opacity 0.2s ease;
+}
+
+.save-status.saving {
+  color: #888;
+}
+
+.save-status.offline {
+  color: #d97706; 
+}
+
+.save-status.saved {
+  color: #16a34a; 
+}
