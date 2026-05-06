@@ -2648,12 +2648,14 @@ right panel - youtube resources
 }
 
 .video-card-sm.compact .video-thumb-sm {
-  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
 }
 
 .video-card-sm.compact .video-thumb-sm img {
   width: 100%;
-  height: 54px;
+  height: 100%;
+  object-fit: cover;
 }
 
 .video-card-sm.compact .play-icon {
@@ -2678,15 +2680,19 @@ right panel - youtube resources
 }
 
 .video-thumb-sm {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 18px;
   position: relative;
-  flex-shrink: 0;
-  width: 84px;
+  background: #00000022;
 }
 
 .video-thumb-sm img {
-  width: 84px;
-  height: 50px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  object-position: center;
   display: block;
 }
 
@@ -2929,17 +2935,6 @@ three - column responsive
   .app-header-brand {
     width: 100%;
     justify-content: center;
-  }
-}
-
-@media (max-width: 1040px) {
-  .video-thumb-sm,
-  .video-thumb-sm img {
-    width: 88px;
-  }
-
-  .video-thumb-sm img {
-    height: 58px;
   }
 }
 
