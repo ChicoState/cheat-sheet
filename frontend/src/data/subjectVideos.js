@@ -639,7 +639,7 @@ export function getCuratedVideosForTopics(topics) {
    .sort((a, b) => a.topicIndex - b.topicIndex)
    .flatMap(({ sectionSpecificVideos, selectedFallbackVideos }) => [
      ...sectionSpecificVideos,
-     ...selectedFallbackVideos,
+     ...selectedFallbackVideos.map(video) => ({ ...video, category}),
    ]);
 }
 
