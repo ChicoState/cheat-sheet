@@ -3195,3 +3195,43 @@ three - column responsive
 .right-panel {
   will-change: width;
 }
+
+/* mobile responsiveness improvement */
+@media (max-width: 768px) {
+  .app-body {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto;
+    overflow-y: auto;
+  }
+  .left-panel, 
+  .right-panel {
+    max-height: 300px;
+    border: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .center-panel {
+    min-height: 60vh;
+  }
+  .pdf-container {
+    padding: var(--space-sm);
+  }
+  .workspace-topbar {
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+  .left-panel-footer {
+    padding: var(--space-sm);
+  }
+  .btn-compile {
+    font-size: 0.8rem;
+    padding: 0.5rem;
+
+  }
+  .modal-box {
+    width: 95%;
+    padding: var(--space-md);
+  }
+  .modal-box iframe {
+    height: 220px;
+  }
+}
