@@ -5,7 +5,7 @@ import CreateCheatSheet from './CreateCheatSheet';
 import { useFormulas } from '../hooks/formulas';
 import { useLatex } from '../hooks/latex';
 import { useYouTubeResources } from '../hooks/youtubeResources';
-import { CURATED_SUBJECT_VIDEOS } from '../data/subjectVideos';
+import { SUBJECT_VIDEOS } from '../data/subjectVideos';
 
 // Mock the dependencies
 vi.mock('../hooks/formulas');
@@ -82,7 +82,7 @@ describe('CreateCheatSheet Component', () => {
       observe = vi.fn();
       disconnect = vi.fn();
     };
-    CURATED_SUBJECT_VIDEOS['Math 101'] = [];
+    SUBJECT_VIDEOS['Math 101'] = [];
     useFormulas.mockReturnValue(mockUseFormulas);
     useLatex.mockReturnValue(mockUseLatex);
     useYouTubeResources.mockReturnValue({ resources: [], isLoading: false, error: '', topicLimit: 6 });
@@ -220,7 +220,7 @@ describe('CreateCheatSheet Component', () => {
   });
 
   it('shows curated videos before a YouTube search runs', () => {
-    CURATED_SUBJECT_VIDEOS['Math 101'] = [
+    SUBJECT_VIDEOS['Math 101'] = [
       { url: 'https://youtu.be/abc123abc12', title: 'Curated Algebra Video', channel: 'Teacher Tube', topic: 'Algebra' },
     ];
 
@@ -244,7 +244,7 @@ describe('CreateCheatSheet Component', () => {
   });
 
   it('only shows curated videos for matching selected sections', () => {
-    CURATED_SUBJECT_VIDEOS['Math 101'] = [
+    SUBJECT_VIDEOS['Math 101'] = [
       { url: 'https://youtu.be/abc123abc12', title: 'Geometry Curated Video', channel: 'Teacher Tube', category: 'Geometry' },
     ];
 
@@ -267,7 +267,7 @@ describe('CreateCheatSheet Component', () => {
   });
 
   it('shows one curated video per section until expanded', () => {
-    CURATED_SUBJECT_VIDEOS['Math 101'] = [
+    SUBJECT_VIDEOS['Math 101'] = [
       { url: 'https://youtu.be/abc123abc12', title: 'First Algebra Video', channel: 'Teacher Tube', categories: ['Algebra'] },
       { url: 'https://youtu.be/def456def45', title: 'Second Algebra Video', channel: 'Teacher Tube', categories: ['Algebra'] },
       { url: 'https://youtu.be/ghi789ghi78', title: 'Third Algebra Video', channel: 'Teacher Tube', categories: ['Algebra'] },
