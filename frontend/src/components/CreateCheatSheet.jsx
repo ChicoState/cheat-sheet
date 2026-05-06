@@ -715,7 +715,18 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
   const [containerHeight, setContainerHeight] = useState(null);
   const [zoom, setZoom] = useState(DEFAULT_PDF_ZOOM);
   const [viewMode, setViewMode] = useState('custom');
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const scrollRef = useRef(null);
 
+  const handlePdfScroll = () => {
+    if(scroffRef.current){
+      setShowScrollTop(scrollRef.current.scroppTop > 300);
+    }
+  };
+
+  const scrollToTop = () => {
+    scrollRef.current?.ScrollTo({ top: 0, behavior: 'smooth' });
+  };
   const clampZoom = (value) => Math.min(2, Math.max(0.5, value));
 
   const handleZoomOut = () => {
@@ -811,7 +822,10 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
         </div>
       </div>
       <div ref={containerRef} className="pdf-preview-stage">
-        <div className="pdf-preview-scroll">
+        <div className="pdf-preview-scroll"
+          ref={scrollRef}
+          onScroll={handlePdfScroll}
+        >
         {compileError ? (
           <div className="compile-error-box">
             <strong>Compilation: Error:</strong><br /><br />
@@ -843,6 +857,7 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
             </div>
         )}
         </div>
+
         {isCompiling && (
           <div className="pdf-recompile-overlay" aria-live="polite" aria-busy="true">
             <div className="pdf-recompile-spinner" aria-hidden="true">

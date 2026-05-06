@@ -290,6 +290,34 @@
   --shadow-inset: inset 0 1px 3px rgba(0,0,0,0.6);
 }
 
+[data-theme="blossom"] {
+  --bg: #fff7fb;
+  --text: #4a2340;
+  --text-muted: #9a6f8d;
+  --panel-bg: #fff0f7;
+  --card-bg: #fff4fa;
+  --box-bg: #ffe8f3;
+  --border: #f3bfd8;
+  --border-subtle: #f8d9e8;
+  --input-bg: #ffffff;
+  --input-border: #efb6d2;
+  --input-text: #4a2340;
+
+  --primary: #ec6aa7;
+  --primary-hover: #d94f93;
+  --btn-primary: #ec6aa7;
+  --btn-primary-hover: #d94f93;
+  --btn-download: #f59ac2;
+  --btn-download-hover: #ea78ad;
+
+  --btn-clear: #ff7f9f;
+  --btn-clear-hover: #eb5d84;
+  --shadow-sm: 0 1px 2px rgba(236, 106, 167, 0.08);
+  --shadow-md: 0 4px 12px rgba(236, 106, 167, 0.12);
+  --shadow-lg: 0 10px 28px rgba(236, 106, 167, 0.16);
+  --shadow-inset: inset 0 1px 3px rgba(236, 106, 167, 0.08);
+}
+
 /* ==========================================================================
    BASE STYLES
    ========================================================================== */
