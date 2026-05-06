@@ -46,7 +46,7 @@ LEGACY_PROBLEM_LABEL_PATTERN = re.compile(r"\\textbf\{Problem ([^}]*)\}\s*")
 LEGACY_ANSWER_LABEL_PATTERN = re.compile(r"\\textbf\{Answer:\}\s*")
 APP_LAYOUT_COMMENT_LINE_PATTERN = re.compile(r"(?m)^% @cheatsheet-layout .*\n?")
 APP_LAYOUT_COMMENT_BLOCK_PATTERN = re.compile(
-    r"(?m)(?:^% @cheatsheet-layout .*\n){5}^%\n?"
+    r"(?m)(?:^% @cheatsheet-layout .*\n)+^%\n?"
 )
 
 
@@ -129,11 +129,7 @@ def append_text_heading(lines, text):
     lines.append(r"\noindent " + text + r"\par")
 
 
-<<<<<<< HEAD
-def build_layout_comment_block(columns=2, font_size="10pt", margins="0.25in", spacing="large", orientation="portrait"):
-=======
-def build_layout_comment_block(columns=4, font_size="9pt", margins="0.15in", spacing="small"):
->>>>>>> af1ff138475768f9f924bbb5507570998035711a
+def build_layout_comment_block(columns=4, font_size="9pt", margins="0.15in", spacing="small", orientation="portrait"):
     return [
         f"% @cheatsheet-layout columns: {columns} | change layout options up top to update columns",
         f"% @cheatsheet-layout font_size: {font_size} | change layout options up top to update text size",
@@ -144,11 +140,7 @@ def build_layout_comment_block(columns=4, font_size="9pt", margins="0.15in", spa
     ]
 
 
-<<<<<<< HEAD
-def build_dynamic_header(columns=2, font_size="10pt", margins="0.25in", spacing="large", orientation="portrait"):
-=======
-def build_dynamic_header(columns=4, font_size="9pt", margins="0.15in", spacing="small"):
->>>>>>> af1ff138475768f9f924bbb5507570998035711a
+def build_dynamic_header(columns=4, font_size="9pt", margins="0.15in", spacing="small", orientation="portrait"):
     """
     Build a dynamic LaTeX header based on user-selected options.
     """
@@ -156,18 +148,23 @@ def build_dynamic_header(columns=4, font_size="9pt", margins="0.15in", spacing="
     spacing_values = get_spacing_values(spacing, font_size)
     doc_class, doc_class_size = get_document_class(font_size)
     
-    # Inject landscape orientation if selected
-    geometry_options = f"margin={margins}"
+    # 1. Force the PDF driver to rotate by passing landscape and letterpaper to the document class
+    doc_options = f"{doc_class_size},fleqn,letterpaper"
     if orientation == "landscape":
-        geometry_options += ", landscape"
+        doc_options += ",landscape"
+
+    # 2. Also pass them to the geometry package
+    geometry_options = f"letterpaper,margin={margins}"
+    if orientation == "landscape":
+        geometry_options += ",landscape"
 
     header_lines = [
-        f"\\documentclass[{doc_class_size},fleqn]{{{doc_class}}}",
+        f"\\documentclass[{doc_options}]{{{doc_class}}}",
         f"\\usepackage[{geometry_options}]{{geometry}}",
         "\\usepackage{amsmath, amssymb}",
         "\\usepackage{enumitem}",
         "\\usepackage{multicol}",
-        "\\usepackage{adjustbox}",  # For auto-scaling equations to fit column width
+        "\\usepackage{adjustbox}",  
         "",
         "\\setlength{\\mathindent}{0pt}",
         "\\setlist[itemize]{noitemsep, topsep=0pt, leftmargin=*}",
@@ -201,11 +198,7 @@ def build_dynamic_footer(columns=2):
     return "\n".join(footer_lines)
 
 
-<<<<<<< HEAD
-def normalize_latex_layout(content, columns=2, font_size="10pt", margins="0.25in", spacing="large", orientation="portrait"):
-=======
-def normalize_latex_layout(content, columns=4, font_size="9pt", margins="0.15in", spacing="small"):
->>>>>>> af1ff138475768f9f924bbb5507570998035711a
+def normalize_latex_layout(content, columns=4, font_size="9pt", margins="0.15in", spacing="small", orientation="portrait"):
     """Rebuild document wrappers so current layout controls apply to existing LaTeX content."""
     if not content:
         return content
@@ -242,11 +235,7 @@ def normalize_latex_layout(content, columns=4, font_size="9pt", margins="0.15in"
     return header + body + ("\n" if body else "") + footer
 
 
-<<<<<<< HEAD
-def build_latex_for_formulas(selected_formulas, columns=2, font_size="10pt", margins="0.25in", spacing="large", orientation="portrait"):
-=======
-def build_latex_for_formulas(selected_formulas, columns=4, font_size="9pt", margins="0.15in", spacing="small"):
->>>>>>> af1ff138475768f9f924bbb5507570998035711a
+def build_latex_for_formulas(selected_formulas, columns=4, font_size="9pt", margins="0.15in", spacing="small", orientation="portrait"):
     """
     Given a list of selected formulas (each with class_name, category, name, latex),
     build a complete LaTeX document.
