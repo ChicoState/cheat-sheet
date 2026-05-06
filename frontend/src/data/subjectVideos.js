@@ -380,7 +380,19 @@ export const CURATED_SUBJECT_VIDEOS = {
      title: "Calculus 3 Full Course",
      videoId: "tGVnBAHLApA",
      channel: "Professor Leonard",
-     topic: "Vectors"
+     topic: "Vector Formulas"
+   },
+   {
+     title: "Partial Derivatives - Multivariable Calculus",
+     videoId: "JAf_aSIJryg",
+     channel: "The Organic Chemistry Tutor",
+     topic: "Partial Derivatives and Optimization"
+   },
+   {
+     title: "Double and Triple Integrals",
+     videoId: "UubU3U2C8WM",
+     channel: "Professor Dave Explains",
+     topic: "Multiple Integrals"
    },
  ],
  "UNIT CIRCLE": [
