@@ -398,17 +398,35 @@ export const CURATED_SUBJECT_VIDEOS = {
    },
  ],
  "PHYSICS I": [
+    {
+      title: "Work, Energy, and Power - Basic Introduction",
+      videoId: "_MR1Dp8-F8w",
+      channel: "The Organic Chemistry Tutor",
+      topic: "Work, Energy & Power"
+    },
+    {
+      title: "What is Light? Maxwell and the Electromagnetic Spectrum",
+      videoId: "pj_ya0e20vE",
+      channel: "Professor Dave Explains",
+      topic: "Electricity & Waves"
+    },
+    {
+      title: "Dynamics: What are Forces?",
+      videoId: "iAMxWvyykRU",
+      channel: "Professor Dave Explains",
+      topic: "Dynamics (Forces)"
+    },
    {
      title: "Physics 1 Final Exam Review",
      videoId: "b1t41Q3xRM8",
      channel: "The Organic Chemistry Tutor",
-     topic: "Kinematics and Dynamics"
+     topic: "Kinematics (Motion)"
    },
    {
      title: "Motion in a Straight Line: Crash Course #1",
      videoId: "ZM8ECpBuQYE",
      channel: "CrashCourse",
-     topic: "Kinematics"
+     topic: "Kinematics (Motion)"
    },
    {
      title: "Momentum and Impulse",
