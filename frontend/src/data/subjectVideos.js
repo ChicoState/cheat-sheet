@@ -366,13 +366,43 @@ export const CURATED_SUBJECT_VIDEOS = {
      title: "Calculus 2 - Integral Test For Convergence",
      videoId: "iLEWXYPZrU8",
      channel: "The Organic Chemistry Tutor",
-     topic: "Sequences and Series"
+     topic: "Sequences & Series"
    },
    {
      title: "Calculus 2 Full Course",
      videoId: "H9eCT6f_Ftw",
      channel: "Professor Leonard",
-     topic: "Integration Techniques"
+     topic: "Integration Techniques and Improper Integrals"
+   },
+   {
+     title: "Improper Integrals - Convergence and Divergence - Calculus 2",
+     videoId: "ND9cEdfCFr0",
+     channel: "The Organic Chemistry Tutor",
+     topic: "Integration Techniques and Improper Integrals"
+   },
+   {
+    title: "Applications of Integration Formula Review - Antiderivatives, Definite Integrals, FTC, Area, Disk Me",
+    videoId: "H71xfyzbkZI",
+    channel: "The Organic Chemistry Tutor",
+    topic: "Applications of Integration"
+   },
+   {
+     title: "Taylor Series and Maclaurin Series - Calculus 2",
+     videoId: "LDBnS4c7YbA",
+     channel: "The Organic Chemistry Tutor",
+     topic: "Power & Taylor Series",
+   },
+   {
+    title: "Parametric Equations",
+    videoId: "QaN_3TytT_U",
+    channel: "Professor Dave Explains",
+    topic: "Parametric & Polar"
+   },
+   {
+     title: "Polar Coordinates Basic Introduction, Conversion to Rectangular, How to Plot Points, Negative R Value",
+     videoId: "aSdaT62ndYE&t=9s",
+     channel: "The Organic Chemistry Tutor",
+     topic: "Parametric & Polar"
    },
  ],
  "CALCULUS III": [
