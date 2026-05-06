@@ -601,6 +601,26 @@ export const CURATED_SUBJECT_VIDEOS = {
     topic: "2x2 Systems"
   },
  ],
+ "LINEAR ALGEBRA II": [
+  {
+    title: "Linear Algebra: Properties of Matrix Operations - Part 1 (Section 2.2) | Math with Professor V",
+    videoId: "pqhI8RCNkZk",
+    channel: "Math With Professor V",
+    topic: "Matrix Properties"
+  },
+  {
+    title: "Eigenvectors and eigenvalues | Chapter 14, Essence of linear algebra",
+    videoId: "PFDu9oVAE-g",
+    channel: "3Blue1Brown",
+    topic: "Eigenvalues & Eigenvectors"
+  },
+  {
+    title: "Further Matrix Decompositions: LU, Cholesky, QR, and SVD",
+    videoId: "wHAJzemKQW4",
+    channel: "Professor Dave Explains",
+    topic: "Decompositions & Spaces",
+  },
+ ],
 
 };
 
