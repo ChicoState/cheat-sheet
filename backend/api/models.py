@@ -39,6 +39,7 @@ class CheatSheet(models.Model):
     margins = models.CharField(max_length=20, default="0.15in")
     font_size = models.CharField(max_length=10, default="9pt")
     spacing = models.CharField(max_length=10, default="small")
+    orientation = models.CharField(max_length=20, default="portrait")
     # Stores selected formulas with user-defined order: [{"class": "...", "category": "...", "name": "..."}]
     selected_formulas = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
