@@ -160,7 +160,7 @@ export const CURATED_SUBJECT_VIDEOS = {
      title: "Types of Angles and Angle Relationships",
      videoId: "dA94zyaLuhk",
      channel: "Professor Dave Explains",
-     topic: "Angle Relationships"
+     topic: "Basic Angle Relationships"
    },
    {
      title: "Parallel Lines Cut by a Transversal",
@@ -296,13 +296,13 @@ export const CURATED_SUBJECT_VIDEOS = {
      title: "Functions and Graphs | Precalculus",
      videoId: "kvU9sOzT2mk",
      channel: "The Organic Chemistry Tutor",
-     topic: "Functions and Graphs"
+     topic: "Functions"
    },
    {
      title: "Verifying Trigonometric Identities",
      videoId: "LlFbHDQVRk4",
      channel: "The Organic Chemistry Tutor",
-     topic: "Functions and Graphs"
+     topic: "Functions"
    },
    {
      title: "Conic Sections: Hyperbolas, Ellipses, Parabolas, Circles",
@@ -326,13 +326,13 @@ export const CURATED_SUBJECT_VIDEOS = {
      title: "Polar Coordinates Basic Introduction",
      videoId: "mgMYdo4f0XE",
      channel: "The Organic Chemistry Tutor",
-     topic: "Polar and Complex Polar"
+     topic: "Polar & Complex Polar"
    },
    {
      title: "Polar Equations to Rectangular Equations",
      videoId: "flTz_pSzVFI",
      channel: "The Organic Chemistry Tutor",
-     topic: "Polar and Complex Polar"
+     topic: "Polar & Complex Polar"
    },
  ],
  "CALCULUS I": [
@@ -414,7 +414,7 @@ export const CURATED_SUBJECT_VIDEOS = {
      title: "Momentum and Impulse",
      videoId: "40sww1q5_hc",
      channel: "The Organic Chemistry Tutor",
-     topic: "Momentum and Collisions"
+     topic: "Momentum & Collisions"
    },
  ],
  "PHYSICS II": [
@@ -422,7 +422,7 @@ export const CURATED_SUBJECT_VIDEOS = {
      title: "Physics 2 Final Exam Review",
      videoId: "uHvs-G-njo8",
      channel: "The Organic Chemistry Tutor",
-     topic: "E&M and Optics"
+     topic: "Waves & Optics"
    },
    {
      title: "Electric Fields: Crash Course #26",
@@ -442,13 +442,13 @@ export const CURATED_SUBJECT_VIDEOS = {
      title: "Statistics Exam 1 Review",
      videoId: "xxpc-HPWX28",
      channel: "The Organic Chemistry Tutor",
-     topic: "Descriptive Stats"
+     topic: "Descriptive Statistics"
    },
    {
      title: "What Is Statistics: Crash Course #1",
      videoId: "zouPoc49xbk",
      channel: "CrashCourse",
-     topic: "Intro to Statistics"
+     topic: "Descriptive statistics"
    },
    {
      title: "Descriptive Statistics",
