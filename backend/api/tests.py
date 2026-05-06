@@ -1248,7 +1248,7 @@ class TestGenerateSheetEndpoint:
         )
         assert resp.status_code == 200
         tex = resp.json()["tex_code"]
-        assert "\\documentclass[8pt,fleqn]{extarticle}" in tex
+        assert "\\documentclass[8pt,fleqn,letterpaper]{extarticle}" in tex
         assert "\\documentclass[8pt,fleqn]{article}" not in tex
 
     def test_generate_sheet_9pt_uses_extarticle(self, auth_client):
@@ -1263,7 +1263,7 @@ class TestGenerateSheetEndpoint:
         )
         assert resp.status_code == 200
         tex = resp.json()["tex_code"]
-        assert "\\documentclass[9pt,fleqn]{extarticle}" in tex
+        assert "\\documentclass[9pt,fleqn,letterpaper]{extarticle}" in tex
         assert "\\documentclass[9pt,fleqn]{article}" not in tex
 
     def test_generate_sheet_10pt_uses_article(self, auth_client):
@@ -1278,7 +1278,7 @@ class TestGenerateSheetEndpoint:
         )
         assert resp.status_code == 200
         tex = resp.json()["tex_code"]
-        assert "\\documentclass[10pt,fleqn]{article}" in tex
+        assert "\\documentclass[10pt,fleqn,letterpaper]{article}" in tex
         assert "extarticle" not in tex
 
     def test_generate_sheet_latex_injection_blocked(self, auth_client):
