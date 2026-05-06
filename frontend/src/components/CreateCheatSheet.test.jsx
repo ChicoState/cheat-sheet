@@ -73,6 +73,7 @@ describe('CreateCheatSheet Component', () => {
     handleCompileOnly: vi.fn(),
     handleDownloadPDF: vi.fn(),
     handleDownloadTex: vi.fn(),
+    handlePrintPDF: vi.fn(),
     clearLatex: vi.fn()
   };
 
