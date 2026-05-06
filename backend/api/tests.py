@@ -36,7 +36,7 @@ def sample_template(db):
         subject="algebra",
         description="A test template",
         latex_content="\\section*{Test}\nHello World",
-        default_margins="0.5in",assert "\\documentclass[8pt,fleqn]{extarticle}" in normalized
+        default_margins="0.5in",
         default_columns=2,
     )
 
@@ -91,6 +91,7 @@ class TestCheatSheetModel(TestCase):
             columns=1,
             font_size="10pt",
             user=self.user,
+            orientation="portrait",
         )
         full = sheet.build_full_latex()
         assert "\\begin{document}" in full
@@ -237,7 +238,7 @@ class TestLatexUtils:
             "\\end{document}"
         )
 
-        normalized = normalize_latex_layout(raw, columns=4, font_size="8pt", margins="0.5in", spacing="tiny")
+        normalized = normalize_latex_layout(raw, columns=4, font_size="8pt", margins="0.5in", spacing="tiny", orientation="portrait")
 
         assert "\\documentclass[8pt,fleqn,letterpaper]{extarticle}" in normalized
         assert "margin=0.5in" in normalized
@@ -1400,7 +1401,7 @@ class TestCompileEndpoint:
         assert "% @cheatsheet-layout margins: 0.25in | change layout options up top to update margins" in tex
         assert "orientation: portrait" in tex 
 
-def test_normalize_latex_layout_rewraps_existing_document_with_current_settings(self):
+
 # ── Auth Endpoint Tests ──────────────────────────────────────────────
 
 
