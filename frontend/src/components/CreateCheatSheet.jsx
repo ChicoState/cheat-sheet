@@ -1380,6 +1380,22 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       }, 600);
       return () => clearTimeout(timer);
     }, [pdfBlob, isCompiling]);
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if((event.ctrlKey || event.metaKey) && event.key == 'Enter'){
+        event.preventDefault();
+        if(!isCompiling) handleCompileClick();
+        return;
+      }
+      if((event.ctrlkey || event.metaKey) && event.key == 's'){
+        event.preventDefault();
+        handleSave({ preventDefault: () => {} });
+        return;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isCompiling]);
   const handleCompileClick = () => {
     if (!hasCollapsedLeftPanelOnceRef.current) {
       // First compile: keep controls reachable while reclaiming preview space.
