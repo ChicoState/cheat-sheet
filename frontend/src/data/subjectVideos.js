@@ -163,10 +163,17 @@ export const SUBJECT_VIDEOS = {
       topic: "Angle Relationships"
     },
     {
+<<<<<<< HEAD
       title: "Parallel Lines Cut by a Transversal",
       videoId: "3Ex7SpsA9MI",
       channel: "Mario's Math Tutoring",
       topic: "Parallel Lines and Transversals"
+=======
+      title: "Parallel Lines Cut by a Transversal - Finding Angle Measures",
+      videoId: "3Ex7SpsA9MI",
+      channel: "Mario's Math Tutoring",
+      topic: "Parallel lines and Traversals"
+>>>>>>> 8eb94e0 (Added video for triangles and parallel lines/traversals for geometry.)
     },
     {
       title: "Triangles",
@@ -174,6 +181,7 @@ export const SUBJECT_VIDEOS = {
       channel: "The Organic Chemistry Tutor",
       topic: "Triangles"
     },
+<<<<<<< HEAD
     {
       title: "Pythagorean Theorem",
       videoId: "d8EA5TxGzcY",
@@ -234,6 +242,8 @@ export const SUBJECT_VIDEOS = {
       channel: "Khan Academy",
       topic: "Transformations"
     },
+=======
+>>>>>>> 8eb94e0 (Added video for triangles and parallel lines/traversals for geometry.)
   ],
   "TRIGONOMETRY": [
     {
