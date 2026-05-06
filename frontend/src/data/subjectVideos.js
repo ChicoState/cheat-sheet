@@ -602,3 +602,40 @@ export function getCuratedVideosForTopics(topics) {
    ]);
 }
 
+export function getYouTubeVideoId(value = '') {
+  const text = String(value).trim();
+  if (!text) return '';
+
+  // If it's already a video ID (11 chars, alphanumeric with - and _)
+  if (/^[a-zA-Z0-9_-]{11}$/.test(text)) {
+    return text;
+  }
+
+  try {
+    const url = new URL(text);
+    const hostname = url.hostname.toLowerCase();
+
+    // Check if it's a YouTube URL
+    if (!['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be'].includes(hostname)) {
+      return '';
+    }
+
+    // Handle youtu.be/VIDEO_ID
+    if (hostname === 'youtu.be') {
+      const videoId = url.pathname.split('/').filter(Boolean)[0] || '';
+      return /^[a-zA-Z0-9_-]{11}$/.test(videoId) ? videoId : '';
+    }
+
+    // Handle youtube.com/watch?v=VIDEO_ID
+    if (url.searchParams.has('v')) {
+      const videoId = url.searchParams.get('v') || '';
+      return /^[a-zA-Z0-9_-]{11}$/.test(videoId) ? videoId : '';
+    }
+
+    // Handle youtube.com/shorts/VIDEO_ID and youtube.com/embed/VIDEO_ID
+    const embedMatch = url.pathname.match(/\/(embed|shorts)\/([a-zA-Z0-9_-]{11})/);
+    return embedMatch?.[2] || '';
+  } catch {
+    return '';
+  }
+}
