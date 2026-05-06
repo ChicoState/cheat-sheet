@@ -236,6 +236,33 @@
 [data-theme="neon"] .class-btn.active {
   box-shadow: 0 0 10px rgba(0,245,255,0.5);
 }
+ /* Galaxy Theme */
+[data-theme="galaxy"] {
+  --bg: #0a0614;
+  --text: #e8e0f5;
+  --text-muted: #8b7aa8;
+  --panel-bg: #110d1f;
+  --border: #2d1f4a;
+  --border-subtle: #1a1230;
+  --primary: #7c3aed;
+  --primary-hover: #6d28d9;
+  --card-bg: #110d1f;
+  --box-bg: #0d0a1a;
+  --input-bg: #080512;
+  --input-border: #3d2566;
+  --input-text: #e8e0f5;
+  --btn-primary: #7c3aed;
+  --btn-primary-hover: #6d28d9;
+  --btn-download: #5b21b6;
+  --btn-download-hover: #4c1d95;
+  --btn-clear: #db2777;
+  --btn-clear-hover: #be185d;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.5);
+  --shadow-md: 0 4px 12px rgba(124,58,237,0.25);
+  --shadow-lg: 0 8px 24px rgba(124,58,237,0.3);
+  --shadow-inset: inset 0 1px 3px rgba(0,0,0,0.6);
+}
+
 /* ==========================================================================
    BASE STYLES
    ========================================================================== */
