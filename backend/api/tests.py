@@ -36,7 +36,7 @@ def sample_template(db):
         subject="algebra",
         description="A test template",
         latex_content="\\section*{Test}\nHello World",
-        default_margins="0.5in",
+        default_margins="0.5in",assert "\\documentclass[8pt,fleqn]{extarticle}" in normalized
         default_columns=2,
     )
 
@@ -239,7 +239,7 @@ class TestLatexUtils:
 
         normalized = normalize_latex_layout(raw, columns=4, font_size="8pt", margins="0.5in", spacing="tiny")
 
-        assert "\\documentclass[8pt,fleqn]{extarticle}" in normalized
+        assert "\\documentclass[8pt,fleqn,letterpaper]{extarticle}" in normalized
         assert "margin=0.5in" in normalized
         assert "\\begin{multicols}{4}" in normalized
         assert "\\begin{multicols}{2}" not in normalized
@@ -383,7 +383,7 @@ class TestLatexUtils:
 
     def test_build_dynamic_header_accepts_custom_font_and_spacing(self):
         header = build_dynamic_header(columns=5, font_size="10.5pt", margins="0.25in", spacing="0.6pt")
-        assert "\\documentclass[10pt,fleqn]{article}" in header
+        assert "\\documentclass[10pt,fleqn,letterpaper]{article}" in header
         assert "\\fontsize{10.5pt}{11.3pt}\\selectfont" in header
         assert "\\setlength{\\baselineskip}{11.1pt}" in header
         assert "\\setlength{\\parskip}{0.6pt}" in header
@@ -402,6 +402,7 @@ class TestLatexUtils:
         assert "% @cheatsheet-layout font_size: 10.5pt | change layout options up top to update text size" in tex
         assert "% @cheatsheet-layout spacing: 0.6pt | change layout options up top to update spacing" in tex
         assert "% @cheatsheet-layout margins: 0.5in | change layout options up top to update margins" in tex
+        assert "% @cheatsheet-layout orientation: portrait | change layout options up top to update orientation" in tex
 
 
 # ── API Tests ────────────────────────────────────────────────────────
@@ -1375,6 +1376,7 @@ class TestCompileEndpoint:
                 "font_size": "8pt",
                 "spacing": "tiny",
                 "margins": "0.25in",
+                "orientation": "portrait",
             },
             format="json",
         )
@@ -1387,6 +1389,7 @@ class TestCompileEndpoint:
             "font_size": "8pt",
             "spacing": "tiny",
             "margins": "0.25in",
+            "orientation": "portrait", 
         }
         assert "\\begin{multicols}{2}" in tex
         assert "\\fontsize{8pt}{8.8pt}\\selectfont" in tex
@@ -1395,8 +1398,9 @@ class TestCompileEndpoint:
         assert "% @cheatsheet-layout font_size: 8pt | change layout options up top to update text size" in tex
         assert "% @cheatsheet-layout spacing: tiny | change layout options up top to update spacing" in tex
         assert "% @cheatsheet-layout margins: 0.25in | change layout options up top to update margins" in tex
+        assert "orientation: portrait" in tex 
 
-
+def test_normalize_latex_layout_rewraps_existing_document_with_current_settings(self):
 # ── Auth Endpoint Tests ──────────────────────────────────────────────
 
 
