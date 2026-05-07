@@ -3521,3 +3521,39 @@ right-panel-scroll::-webkit-scrollbar-thumb:hover,
   font-variant-numeric: tabular-nums;
   min-width: 80px;
 }
+
+.pdf-preview-scroll {
+  position: relative;
+}
+
+.pdf-scroll-top-btn {
+   position: sticky;
+  bottom: 20px;
+  left: 100%;
+  transform: translateX(-40px);
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  background: var(--primary, #3b82f6);
+  color: white;
+  border: none;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.pdf-scroll-top-btn:hover {
+  background: var(--primary-hover, #2563eb);
+  transform: translateX(-40px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.pdf-scroll-top-btn:active {
+  transform: translateX(-40px) scale(0.98);
+}

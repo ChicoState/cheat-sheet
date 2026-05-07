@@ -7,7 +7,6 @@ import { useLatex } from '../hooks/latex';
 import { useYouTubeResources } from '../hooks/youtubeResources';
 import { getCuratedVideosForTopics } from '../data/subjectVideos';
 import { Document, Page, pdfjs } from 'react-pdf';
-import confetti from 'canvas-confetti';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -741,48 +740,42 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
   const scrollRef = useRef(null);
 
   const handlePdfScroll = () => {
-    if(scrollRef.current){
-      setShowScrollTop(scrollRef.current.scroppTop > 300);
+    if (scrollRef.current) {
+      setShowScrollTop(scrollRef.current.scrollTop > 300);
     }
-    const pages = scrollRef.current.querySelectorAll('.pdf-page');
-    const scrollTop = scrollRef.current.scrollTop;
-    const containerTop = scrollRef.current.getBoundingClientRect().top;
-
-    let current = 1;
-    pages.forEach((page, index) => {
-      const pageTop = page.getBoundingClientRect().top - containerTop;
-      if (pageTop <= 100){
-        current = index + 1;
-      }
-    });
-    setCurrentPage(current);
+    const pages = scrollRef.current?.querySelectorAll('.pdf-page');
+    if (pages?.length) {
+      const containerTop = scrollRef.current.getBoundingClientRect().top;
+      let current = 1;
+      pages.forEach((page, index) => {
+        const pageTop = page.getBoundingClientRect().top - containerTop;
+        if (pageTop <= 100) current = index + 1;
+      });
+      setCurrentPage(current);
+    }
   };
 
   const scrollToTop = () => {
     scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
-  const clampZoom = (value) => Math.min(2, Math.max(0.5, value));
 
+  const clampZoom = (value) => Math.min(2, Math.max(0.5, value));
   const handleZoomOut = () => {
     setViewMode('custom');
-    setZoom((currentZoom) => clampZoom(currentZoom - 0.15));
+    setZoom((z) => clampZoom(z - 0.15));
   };
-
   const handleZoomIn = () => {
     setViewMode('custom');
-    setZoom((currentZoom) => clampZoom(currentZoom + 0.15));
+    setZoom((z) => clampZoom(z + 0.15));
   };
-
   const handleResetZoom = () => {
     setViewMode('custom');
     setZoom(DEFAULT_PDF_ZOOM);
   };
-
   const handleFitToWidth = () => {
     setViewMode('width');
     setZoom(1);
   };
-
   const handleFitToHeight = () => {
     setViewMode('height');
     setZoom(1);
@@ -791,38 +784,33 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
   const pageWidth = containerWidth && viewMode !== 'height'
     ? Math.max(240, Math.round(containerWidth * (viewMode === 'width' ? 1 : zoom)))
     : undefined;
-
   const pageHeight = containerHeight && viewMode === 'height'
     ? Math.max(320, Math.round((containerHeight - 24) * zoom))
     : undefined;
 
   const updatePreviewSize = useCallback(() => {
     const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    setContainerWidth(rect.width);
-    setContainerHeight(rect.height);
+    if (rect) {
+      setContainerWidth(rect.width);
+      setContainerHeight(rect.height);
+    }
   }, []);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
     updatePreviewSize();
-
     if (!window.ResizeObserver) {
       window.addEventListener('resize', updatePreviewSize);
       return () => window.removeEventListener('resize', updatePreviewSize);
     }
-
-    const resizeObserver = new window.ResizeObserver((entries) => {
+    const resizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0];
-      if (!entry) return;
-
-      setContainerWidth(entry.contentRect.width);
-      setContainerHeight(entry.contentRect.height);
+      if (entry) {
+        setContainerWidth(entry.contentRect.width);
+        setContainerHeight(entry.contentRect.height);
+      }
     });
-
     resizeObserver.observe(container);
     return () => resizeObserver.disconnect();
   }, [updatePreviewSize]);
@@ -834,20 +822,41 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
   return (
     <div className="pdf-preview-shell">
       <div className="pdf-preview-toolbar">
-        <span className="pdf-toolbar-note">{numPages ? `Page 1 of ${numPages}` : 'Use the controls to adjust the preview.'}</span>
+        <span className="pdf-toolbar-note">
+          {numPages ? `Page ${currentPage} of ${numPages}` : 'Use the controls to adjust the preview.'}
+        </span>
         <div className="pdf-zoom-controls" role="toolbar" aria-label="PDF zoom controls">
-          <button type="button" className={`pdf-zoom-btn pdf-zoom-fit ${viewMode === 'width' ? 'active' : ''}`} onClick={handleFitToWidth} aria-pressed={viewMode === 'width'}>
+          <button
+            type="button"
+            className={`pdf-zoom-btn pdf-zoom-fit ${viewMode === 'width' ? 'active' : ''}`}
+            onClick={handleFitToWidth}
+            aria-pressed={viewMode === 'width'}
+          >
             Fit width
           </button>
-          <button type="button" className={`pdf-zoom-btn pdf-zoom-fit ${viewMode === 'height' ? 'active' : ''}`} onClick={handleFitToHeight} aria-pressed={viewMode === 'height'}>
+          <button
+            type="button"
+            className={`pdf-zoom-btn pdf-zoom-fit ${viewMode === 'height' ? 'active' : ''}`}
+            onClick={handleFitToHeight}
+            aria-pressed={viewMode === 'height'}
+          >
             Fit height
           </button>
           <div className="pdf-zoom-group">
             <button type="button" className="pdf-zoom-btn" onClick={handleZoomOut} aria-label="Zoom out">
               −
             </button>
-            <button type="button" className={`pdf-zoom-btn pdf-zoom-readout ${viewMode === 'custom' ? 'active' : ''}`} onClick={handleResetZoom} aria-pressed={viewMode === 'custom'}>
-              {viewMode === 'width' ? 'Fit width' : viewMode === 'height' ? 'Fit height' : `${Math.round(zoom * 100)}%`}
+            <button
+              type="button"
+              className={`pdf-zoom-btn pdf-zoom-readout ${viewMode === 'custom' ? 'active' : ''}`}
+              onClick={handleResetZoom}
+              aria-pressed={viewMode === 'custom'}
+            >
+              {viewMode === 'width'
+                ? 'Fit width'
+                : viewMode === 'height'
+                ? 'Fit height'
+                : `${Math.round(zoom * 100)}%`}
             </button>
             <button type="button" className="pdf-zoom-btn" onClick={handleZoomIn} aria-label="Zoom in">
               +
@@ -855,25 +864,26 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
           </div>
         </div>
       </div>
+
       <div ref={containerRef} className="pdf-preview-stage">
-        <div className="pdf-preview-scroll"
-          ref={scrollRef}
-          onScroll={handlePdfScroll}
-        >
-        {compileError ? (
-          <div className="compile-error-box">
-            <strong>Compilation: Error:</strong><br /><br />
-            {compileError}
-          </div>
-        ) : pdfBlob ? (
-            <Document
-              file={pdfBlob}
-              onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-              loading={<div className="pdf-state-message">Loading PDF...</div>}
-              error={<div className="pdf-state-message pdf-state-error">Failed to load PDF.</div>}
+        <div className="pdf-preview-scroll" ref={scrollRef} onScroll={handlePdfScroll}>
+          {compileError ? (
+            <div className="compile-error-box">
+              <strong>Compilation Error:</strong>
+              <br />
+              <br />
+              {compileError}
+            </div>
+          ) : pdfBlob ? (
+            <>
+              <Document
+                file={pdfBlob}
+                onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+                loading={<div className="pdf-state-message">Loading PDF…</div>}
+                error={<div className="pdf-state-message pdf-state-error">Failed to load PDF.</div>}
               >
-                {Array.from(new Array(numPages), (_, index) => (
-                  <Page 
+                {Array.from({ length: numPages }, (_, index) => (
+                  <Page
                     key={`page_${index + 1}`}
                     pageNumber={index + 1}
                     renderTextLayer={false}
@@ -881,16 +891,25 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
                     className="pdf-page"
                     width={pageWidth}
                     height={pageHeight}
-                    />
-
+                  />
                 ))}
-            </Document>
-        ) : (
-          <div className="pdf-state-message">
-            Compile the PDF to see your preview.
-            </div>
-        )}
+              </Document>
+              {showScrollTop && (
+                <button
+                  type="button"
+                  className="pdf-scroll-top-btn"
+                  onClick={scrollToTop}
+                  aria-label="Scroll to top"
+                >
+                  ↑
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="pdf-state-message">Compile the PDF to see your preview.</div>
+          )}
         </div>
+
         {isCompiling && (
           <div className="pdf-recompile-overlay" aria-live="polite" aria-busy="true">
             <div className="pdf-recompile-spinner" aria-hidden="true">
@@ -1182,24 +1201,6 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     }
   }, []);
 
-  const hasShownConfettiRef = useRef(false);
-  useEffect(() => {
-    if(!pdfBlob || isCompiling || hasShownConfettiRef.current) return;
-    hasShownConfettiRef.current = true;
-    confetti({
-      particleCount: 120,
-      spread: 80,
-      origin: { y: 0.6 },
-      colors: [
-        getComputedStyle(document.documentElement)
-          .getPropertyValue('--primary').trim() || '#3b82f6',
-          '#10b981',
-          '#f59e0b',
-          '#ec4899',
-          '#8b5cf6',
-      ],
-    });
-  }, [pdfBlob, isCompiling]);
 
   const getSaveStatusText = () => {
     if (saveStatus === 'saving') return 'Saving...';
@@ -1469,7 +1470,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
         if(!isCompiling) handleCompileClick();
         return;
       }
-      if((event.ctrlkey || event.metaKey) && event.key === 's'){
+      if((event.ctrlKey || event.metaKey) && event.key === 's'){
         event.preventDefault();
         handleSave({ preventDefault: () => {} });
         return;
@@ -1518,7 +1519,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       orientation,
       selectedFormulas: getSelectedFormulasList(),
     });
-    setLastSaved(Date.now());
+    setLastSavedAt(Date.now());
     showToast('Cheat sheet saved successfully!');
   } catch {
     showToast('Failed to save. Please try again.', 'error');
