@@ -352,6 +352,7 @@ const SectionVideoPicks = ({
   searchedVideos = [],
   onOpen,
   onSearchMore,
+  onClearSearch,
   isSearching = false,
   searchError = '',
   hasSearched = false,
@@ -392,19 +393,30 @@ const SectionVideoPicks = ({
       )}
 
       {allowSearch && (
-        <div className="section-video-search-row">
-          <button
-            type="button"
-            className="btn-toggle-panel section-video-search"
-            onClick={() => onSearchMore({ className, category })}
-            disabled={isSearching}
-            aria-label={`Search YouTube for more in ${category}`}
-            title={`Search YouTube for more in ${category}`}
-          >
-            {isSearching ? '↻' : '⌕'}
-          </button>
-        </div>
-      )}
+  <div className="section-video-search-row">
+    <button
+      type="button"
+      className="btn-toggle-panel section-video-search"
+      onClick={() => onSearchMore({ className, category })}
+      disabled={isSearching}
+      aria-label={`Search YouTube for more in ${category}`}
+      title={`Search YouTube for more in ${category}`}
+    >
+      {isSearching ? '↻' : '⌕'}
+    </button>
+    {hasSearched && !isSearching && searchedVideos.length > 0 && (
+      <button
+        type="button"
+        className="btn-clear-search"
+        onClick={onClearSearch}
+        aria-label={`Clear search results for ${category}`}
+        title="Clear search results"
+      >
+        ✕
+      </button>
+    )}
+  </div>
+)}
 
       {isSearching && !searchedVideos.length && !searchError && (
         <p className="inline-video-status">Searching…</p>
@@ -453,11 +465,31 @@ const FormulaSelection = ({
   return (
     <div className="formula-selection">
       <CollapsiblePanelSection
-        title="Select classes"
-        isOpen={classesOpen}
-        onToggle={() => setClassesOpen((current) => !current)}
-        countBadge={selectedCount > 0 ? `${selectedCount}` : null}
-      >
+  title="Select classes"
+  isOpen={classesOpen}
+  onToggle={() => setClassesOpen((current) => !current)}
+  countBadge={selectedCount > 0 ? `${selectedCount}` : null}
+>
+  <div className="class-select-all-row">
+    <button
+      type="button"
+      className="btn-select-all"
+      onClick={() => classesData.forEach((cls) => {
+        if (!selectedClasses[cls.name]) toggleClass(cls.name);
+      })}
+    >
+      Select All
+    </button>
+    <button
+      type="button"
+      className="btn-select-all btn-deselect-all"
+      onClick={() => classesData.forEach((cls) => {
+        if (selectedClasses[cls.name]) toggleClass(cls.name);
+        })}
+        >
+        Deselect All
+        </button>
+      </div>
         <div className="class-checkboxes">
           {classesData.map((cls) => {
             const isChecked = !!selectedClasses[cls.name];
@@ -703,29 +735,47 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
   const [containerHeight, setContainerHeight] = useState(null);
   const [zoom, setZoom] = useState(DEFAULT_PDF_ZOOM);
   const [viewMode, setViewMode] = useState('custom');
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const scrollRef = useRef(null);
+
+  const handlePdfScroll = () => {
+    if (scrollRef.current) {
+      setShowScrollTop(scrollRef.current.scrollTop > 300);
+    }
+    const pages = scrollRef.current?.querySelectorAll('.pdf-page');
+    if (pages?.length) {
+      const containerTop = scrollRef.current.getBoundingClientRect().top;
+      let current = 1;
+      pages.forEach((page, index) => {
+        const pageTop = page.getBoundingClientRect().top - containerTop;
+        if (pageTop <= 100) current = index + 1;
+      });
+      setCurrentPage(current);
+    }
+  };
+
+  const scrollToTop = () => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const clampZoom = (value) => Math.min(2, Math.max(0.5, value));
-
   const handleZoomOut = () => {
     setViewMode('custom');
-    setZoom((currentZoom) => clampZoom(currentZoom - 0.15));
+    setZoom((z) => clampZoom(z - 0.15));
   };
-
   const handleZoomIn = () => {
     setViewMode('custom');
-    setZoom((currentZoom) => clampZoom(currentZoom + 0.15));
+    setZoom((z) => clampZoom(z + 0.15));
   };
-
   const handleResetZoom = () => {
     setViewMode('custom');
     setZoom(DEFAULT_PDF_ZOOM);
   };
-
   const handleFitToWidth = () => {
     setViewMode('width');
     setZoom(1);
   };
-
   const handleFitToHeight = () => {
     setViewMode('height');
     setZoom(1);
@@ -734,38 +784,33 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
   const pageWidth = containerWidth && viewMode !== 'height'
     ? Math.max(240, Math.round(containerWidth * (viewMode === 'width' ? 1 : zoom)))
     : undefined;
-
   const pageHeight = containerHeight && viewMode === 'height'
     ? Math.max(320, Math.round((containerHeight - 24) * zoom))
     : undefined;
 
   const updatePreviewSize = useCallback(() => {
     const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    setContainerWidth(rect.width);
-    setContainerHeight(rect.height);
+    if (rect) {
+      setContainerWidth(rect.width);
+      setContainerHeight(rect.height);
+    }
   }, []);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
     updatePreviewSize();
-
     if (!window.ResizeObserver) {
       window.addEventListener('resize', updatePreviewSize);
       return () => window.removeEventListener('resize', updatePreviewSize);
     }
-
-    const resizeObserver = new window.ResizeObserver((entries) => {
+    const resizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0];
-      if (!entry) return;
-
-      setContainerWidth(entry.contentRect.width);
-      setContainerHeight(entry.contentRect.height);
+      if (entry) {
+        setContainerWidth(entry.contentRect.width);
+        setContainerHeight(entry.contentRect.height);
+      }
     });
-
     resizeObserver.observe(container);
     return () => resizeObserver.disconnect();
   }, [updatePreviewSize]);
@@ -777,20 +822,41 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
   return (
     <div className="pdf-preview-shell">
       <div className="pdf-preview-toolbar">
-        <span className="pdf-toolbar-note">Use the controls to adjust the preview.</span>
+        <span className="pdf-toolbar-note">
+          {numPages ? `Page ${currentPage} of ${numPages}` : 'Use the controls to adjust the preview.'}
+        </span>
         <div className="pdf-zoom-controls" role="toolbar" aria-label="PDF zoom controls">
-          <button type="button" className={`pdf-zoom-btn pdf-zoom-fit ${viewMode === 'width' ? 'active' : ''}`} onClick={handleFitToWidth} aria-pressed={viewMode === 'width'}>
+          <button
+            type="button"
+            className={`pdf-zoom-btn pdf-zoom-fit ${viewMode === 'width' ? 'active' : ''}`}
+            onClick={handleFitToWidth}
+            aria-pressed={viewMode === 'width'}
+          >
             Fit width
           </button>
-          <button type="button" className={`pdf-zoom-btn pdf-zoom-fit ${viewMode === 'height' ? 'active' : ''}`} onClick={handleFitToHeight} aria-pressed={viewMode === 'height'}>
+          <button
+            type="button"
+            className={`pdf-zoom-btn pdf-zoom-fit ${viewMode === 'height' ? 'active' : ''}`}
+            onClick={handleFitToHeight}
+            aria-pressed={viewMode === 'height'}
+          >
             Fit height
           </button>
           <div className="pdf-zoom-group">
             <button type="button" className="pdf-zoom-btn" onClick={handleZoomOut} aria-label="Zoom out">
               −
             </button>
-            <button type="button" className={`pdf-zoom-btn pdf-zoom-readout ${viewMode === 'custom' ? 'active' : ''}`} onClick={handleResetZoom} aria-pressed={viewMode === 'custom'}>
-              {viewMode === 'width' ? 'Fit width' : viewMode === 'height' ? 'Fit height' : `${Math.round(zoom * 100)}%`}
+            <button
+              type="button"
+              className={`pdf-zoom-btn pdf-zoom-readout ${viewMode === 'custom' ? 'active' : ''}`}
+              onClick={handleResetZoom}
+              aria-pressed={viewMode === 'custom'}
+            >
+              {viewMode === 'width'
+                ? 'Fit width'
+                : viewMode === 'height'
+                ? 'Fit height'
+                : `${Math.round(zoom * 100)}%`}
             </button>
             <button type="button" className="pdf-zoom-btn" onClick={handleZoomIn} aria-label="Zoom in">
               +
@@ -798,22 +864,26 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
           </div>
         </div>
       </div>
+
       <div ref={containerRef} className="pdf-preview-stage">
-        <div className="pdf-preview-scroll">
-        {compileError ? (
-          <div className="compile-error-box">
-            <strong>Compilation: Error:</strong><br /><br />
-            {compileError}
-          </div>
-        ) : pdfBlob ? (
-            <Document
-              file={pdfBlob}
-              onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-              loading={<div className="pdf-state-message">Loading PDF...</div>}
-              error={<div className="pdf-state-message pdf-state-error">Failed to load PDF.</div>}
+        <div className="pdf-preview-scroll" ref={scrollRef} onScroll={handlePdfScroll}>
+          {compileError ? (
+            <div className="compile-error-box">
+              <strong>Compilation Error:</strong>
+              <br />
+              <br />
+              {compileError}
+            </div>
+          ) : pdfBlob ? (
+            <>
+              <Document
+                file={pdfBlob}
+                onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+                loading={<div className="pdf-state-message">Loading PDF…</div>}
+                error={<div className="pdf-state-message pdf-state-error">Failed to load PDF.</div>}
               >
-                {Array.from(new Array(numPages), (_, index) => (
-                  <Page 
+                {Array.from({ length: numPages }, (_, index) => (
+                  <Page
                     key={`page_${index + 1}`}
                     pageNumber={index + 1}
                     renderTextLayer={false}
@@ -821,16 +891,25 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
                     className="pdf-page"
                     width={pageWidth}
                     height={pageHeight}
-                    />
-
+                  />
                 ))}
-            </Document>
-        ) : (
-          <div className="pdf-state-message">
-            Compile the PDF to see your preview.
-            </div>
-        )}
+              </Document>
+              {showScrollTop && (
+                <button
+                  type="button"
+                  className="pdf-scroll-top-btn"
+                  onClick={scrollToTop}
+                  aria-label="Scroll to top"
+                >
+                  ↑
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="pdf-state-message">Compile the PDF to see your preview.</div>
+          )}
         </div>
+
         {isCompiling && (
           <div className="pdf-recompile-overlay" aria-live="polite" aria-busy="true">
             <div className="pdf-recompile-spinner" aria-hidden="true">
@@ -1054,6 +1133,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const [videoSearchRequest, setVideoSearchRequest] = useState(null);
   const [saveStatus, setSaveStatus] = useState('idle');
   const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [toast, setToast] = useState(null);
   const [classesCollapseSignal, setClassesCollapseSignal] = useState(0);
   const pendingPanelLayoutRef = useRef(panelLayout);
   const hasCollapsedLeftPanelOnceRef = useRef(false);
@@ -1092,6 +1172,13 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     () => searchedVideoResources.filter((video) => !curatedVideoKeys.has(getVideoResourceKey(video))),
     [curatedVideoKeys, searchedVideoResources],
   );
+  const handleClearVideoSearch = () => {
+    setVideoSearchRequest(null);
+  };
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
   const curatedVideosByTopic = useMemo(() => groupVideosByTopic(curatedVideoResources), [curatedVideoResources]);
   const searchedVideosByTopic = useMemo(() => groupVideosByTopic(visibleSearchedVideoResources), [visibleSearchedVideoResources]);
   const getEmbedUrl  = (id) => `https://www.youtube.com/embed/${id}?autoplay=1`;
@@ -1113,6 +1200,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       refocusOpener();
     }
   }, []);
+
 
   const getSaveStatusText = () => {
     if (saveStatus === 'saving') return 'Saving...';
@@ -1167,6 +1255,16 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       topics: [topic],
     });
   };
+
+  useEffect(() => {
+    const baseTitle = 'Cheat Sheet Generator';
+    document.title = title?.trim()
+      ? `${title.trim()} — ${baseTitle}`
+      : baseTitle;
+    return () => {
+      document.title = baseTitle;
+    };
+  }, [title]);
 
   useEffect(() => {
     if (!modalVideo) return undefined;
@@ -1365,6 +1463,22 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       }, 600);
       return () => clearTimeout(timer);
     }, [pdfBlob, isCompiling]);
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if((event.ctrlKey || event.metaKey) && event.key === 'Enter'){
+        event.preventDefault();
+        if(!isCompiling) handleCompileClick();
+        return;
+      }
+      if((event.ctrlKey || event.metaKey) && event.key === 's'){
+        event.preventDefault();
+        handleSave({ preventDefault: () => {} });
+        return;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isCompiling]);
   const handleCompileClick = () => {
     if (!hasCollapsedLeftPanelOnceRef.current) {
       // First compile: keep controls reachable while reclaiming preview space.
@@ -1393,6 +1507,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
 
   const handleSave = async (e) => {
     e?.preventDefault?.();
+    try { 
     await onSave({
       title,
       content,
@@ -1404,7 +1519,12 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       orientation,
       selectedFormulas: getSelectedFormulasList(),
     });
-  };
+    setLastSavedAt(Date.now());
+    showToast('Cheat sheet saved successfully!');
+  } catch {
+    showToast('Failed to save. Please try again.', 'error');
+  }
+};
 
   const handleClear = () => {
     if (window.confirm('Are you sure you want to clear everything? This cannot be undone.')) {
@@ -1435,7 +1555,15 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                   placeholder="My Math Cheat Sheet"
                   required
                   className="input-field"
+                  maxLength={80}
+                  autoComplete="off"
+                  spellCheck={false}
                 />
+                <div className="title-char-counter">
+                  <span className={title.length > 70 ? 'title-char-counter-warn' : ''}>
+                    {title.length}/80
+                  </span>
+                </div>
               </div>
 
               <FormulaSelection
@@ -1475,9 +1603,10 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                 ref={compileBtnRef}
                 type="button"
                 onClick={handleCompileClick}
-                className="btn-compile"
+                className={`btn-compile ${isCompiling ? 'is-compiling' : ''}`}
                 disabled={isCompiling}
                 aria-label="Compile PDF"
+                title="Generate LaTeX and compile to PDF. First compile will auto-generate from your current selected subjects."
               >
                 <span className="btn-compile-icon">{isCompiling ? '↻' : '⚡'}</span>
                 <span className="btn-compile-text">
@@ -1518,6 +1647,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                   onClick={handleSave}
                   className="btn history-btn"
                   disabled={isSaving}
+                  title="Save (Ctrl + S)"
                 >
                   {isSaving ? 'Saving…' : 'Save'}
                 </button>
@@ -1686,10 +1816,21 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
             <aside className="right-panel">
               <div className="right-panel-header">
                 Videos
+                {selectedVideoTopics.length > 0 && (
+                 <span className="right-panel-count-badge">
+                    {selectedVideoTopics.length}
+                 </span>
+                )}
               </div>
               <div className="right-panel-scroll">
                 {!selectedVideoTopics.length && (
-                  <p className="right-panel-empty">Select sections</p>
+                  <div className="right-panel-empty-state">
+                    <span className="right-panel-empty-icon">🎬</span>
+                    <p className="right-panel-empty-title">No sections selected</p>
+                    <p className="right-panel-empty-hint">
+                    Select a subject and check some sections on the left to see related videos here.
+                      </p>
+                  </div>
                 )}
                 {selectedVideoTopics.map((topic) => {
                   const topicKey = getVideoTopicKey(topic);
@@ -1710,6 +1851,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                         searchedVideos={searchedVideos}
                         onOpen={handleOpenVideo}
                         onSearchMore={handleSearchMoreVideos}
+                        onClearSearch={handleClearVideoSearch}
                         isSearching={isSearchingTopic}
                         searchError={hasSearchedTopic ? videoError : ''}
                         hasSearched={hasSearchedTopic}
@@ -1757,6 +1899,14 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
               Open on YouTube
             </a>
           </div>
+        </div>
+      )}
+      {toast && (
+        <div className={`toast toast-${toast.type}`} role="alert" aria-live="polite">
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✓' : '✕'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
         </div>
       )}
     </>
