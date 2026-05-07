@@ -1223,6 +1223,16 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   };
 
   useEffect(() => {
+    const baseTitle = 'Cheat Sheet Generator';
+    document.title = title?.trim()
+      ? `${title.trim()} — ${baseTitle}`
+      : baseTitle;
+    return () => {
+      document.title = baseTitle;
+    };
+  }, [title]);
+
+  useEffect(() => {
     if (!modalVideo) return undefined;
 
     const handleKeyDown = (event) => {
