@@ -7,6 +7,7 @@ import { useLatex } from '../hooks/latex';
 import { useYouTubeResources } from '../hooks/youtubeResources';
 import { getCuratedVideosForTopics } from '../data/subjectVideos';
 import { Document, Page, pdfjs } from 'react-pdf';
+import confetti from 'canvas-confetti';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -740,12 +741,12 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
   const scrollRef = useRef(null);
 
   const handlePdfScroll = () => {
-    if(scroffRef.current){
+    if(scrollRef.current){
       setShowScrollTop(scrollRef.current.scroppTop > 300);
     }
     const pages = scrollRef.current.querySelectorAll('.pdf-page');
     const scrollTop = scrollRef.current.scrollTop;
-    const containerTop = scrollRef.current.getBoundingClientRect().top();
+    const containerTop = scrollRef.current.getBoundingClientRect().top;
 
     let current = 1;
     pages.forEach((page, index) => {
@@ -758,7 +759,7 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
   };
 
   const scrollToTop = () => {
-    scrollRef.current?.ScrollTo({ top: 0, behavior: 'smooth' });
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const clampZoom = (value) => Math.min(2, Math.max(0.5, value));
 
@@ -1158,7 +1159,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
-  })
+  }, []);
   const curatedVideosByTopic = useMemo(() => groupVideosByTopic(curatedVideoResources), [curatedVideoResources]);
   const searchedVideosByTopic = useMemo(() => groupVideosByTopic(visibleSearchedVideoResources), [visibleSearchedVideoResources]);
   const getEmbedUrl  = (id) => `https://www.youtube.com/embed/${id}?autoplay=1`;
@@ -1180,6 +1181,25 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       refocusOpener();
     }
   }, []);
+
+  const hasShownConfettiRef = useRef(false);
+  useEffect(() => {
+    if(!pdfBlob || isCompiling || hasShownConfettiRef.current) return;
+    hasShownConfettiRef.current = true;
+    confetti({
+      particleCount: 120,
+      spread: 80,
+      origin: { y: 0.6 },
+      colors: [
+        getComputedStyle(document.documentElement)
+          .getPropertyValue('--primary').trim() || '#3b82f6',
+          '#10b981',
+          '#f59e0b',
+          '#ec4899',
+          '#8b5cf6',
+      ],
+    });
+  }, [pdfBlob, isCompiling]);
 
   const getSaveStatusText = () => {
     if (saveStatus === 'saving') return 'Saving...';
@@ -1444,12 +1464,12 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     }, [pdfBlob, isCompiling]);
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if((event.ctrlKey || event.metaKey) && event.key == 'Enter'){
+      if((event.ctrlKey || event.metaKey) && event.key === 'Enter'){
         event.preventDefault();
         if(!isCompiling) handleCompileClick();
         return;
       }
-      if((event.ctrlkey || event.metaKey) && event.key == 's'){
+      if((event.ctrlkey || event.metaKey) && event.key === 's'){
         event.preventDefault();
         handleSave({ preventDefault: () => {} });
         return;
@@ -1498,7 +1518,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       orientation,
       selectedFormulas: getSelectedFormulasList(),
     });
-    setLastSaved(new Date());
+    setLastSaved(Date.now());
     showToast('Cheat sheet saved successfully!');
   } catch {
     showToast('Failed to save. Please try again.', 'error');
@@ -1885,7 +1905,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
           <span className="toast-icon">
             {toast.type === 'success' ? '✓' : '✕'}
           </span>
-          <span className="toast=message">{toast.message}</span>
+          <span className="toast-message">{toast.message}</span>
         </div>
       )}
     </>
