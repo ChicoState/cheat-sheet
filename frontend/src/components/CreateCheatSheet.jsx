@@ -736,12 +736,25 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
   const [zoom, setZoom] = useState(DEFAULT_PDF_ZOOM);
   const [viewMode, setViewMode] = useState('custom');
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const scrollRef = useRef(null);
 
   const handlePdfScroll = () => {
     if(scroffRef.current){
       setShowScrollTop(scrollRef.current.scroppTop > 300);
     }
+    const pages = scrollRef.current.querySelectorAll('.pdf-page');
+    const scrollTop = scrollRef.current.scrollTop;
+    const containerTop = scrollRef.current.getBoundingClientRect().top();
+
+    let current = 1;
+    pages.forEach((page, index) => {
+      const pageTop = page.getBoundingClientRect().top - containerTop;
+      if (pageTop <= 100){
+        current = index + 1;
+      }
+    });
+    setCurrentPage(current);
   };
 
   const scrollToTop = () => {
@@ -820,7 +833,7 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
   return (
     <div className="pdf-preview-shell">
       <div className="pdf-preview-toolbar">
-        <span className="pdf-toolbar-note">Use the controls to adjust the preview.</span>
+        <span className="pdf-toolbar-note">{numPages ? `Page 1 of ${numPages}` : 'Use the controls to adjust the preview.'}</span>
         <div className="pdf-zoom-controls" role="toolbar" aria-label="PDF zoom controls">
           <button type="button" className={`pdf-zoom-btn pdf-zoom-fit ${viewMode === 'width' ? 'active' : ''}`} onClick={handleFitToWidth} aria-pressed={viewMode === 'width'}>
             Fit width

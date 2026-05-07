@@ -3514,3 +3514,10 @@ right-panel-scroll::-webkit-scrollbar-thumb:hover,
   background: var(--btn-clear);
   color: white;
 }
+
+.pdf-toolbar-notes {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 80px;
+}
