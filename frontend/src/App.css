@@ -3473,3 +3473,44 @@ right-panel-scroll::-webkit-scrollbar-thumb:hover,
     transform: translateX(-50%) translateY(0);
    }
 }
+
+.layout-control + .layout-control {
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* select all / deselect all buttons */
+.class-select-all-row {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.btn-select-all {
+  flex: 1;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--primary);
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);  
+}
+
+.btn-select-all:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-deselect-all {
+  border-color: var(--btn-clear);
+  color: var(--btn-clear);
+}
+
+.btn-deselect-all:hover {
+  background: var(--btn-clear);
+  color: white;
+}
