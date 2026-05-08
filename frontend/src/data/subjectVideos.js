@@ -558,7 +558,7 @@ export const CURATED_SUBJECT_VIDEOS = {
      title: "Linear Regression Explained",
      videoId: "zITIFTsivN8",
      channel: "StatQuest with Josh Starmer",
-     topic: "Linear Regression"
+     topic: "Linear & Multiple Regression"
    },
    {
      title: "Hypothesis Testing",
@@ -577,8 +577,46 @@ export const CURATED_SUBJECT_VIDEOS = {
      videoId: "QZ7kgmhdIwA",
      channel: "CrashCourse",
      topic: "Two-Sample Inference"
-
-
+   },
+ ],
+ "LINEAR ALGEBRA I": [
+   {
+     title: "Vectors | Chapter 1, Essence of linear algebra",
+     videoId: "fNk_zzaMoSs",
+     channel: "3Blue1Brown",
+     topic: "Vector Basics"
+   },
+   {
+     title: "Multiplying Matrices",
+     videoId: "XkY2DOUCWMU",
+     channel: "Khan Academy",
+     topic: "Matrix Operations"
+   },
+   {
+     title: "Inverse of a 2x2 Matrix",
+     videoId: "aGxBncx2fS0",
+     channel: "The Organic Chemistry Tutor",
+     topic: "Determinants & Inverses"
+   },
+ ],
+ "LINEAR ALGEBRA II": [
+   {
+     title: "The determinant | Chapter 6, Essence of linear algebra",
+     videoId: "Ip3X9LOh2dk",
+     channel: "3Blue1Brown",
+     topic: "Matrix Properties & Classifications"
+   },
+   {
+     title: "Eigenvectors and eigenvalues",
+     videoId: "PFDu9oVAE-g",
+     channel: "3Blue1Brown",
+     topic: "Eigenvalues & Diagonalization"
+   },
+   {
+     title: "Diagonalization of a Matrix",
+     videoId: "Y_HVQvj0YyA",
+     channel: "The Organic Chemistry Tutor",
+     topic: "Decompositions"
    },
  ],
 };
