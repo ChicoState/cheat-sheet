@@ -775,6 +775,32 @@ export const CURATED_SUBJECT_VIDEOS = {
       topic: 'Dynamic Programming',
     },
   ],
+  'DATA STRUCTURES & ALGORITHMS III': [
+    {
+      title: 'Disjoint Set Union (Union Find) Explained',
+      videoId: 'ayW5B2W9hfo',
+      channel: 'NeetCode',
+      topic: 'Advanced Data Structures',
+    },
+    {
+      title: 'Topological Sort Algorithm',
+      videoId: 'eL-KzMXSXXI',
+      channel: 'WilliamFiset',
+      topic: 'Advanced Graphs & Network Flow',
+    },
+    {
+      title: 'Rabin-Karp String Matching Algorithm',
+      videoId: 'qQ8vS2btsxI',
+      channel: 'Abdul Bari',
+      topic: 'Advanced String Matching',
+    },
+    {
+      title: 'Convex Hull - Graham Scan Algorithm',
+      videoId: 'B2AJoQSZf4M',
+      channel: 'WilliamFiset',
+      topic: 'Computational Geometry',
+    },
+  ],
 };
 
 const YOUTUBE_HOSTS = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be']);
