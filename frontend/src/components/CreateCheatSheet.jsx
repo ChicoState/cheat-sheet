@@ -318,15 +318,13 @@ const VideoCard = ({ video, onOpen, className = '', compact = false }) => (
       <img src={video.thumbnailUrl || `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`} alt={video.title} loading="lazy" />
       <div className="play-icon">▶</div>
     </div>
-    {compact ? null : (
-      <div className="video-info-sm">
-        <div className="video-topic-chip">{video.category}</div>
-        <div className="v-title">{video.title}</div>
-        <div className="v-channel">
-          {video.channel}{formatViewCount(video.viewCount) ? ` · ${formatViewCount(video.viewCount)}` : ''}
-        </div>
+    <div className="video-info-sm">
+      {compact ? null : <div className="video-topic-chip">{video.category}</div>}
+      <div className="v-title">{video.title}</div>
+      <div className="v-channel">
+        {video.channel}{formatViewCount(video.viewCount) ? ` · ${formatViewCount(video.viewCount)}` : ''}
       </div>
-    )}
+    </div>
   </button>
 );
 
@@ -628,39 +626,6 @@ const FormulaSelection = React.memo(function FormulaSelection({
 });
 
 const COMPILE_ERROR_LINE_REGEX = /document\.tex:(\d+):/g;
-const APP_LAYOUT_COMMENT_PREFIX = '% @cheatsheet-layout';
-const HIGHLIGHT_DEBOUNCE_MS = 120;
-
-const escapeHtml = (value = '') => value
-  .replace(/&/g, '&amp;')
-  .replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;')
-  .replace(/'/g, '&#39;');
-
-const highlightLatexLine = (line = '') => {
-  if (line.trimStart().startsWith(APP_LAYOUT_COMMENT_PREFIX)) {
-    return `<span class="latex-token app-comment">${escapeHtml(line)}</span>`;
-  }
-
-  const placeholders = [];
-  const stashToken = (html) => {
-    const placeholder = `LATEXTOKEN${placeholders.length}PLACEHOLDER`;
-    placeholders.push(html);
-    return placeholder;
-  };
-
-  let html = escapeHtml(line);
-
-  html = html.replace(/%.*$/g, (match) => stashToken(`<span class="latex-token comment">${match}</span>`));
-  html = html.replace(/\\[a-zA-Z@]+|\\./g, (match) => stashToken(`<span class="latex-token command">${match}</span>`));
-  html = html.replace(/[{}[\]]/g, (match) => `<span class="latex-token brace">${match}</span>`);
-  html = html.replace(/[$&#_^]/g, (match) => `<span class="latex-token symbol">${match}</span>`);
-
-  html = html.replace(/LATEXTOKEN(\d+)PLACEHOLDER/g, (_, index) => placeholders[Number(index)] ?? '');
-
-  return html || '&nbsp;';
-};
 
 const extractCompileErrorLines = (compileError = '') => {
   const normalizedError = compileError || '';
@@ -691,16 +656,11 @@ const getCompileErrorSummary = (compileError = '') => {
 const LatexEditor = ({ content, onChange, isModified, compileError }) => {
   const textareaRef = useRef(null);
   const lineNumbersRef = useRef(null);
-  const highlightLayerRef = useRef(null);
   const scrollSyncFrameRef = useRef(null);
-  const [highlightContent, setHighlightContent] = useState(content);
+  const [draftContent, setDraftContent] = useState(content);
 
   useEffect(() => {
-    const highlightTimer = setTimeout(() => {
-      setHighlightContent(content);
-    }, HIGHLIGHT_DEBOUNCE_MS);
-
-    return () => clearTimeout(highlightTimer);
+    setDraftContent(content);
   }, [content]);
 
   useEffect(() => () => {
@@ -711,18 +671,7 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
 
   const errorLines = useMemo(() => extractCompileErrorLines(compileError), [compileError]);
   const compileErrorSummary = useMemo(() => getCompileErrorSummary(compileError), [compileError]);
-  const liveLineCount = useMemo(() => (content ? content.split('\n').length : 1), [content]);
-  const highlightedLines = useMemo(() => {
-    const lines = highlightContent ? highlightContent.split('\n') : [''];
-
-    return lines.map((line, index) => ({
-      lineNumber: index + 1,
-      highlightedHtml: highlightLatexLine(line),
-      hasError: errorLines.has(index + 1),
-    }));
-  }, [highlightContent, errorLines]);
-
-  const lineCount = Math.max(liveLineCount, highlightedLines.length);
+  const lineCount = useMemo(() => (draftContent ? draftContent.split('\n').length : 1), [draftContent]);
 
   const syncScrollLayers = useCallback(() => {
     scrollSyncFrameRef.current = null;
@@ -732,11 +681,6 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
 
     if (lineNumbersRef.current) {
       lineNumbersRef.current.scrollTop = textarea.scrollTop;
-    }
-
-    if (highlightLayerRef.current) {
-      highlightLayerRef.current.scrollTop = textarea.scrollTop;
-      highlightLayerRef.current.scrollLeft = textarea.scrollLeft;
     }
   }, []);
 
@@ -766,20 +710,15 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
           ))}
         </div>
         <div className="editor-surface">
-          <div className={`editor-highlight-layer ${isModified ? 'modified' : ''}`} ref={highlightLayerRef} aria-hidden="true">
-            {highlightedLines.map(({ lineNumber, highlightedHtml, hasError }) => (
-              <div
-                key={lineNumber}
-                className={`editor-highlight-line ${hasError ? 'error' : ''}`}
-                dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-              />
-            ))}
-          </div>
           <textarea
             ref={textareaRef}
             id="content"
-            value={content}
-            onChange={(e) => onChange(e.target.value)}
+            value={draftContent}
+            onChange={(e) => {
+              const nextContent = e.target.value;
+              setDraftContent(nextContent);
+              onChange(nextContent);
+            }}
             onScroll={handleScroll}
             placeholder='Select classes and categories above, then click "GET CHEAT SHEET" to see the LaTeX code here.'
             className={`textarea-field ${isModified ? 'modified' : ''}`}
@@ -1176,6 +1115,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     setMargins,
     orientation,
     setOrientation,
+    getCurrentContent,
     pdfBlob,
     isCompiling,
     compileError,
@@ -1420,12 +1360,14 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       return;
     }
 
+    const liveContent = getCurrentContent();
+
     lastAutoSavedPdfRef.current = pdfBlob;
     setSaveStatus('saving');
     setLastSavedAt(Date.now());
     onSave({
       title,
-      content,
+      content: liveContent,
       contentSource,
       hasSuccessfulCompile: true,
       columns,
@@ -1436,7 +1378,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       selectedFormulas: getSelectedFormulasList(),
       compileSnapshot: {
         title,
-        content,
+        content: liveContent,
         contentSource,
         hasSuccessfulCompile: true,
         columns,
@@ -1455,7 +1397,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       console.error('Failed to autosave compiled sheet', error);
       setSaveStatus('offline');
     });
-  }, [columns, compileError, content, contentSource, fontSize, getSelectedFormulasList, margins, onSave, orientation, pdfBlob, spacing, title]);
+  }, [columns, compileError, contentSource, fontSize, getCurrentContent, getSelectedFormulasList, margins, onSave, orientation, pdfBlob, spacing, title]);
 
   const startResize = useCallback((panel) => (event) => {
     event.preventDefault();
@@ -1578,12 +1520,14 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     e?.preventDefault?.();
     if (isSaving || saveInFlightRef.current) return;
 
+    const liveContent = getCurrentContent();
+
     saveInFlightRef.current = true;
     setSaveStatus('saving');
     try {
       await onSave({
         title,
-        content,
+        content: liveContent,
         contentSource,
         hasSuccessfulCompile: hasCollapsedLeftPanelOnceRef.current,
         columns,
@@ -1602,7 +1546,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     } finally {
       saveInFlightRef.current = false;
     }
-  }, [columns, content, contentSource, fontSize, getSelectedFormulasList, isSaving, margins, onSave, orientation, showToast, spacing, title]);
+  }, [columns, contentSource, fontSize, getCurrentContent, getSelectedFormulasList, isSaving, margins, onSave, orientation, showToast, spacing, title]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {

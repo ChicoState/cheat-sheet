@@ -38,4 +38,11 @@ describe('App.css regressions', () => {
     expect(getRule('.video-card-sm:focus-visible')).toMatch(/outline-offset:\s*-2px/);
     expect(getRule('.video-more-toggle:focus-visible')).toMatch(/outline-offset:\s*0/);
   });
+
+  it('uses a tighter row layout for compact sidebar video cards', () => {
+    expect(getRule('.video-card-sm.compact')).toMatch(/display:\s*grid/);
+    expect(getRule('.video-card-sm.compact')).toMatch(/grid-template-columns:\s*(72px|76px|80px|84px|88px)\s+minmax\(0,\s*1fr\)/);
+    expect(getRule('.video-card-sm.compact .video-info-sm')).toMatch(/display:\s*flex/);
+    expect(getRule('.video-card-sm.compact .video-info-sm')).toMatch(/flex-direction:\s*column/);
+  });
 });

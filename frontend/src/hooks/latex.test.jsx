@@ -113,16 +113,55 @@ describe('useLatex hook', () => {
     expect(result.current.content).toBe('Storage content');
   });
 
-  test('handles content changes correctly', () => {
+  test('debounces content state updates while marking the draft dirty immediately', async () => {
+    vi.useFakeTimers();
     const { result } = renderHook(() => useLatex(), { wrapper });
 
-    act(() => {
-      result.current.handleContentChange('New latex content');
+    try {
+      act(() => {
+        result.current.handleContentChange('New latex content');
+      });
+
+      expect(result.current.content).toBe('');
+      expect(result.current.contentModified).toBe(true);
+      expect(result.current.compileError).toBeNull();
+
+      await act(async () => {
+        vi.advanceTimersByTime(150);
+      });
+
+      expect(result.current.content).toBe('New latex content');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test('compiles the latest draft even before debounced content state catches up', async () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useLatex(), { wrapper });
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      blob: async () => new Blob(['fake pdf data'])
     });
 
-    expect(result.current.content).toBe('New latex content');
-    expect(result.current.contentModified).toBe(true);
-    expect(result.current.compileError).toBeNull();
+    try {
+      act(() => {
+        result.current.handleContentChange('\\documentclass{article}\nLatest draft');
+      });
+
+      await act(async () => {
+        await result.current.handleCompileOnly([]);
+      });
+
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(global.fetch).toHaveBeenCalledWith('/api/compile/', expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('Latest draft'),
+      }));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test('manual edits remain protected from selection regeneration after compile', async () => {

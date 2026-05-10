@@ -4,6 +4,7 @@ import AuthContext from '../context/AuthContext';
 const STORAGE_KEY = 'cheatSheetLatex';
 const SAVE_DEBOUNCE_MS = 500;
 const AUTO_COMPILE_DEBOUNCE_MS = 450;
+const CONTENT_SYNC_DEBOUNCE_MS = 120;
 const MAX_HISTORY_ENTRIES = 7;
 const DEFAULT_LAYOUT = {
   columns: 4,
@@ -94,11 +95,13 @@ export function useLatex(initialData) {
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   
+  const contentRef = useRef(initialData?.content ?? '');
   const isCompilingRef = useRef(false);
   const isGeneratingRef = useRef(false);
   const initialLoaded = useRef(false);
   const pdfBlobUrlRef = useRef(null);
   const autoCompileTimerRef = useRef(null);
+  const contentSyncTimerRef = useRef(null);
   const hasRestoredPreviewRef = useRef(false);
   const lastCompiledLayoutRef = useRef({
     columns: initialData?.columns ?? DEFAULT_LAYOUT.columns,
@@ -111,6 +114,9 @@ export function useLatex(initialData) {
   // Revoke the object URL when the component unmounts to prevent memory leaks
   useEffect(() => {
     return () => {
+      if (contentSyncTimerRef.current) {
+        clearTimeout(contentSyncTimerRef.current);
+      }
       if (pdfBlobUrlRef.current) {
         URL.revokeObjectURL(pdfBlobUrlRef.current);
       }
@@ -127,27 +133,51 @@ export function useLatex(initialData) {
     }
   }, []);
 
+  const syncContentNow = useCallback((nextContent) => {
+    if (contentSyncTimerRef.current) {
+      clearTimeout(contentSyncTimerRef.current);
+      contentSyncTimerRef.current = null;
+    }
+
+    contentRef.current = nextContent;
+    setContent(nextContent);
+  }, []);
+
+  const scheduleContentSync = useCallback((nextContent) => {
+    if (contentSyncTimerRef.current) {
+      clearTimeout(contentSyncTimerRef.current);
+    }
+
+    contentRef.current = nextContent;
+    contentSyncTimerRef.current = setTimeout(() => {
+      setContent(nextContent);
+      contentSyncTimerRef.current = null;
+    }, CONTENT_SYNC_DEBOUNCE_MS);
+  }, []);
+
+  const getCurrentContent = useCallback(() => contentRef.current, []);
+
   const goBack = useCallback(() => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
       setHistoryIndex(newIndex);
-      setContent(history[newIndex]?.content || '');
+      syncContentNow(history[newIndex]?.content || '');
       setContentSource('manual');
       setCompileError(null);
       setContentModified(true);
     }
-  }, [historyIndex, history]);
+  }, [historyIndex, history, syncContentNow]);
 
   const goForward = useCallback(() => {
     if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1;
       setHistoryIndex(newIndex);
-      setContent(history[newIndex]?.content || '');
+      syncContentNow(history[newIndex]?.content || '');
       setContentSource('manual');
       setCompileError(null);
       setContentModified(true);
     }
-  }, [historyIndex, history]);
+  }, [historyIndex, history, syncContentNow]);
 
   const saveToHistory = useCallback((newContent) => {
     setHistory((previousHistory) => {
@@ -169,6 +199,7 @@ export function useLatex(initialData) {
     if (saved && initialData?.content == null) {
       initialLoaded.current = true;
       setTitle(saved.title ?? '');
+      contentRef.current = saved.content ?? '';
       setContent(saved.content ?? '');
       setContentSource(getInitialContentSource(saved));
       setColumns(saved.columns ?? DEFAULT_LAYOUT.columns);
@@ -186,6 +217,7 @@ export function useLatex(initialData) {
     } else if (initialData) {
       initialLoaded.current = true;
       setTitle(initialData.title ?? '');
+      contentRef.current = initialData.content ?? '';
       setContent(initialData.content ?? '');
       setContentSource(getInitialContentSource(initialData));
       setColumns(initialData.columns ?? DEFAULT_LAYOUT.columns);
@@ -204,11 +236,11 @@ export function useLatex(initialData) {
   }, [initialData]);
 
   const handleContentChange = useCallback((newContent) => {
-    setContent(newContent);
+    scheduleContentSync(newContent);
     setContentSource(newContent.trim() ? 'manual' : 'empty');
     setCompileError(null);
     setContentModified(true);
-  }, []);
+  }, [scheduleContentSync]);
 
   const saveTimerRef = useRef(null);
 
@@ -302,13 +334,14 @@ export function useLatex(initialData) {
     lastCompiledLayoutRef.current.margins !== margins ||
     lastCompiledLayoutRef.current.orientation !== orientation;
     
-  const canRegenerateFromSelections = !content.trim() || contentSource === 'generated';
+  const canRegenerateFromSelections = !contentRef.current.trim() || contentSource === 'generated';
 
   const handleCompileOnly = useCallback(async (selectedList = []) => {
     clearAutoCompileTimer();
     if (isCompilingRef.current) return false;
 
-    const hasContent = content.trim().length > 0;
+    const liveContent = contentRef.current;
+    const hasContent = liveContent.trim().length > 0;
     if (!hasContent && selectedList.length === 0) {
       alert('Select formulas first or generate a sheet before compiling.');
       return false;
@@ -319,19 +352,19 @@ export function useLatex(initialData) {
     setCompileError(null);
 
     try {
-      let contentToCompile = content;
+      let contentToCompile = liveContent;
 
       if (!hasContent) {
         const generatedContent = await generateLatexContent(selectedList);
         saveToHistory(generatedContent);
         contentToCompile = generatedContent;
-        setContent(generatedContent);
+        syncContentNow(generatedContent);
         setContentSource('generated');
       }
 
       if (hasContent && hasLayoutChanges) {
         contentToCompile = await normalizeLatexContent(contentToCompile);
-        setContent(contentToCompile);
+        syncContentNow(contentToCompile);
       }
 
       await compileLatexContent(contentToCompile, {
@@ -351,7 +384,7 @@ export function useLatex(initialData) {
       setIsCompiling(false);
       isCompilingRef.current = false;
     }
-  }, [clearAutoCompileTimer, columns, compileLatexContent, content, fontSize, generateLatexContent, hasLayoutChanges, margins, normalizeLatexContent, saveToHistory, spacing, orientation]);
+  }, [clearAutoCompileTimer, columns, compileLatexContent, fontSize, generateLatexContent, hasLayoutChanges, margins, normalizeLatexContent, saveToHistory, spacing, orientation, syncContentNow]);
 
   useEffect(() => {
     if (!initialLoaded.current) return;
@@ -374,7 +407,7 @@ export function useLatex(initialData) {
     clearAutoCompileTimer();
     if (isCompilingRef.current) return false;
     
-    let contentToCompile = latexContent || content;
+    let contentToCompile = latexContent || contentRef.current;
     
     if (regenerateOptions) {
       try {
@@ -396,7 +429,7 @@ export function useLatex(initialData) {
         }
         const data = await response.json();
         contentToCompile = data.tex_code;
-        setContent(data.tex_code);
+        syncContentNow(data.tex_code);
         setContentSource('generated');
         saveToHistory(data.tex_code);
       } catch (e) {
@@ -410,9 +443,9 @@ export function useLatex(initialData) {
     setIsCompiling(true);
     setCompileError(null);
     try {
-      if ((latexContent || content) && hasLayoutChanges) {
+      if ((latexContent || contentRef.current) && hasLayoutChanges) {
         contentToCompile = await normalizeLatexContent(contentToCompile);
-        setContent(contentToCompile);
+        syncContentNow(contentToCompile);
       }
 
       await compileLatexContent(contentToCompile, {
@@ -432,7 +465,7 @@ export function useLatex(initialData) {
       setIsCompiling(false);
       isCompilingRef.current = false;
     }
-  }, [clearAutoCompileTimer, columns, compileLatexContent, content, fontSize, hasLayoutChanges, margins, normalizeLatexContent, saveToHistory, spacing, orientation]);
+  }, [clearAutoCompileTimer, columns, compileLatexContent, fontSize, hasLayoutChanges, margins, normalizeLatexContent, saveToHistory, spacing, orientation, syncContentNow]);
 
   useEffect(() => {
     if (!initialLoaded.current || hasRestoredPreviewRef.current) return;
@@ -456,7 +489,7 @@ export function useLatex(initialData) {
     try {
       const generatedContent = await generateLatexContent(selectedList);
       saveToHistory(generatedContent);
-      setContent(generatedContent);
+      syncContentNow(generatedContent);
       setContentSource('generated');
       setContentModified(false);
       setPdfBlob(null);
@@ -475,11 +508,11 @@ export function useLatex(initialData) {
     setIsLoading(true);
     try {
       const normalizedContent = hasLayoutChanges
-        ? await normalizeLatexContent(content)
-        : content;
+        ? await normalizeLatexContent(contentRef.current)
+        : contentRef.current;
 
       if (hasLayoutChanges) {
-        setContent(normalizedContent);
+        syncContentNow(normalizedContent);
       }
 
       const response = await fetch('/api/compile/', {
@@ -519,18 +552,18 @@ export function useLatex(initialData) {
   };
 
   const handleDownloadTex = async () => {
-    if (!content) {
+    if (!contentRef.current) {
       alert('No LaTeX code to download. Generate a sheet first.');
       return;
     }
 
     try {
       const normalizedContent = hasLayoutChanges
-        ? await normalizeLatexContent(content)
-        : content;
+        ? await normalizeLatexContent(contentRef.current)
+        : contentRef.current;
 
       if (hasLayoutChanges) {
-        setContent(normalizedContent);
+        syncContentNow(normalizedContent);
       }
       const blob = new Blob([normalizedContent], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
@@ -576,7 +609,7 @@ export function useLatex(initialData) {
   const clearLatex = () => {
     clearAutoCompileTimer();
     setTitle(initialData?.title ?? '');
-    setContent('');
+    syncContentNow('');
     setContentSource('empty');
     setContentModified(false);
     setColumns(initialData?.columns ?? DEFAULT_LAYOUT.columns);
@@ -622,6 +655,7 @@ export function useLatex(initialData) {
     setMargins,
     orientation,
     setOrientation,
+    getCurrentContent,
     pdfBlob,
     isGenerating,
     isCompiling,

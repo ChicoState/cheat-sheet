@@ -61,6 +61,7 @@ describe('CreateCheatSheet Component', () => {
     setMargins: vi.fn(),
     orientation: 'portrait',
     setOrientation: vi.fn(),
+    getCurrentContent: vi.fn(() => ''),
     pdfBlob: null,
     isGenerating: false,
     isCompiling: false,
@@ -87,7 +88,10 @@ describe('CreateCheatSheet Component', () => {
     };
     CURATED_SUBJECT_VIDEOS['Math 101'] = [];
     useFormulas.mockReturnValue(mockUseFormulas);
-    useLatex.mockReturnValue(mockUseLatex);
+    useLatex.mockReturnValue({
+      ...mockUseLatex,
+      getCurrentContent: vi.fn(() => mockUseLatex.content),
+    });
     useYouTubeResources.mockReturnValue({ resources: [], isLoading: false, error: '', topicLimit: 6 });
   });
 
@@ -364,44 +368,19 @@ describe('CreateCheatSheet Component', () => {
     expect(screen.queryByLabelText(/Generated LaTeX Code:/i)).not.toBeInTheDocument();
   });
 
-  it('keeps editor input live while delaying syntax highlighting work', async () => {
-    vi.useFakeTimers();
-    const onSave = vi.fn().mockResolvedValue(undefined);
-    const onReset = vi.fn();
-
+  it('shows the live textarea directly instead of a delayed highlight mirror', () => {
     useLatex.mockReturnValue({
       ...mockUseLatex,
       content: 'alpha',
       pdfBlob: new Blob(['pdf'], { type: 'application/pdf' }),
     });
 
-    try {
-      const { rerender } = render(<CreateCheatSheet onSave={onSave} onReset={onReset} />);
+    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
 
-      fireEvent.click(screen.getByRole('button', { name: /Show LaTeX editor/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Show LaTeX editor/i }));
 
-      const highlightLayer = document.querySelector('.editor-highlight-layer');
-      expect(highlightLayer).toHaveTextContent('alpha');
-
-      useLatex.mockReturnValue({
-        ...mockUseLatex,
-        content: 'alpha\n\\beta',
-        pdfBlob: new Blob(['pdf'], { type: 'application/pdf' }),
-      });
-
-      rerender(<CreateCheatSheet onSave={onSave} onReset={onReset} />);
-
-      expect(screen.getByLabelText(/Generated LaTeX Code:/i)).toHaveValue('alpha\n\\beta');
-      expect(highlightLayer).not.toHaveTextContent('\\beta');
-
-      await act(async () => {
-        vi.advanceTimersByTime(150);
-      });
-
-      expect(highlightLayer).toHaveTextContent('\\beta');
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(screen.getByLabelText(/Generated LaTeX Code:/i)).toHaveValue('alpha');
+    expect(document.querySelector('.editor-highlight-layer')).not.toBeInTheDocument();
   });
 
   it('restores saved orientation from initial data', () => {
@@ -530,6 +509,44 @@ describe('CreateCheatSheet Component', () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
+  it('saves the latest live draft instead of stale debounced content', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    useLatex.mockReturnValue({
+      ...mockUseLatex,
+      content: 'stale saved content',
+      getCurrentContent: vi.fn(() => 'latest live draft'),
+    });
+
+    render(<CreateCheatSheet onSave={onSave} onReset={vi.fn()} />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: /^Save$/i })[0]);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      content: 'latest live draft',
+    }));
+  });
+
+  it('autosaves the latest live draft after compile succeeds', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    useLatex.mockReturnValue({
+      ...mockUseLatex,
+      content: 'stale autosave content',
+      getCurrentContent: vi.fn(() => 'latest compiled draft'),
+      pdfBlob: 'blob:test-url',
+    });
+
+    render(<CreateCheatSheet onSave={onSave} onReset={vi.fn()} />);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      content: 'latest compiled draft',
+      hasSuccessfulCompile: true,
+    }), false);
+  });
+
   it('ignores repeated Ctrl+S presses before save state updates', () => {
     const onSave = vi.fn(() => new Promise(() => {}));
 
@@ -614,6 +631,31 @@ describe('CreateCheatSheet Component', () => {
 
     expect(screen.getAllByRole('button', { name: /open curated algebra video/i }).length).toBeGreaterThan(0);
     expect(useYouTubeResources).toHaveBeenCalledWith(null);
+  });
+
+  it('shows compact sidebar videos with readable title text', () => {
+    CURATED_SUBJECT_VIDEOS['Math 101'] = [
+      { url: 'https://youtu.be/abc123abc12', title: 'Curated Algebra Video', channel: 'Teacher Tube', topic: 'Algebra' },
+    ];
+
+    useFormulas.mockReturnValue({
+      ...mockUseFormulas,
+      classesData: [
+        {
+          name: 'Math 101',
+          categories: [{ name: 'Algebra', formulas: [] }],
+        },
+      ],
+      selectedClasses: { 'Math 101': true },
+      selectedCategories: { 'Math 101:Algebra': true },
+      hasSelectedClasses: true,
+    });
+
+    render(<CreateCheatSheet onSave={vi.fn()} onReset={vi.fn()} />);
+
+    const rightPanel = within(document.querySelector('.right-panel'));
+    expect(rightPanel.getByText('Curated Algebra Video')).toBeInTheDocument();
+    expect(rightPanel.getByText('Teacher Tube')).toBeInTheDocument();
   });
 
   it('only shows curated videos for matching selected sections', () => {
