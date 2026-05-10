@@ -1203,7 +1203,9 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const [toast, setToast] = useState(null);
   const [classesCollapseSignal, setClassesCollapseSignal] = useState(0);
   const pendingPanelLayoutRef = useRef(panelLayout);
-  const hasCollapsedLeftPanelOnceRef = useRef(Boolean(initialData?.compileHistory?.length));
+  const hasCollapsedLeftPanelOnceRef = useRef(
+    Boolean(initialData?.compileHistory?.length || initialData?.contentSource === 'generated'),
+  );
   const lastAutoSavedPdfRef = useRef(null);
   const lastVideoOpenerRef = useRef(null);
   const modalDialogRef = useRef(null);
