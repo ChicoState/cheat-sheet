@@ -84,6 +84,7 @@ class CheatSheetSerializer(serializers.ModelSerializer):
             "font_size",
             "spacing",
             "orientation",
+            "has_successful_compile",
             "selected_formulas",
             "problems",
             "full_latex",

@@ -701,12 +701,14 @@ class TestCheatSheetAPI:
                 "margins": "1in",
                 "columns": 1,
                 "font_size": "12pt",
+                "has_successful_compile": True,
             },
             format="json",
         )
         assert resp.status_code == 201
         assert resp.json()["title"] == "Brand New Sheet"
         assert resp.json()["content_source"] == "manual"
+        assert resp.json()["has_successful_compile"] is True
         assert "full_latex" in resp.json()
         assert resp.json()["spacing"] == "small"
 
@@ -733,7 +735,7 @@ class TestCheatSheetAPI:
     def test_update_cheatsheet(self, auth_client, sample_sheet):
         resp = auth_client.patch(
             f"/api/cheatsheets/{sample_sheet.id}/",
-            {"margins": "0.25in", "columns": 3, "spacing": "small", "content_source": "generated"},
+            {"margins": "0.25in", "columns": 3, "spacing": "small", "content_source": "generated", "has_successful_compile": True},
             format="json",
         )
         assert resp.status_code == 200
@@ -741,6 +743,7 @@ class TestCheatSheetAPI:
         assert resp.json()["columns"] == 3
         assert resp.json()["spacing"] == "small"
         assert resp.json()["content_source"] == "generated"
+        assert resp.json()["has_successful_compile"] is True
 
     def test_delete_cheatsheet(self, auth_client, sample_sheet):
         resp = auth_client.delete(f"/api/cheatsheets/{sample_sheet.id}/")

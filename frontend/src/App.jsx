@@ -25,6 +25,7 @@ const createDefaultSheet = () => ({
   title: getNextUntitledTitle(),
   content: '',
   contentSource: 'empty',
+  hasSuccessfulCompile: false,
   columns: 4,
   fontSize: '9pt',
   spacing: 'small',
@@ -48,6 +49,7 @@ const sameSnapshot = (left, right) => {
     left.title === right.title
     && left.content === right.content
     && left.contentSource === right.contentSource
+    && left.hasSuccessfulCompile === right.hasSuccessfulCompile
     && left.columns === right.columns
     && left.fontSize === right.fontSize
     && left.spacing === right.spacing
@@ -62,6 +64,7 @@ const buildRestoredSheet = (baseSheet, snapshot) => ({
   title: snapshot.title ?? baseSheet.title,
   content: snapshot.content ?? '',
   contentSource: snapshot.contentSource ?? baseSheet.contentSource ?? 'generated',
+  hasSuccessfulCompile: snapshot.hasSuccessfulCompile ?? baseSheet.hasSuccessfulCompile ?? Boolean(snapshot.compiledAt),
   columns: snapshot.columns ?? baseSheet.columns,
   fontSize: snapshot.fontSize ?? baseSheet.fontSize,
   spacing: snapshot.spacing ?? baseSheet.spacing,
@@ -223,6 +226,7 @@ function App() {
       ...currentSheet,
       ...data,
       contentSource: nextContentSource,
+      hasSuccessfulCompile: data.hasSuccessfulCompile ?? currentSheet.hasSuccessfulCompile ?? false,
       selectedFormulas: data.selectedFormulas ?? currentSheet.selectedFormulas ?? [],
       compileHistory: nextHistory,
     };
@@ -272,6 +276,7 @@ function App() {
           font_size: nextSheet.fontSize,
           spacing: nextSheet.spacing,
           orientation: nextSheet.orientation ?? 'portrait',
+          has_successful_compile: nextSheet.hasSuccessfulCompile,
           selected_formulas: nextSheet.selectedFormulas,
         }),
       });
@@ -290,6 +295,7 @@ function App() {
             id: savedSheet.id,
             content: savedSheet.latex_content ?? nextSheet.content,
             contentSource: savedSheet.content_source ?? nextSheet.contentSource,
+            hasSuccessfulCompile: savedSheet.has_successful_compile ?? nextSheet.hasSuccessfulCompile ?? false,
             fontSize: savedSheet.font_size ?? nextSheet.fontSize,
             spacing: savedSheet.spacing ?? nextSheet.spacing,
             orientation: savedSheet.orientation ?? nextSheet.orientation ?? 'portrait',
@@ -309,6 +315,7 @@ function App() {
         id: savedSheet.id,
         content: savedSheet.latex_content ?? nextSheet.content,
         contentSource: savedSheet.content_source ?? nextSheet.contentSource,
+        hasSuccessfulCompile: savedSheet.has_successful_compile ?? nextSheet.hasSuccessfulCompile ?? false,
         fontSize: savedSheet.font_size ?? nextSheet.fontSize,
         spacing: savedSheet.spacing ?? nextSheet.spacing,
         orientation: savedSheet.orientation ?? nextSheet.orientation ?? 'portrait',
@@ -349,6 +356,7 @@ function App() {
       fontSize: sheet.font_size,
       spacing: sheet.spacing,
       orientation: sheet.orientation ?? 'portrait',
+      hasSuccessfulCompile: sheet.has_successful_compile ?? false,
       selectedFormulas,
       compileHistory: getStoredCompileHistory(sheet.id),
     };

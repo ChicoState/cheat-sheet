@@ -10,6 +10,7 @@ vi.mock('./components/CreateCheatSheet', () => ({
   default: ({ initialData, onSave, onRestoreSnapshot }) => (
     <section data-testid="create-cheat-sheet">
       <div data-testid="initial-orientation">{initialData?.orientation ?? ''}</div>
+      <div data-testid="initial-compiled-flag">{String(initialData?.hasSuccessfulCompile ?? false)}</div>
       <button
         type="button"
         onClick={() => onSave({
@@ -21,6 +22,7 @@ vi.mock('./components/CreateCheatSheet', () => ({
           spacing: 'tiny',
           margins: '0.25in',
           orientation: 'landscape',
+          hasSuccessfulCompile: true,
           selectedFormulas: [{ name: 'Euler' }],
         })}
       >
@@ -60,6 +62,7 @@ vi.mock('./components/Dashboard', () => ({
         font_size: '10pt',
         spacing: 'tiny',
         orientation: 'landscape',
+        has_successful_compile: true,
         selected_formulas: [],
       })}
     >
@@ -102,6 +105,7 @@ describe('App sheet persistence', () => {
         font_size: '10pt',
         spacing: 'tiny',
         orientation: 'landscape',
+        has_successful_compile: true,
         selected_formulas: [{ name: 'Euler' }],
       }),
       clone() {
@@ -114,6 +118,7 @@ describe('App sheet persistence', () => {
     renderApp();
 
     expect(screen.getByTestId('initial-orientation')).toHaveTextContent('portrait');
+    expect(screen.getByTestId('initial-compiled-flag')).toHaveTextContent('false');
   });
 
   it('persists orientation in authenticated save requests', async () => {
@@ -124,6 +129,7 @@ describe('App sheet persistence', () => {
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
     const requestBody = JSON.parse(fetch.mock.calls[0][1].body);
     expect(requestBody.orientation).toBe('landscape');
+    expect(requestBody.has_successful_compile).toBe(true);
   });
 
   it('stores the orientation returned by the save response', async () => {
@@ -163,8 +169,10 @@ describe('App sheet persistence', () => {
 
     const storedSheet = JSON.parse(localStorage.getItem('currentCheatSheet'));
     expect(storedSheet.orientation).toBe('landscape');
+    expect(storedSheet.hasSuccessfulCompile).toBe(true);
     fireEvent.click(screen.getByRole('link', { name: /home/i }));
     await waitFor(() => expect(screen.getByTestId('initial-orientation')).toHaveTextContent('landscape'));
+    expect(screen.getByTestId('initial-compiled-flag')).toHaveTextContent('true');
   });
 
   it('restores orientation from compile history snapshots', () => {

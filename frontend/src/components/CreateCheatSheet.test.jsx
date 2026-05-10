@@ -223,7 +223,7 @@ describe('CreateCheatSheet Component', () => {
     useLatex.mockReturnValue({
       ...mockUseLatex,
       content: '\\documentclass{article}',
-      contentSource: 'generated',
+      contentSource: 'manual',
       canRegenerateFromSelections: false,
       handleCompileOnly: handleCompileOnlyMock,
     });
@@ -239,7 +239,7 @@ describe('CreateCheatSheet Component', () => {
       <CreateCheatSheet
         onSave={vi.fn().mockResolvedValue(undefined)}
         onReset={vi.fn()}
-        initialData={{ content: '\\documentclass{article}', contentSource: 'generated', compileHistory: [] }}
+        initialData={{ content: '\\documentclass{article}', contentSource: 'manual', hasSuccessfulCompile: true, compileHistory: [] }}
       />,
     );
 

@@ -1204,7 +1204,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const [classesCollapseSignal, setClassesCollapseSignal] = useState(0);
   const pendingPanelLayoutRef = useRef(panelLayout);
   const hasCollapsedLeftPanelOnceRef = useRef(
-    Boolean(initialData?.compileHistory?.length || initialData?.contentSource === 'generated'),
+    Boolean(initialData?.hasSuccessfulCompile || initialData?.compileHistory?.length),
   );
   const lastAutoSavedPdfRef = useRef(null);
   const lastVideoOpenerRef = useRef(null);
@@ -1427,6 +1427,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       title,
       content,
       contentSource,
+      hasSuccessfulCompile: true,
       columns,
       fontSize,
       spacing,
@@ -1437,6 +1438,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
         title,
         content,
         contentSource,
+        hasSuccessfulCompile: true,
         columns,
         fontSize,
         spacing,
@@ -1583,6 +1585,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
         title,
         content,
         contentSource,
+        hasSuccessfulCompile: hasCollapsedLeftPanelOnceRef.current,
         columns,
         fontSize,
         spacing,
