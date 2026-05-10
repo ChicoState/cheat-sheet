@@ -166,6 +166,36 @@ describe('CreateCheatSheet Component', () => {
     expect(handlePreviewMock).toHaveBeenCalledWith(null, expect.objectContaining({ formulas: selectedFormulas }));
   });
 
+  it('collapses classes and sections after first compile while keeping reorder open', async () => {
+    const handlePreviewMock = vi.fn();
+    const selectedFormulas = [{ name: 'test' }];
+
+    useLatex.mockReturnValue({ ...mockUseLatex, handlePreview: handlePreviewMock });
+    useFormulas.mockReturnValue({
+      ...mockUseFormulas,
+      selectedClasses: { 'Math 101': true },
+      selectedCategories: { 'Math 101:Algebra': true },
+      groupedFormulas: [{ class: 'Math 101', formulas: selectedFormulas }],
+      selectedCount: 1,
+      hasSelectedClasses: true,
+      getSelectedFormulasList: vi.fn().mockReturnValue(selectedFormulas),
+    });
+
+    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: /Select classes/i })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /Select sections/i })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /Drag to reorder formulas/i })).toHaveAttribute('aria-expanded', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: /Compile PDF/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Select classes/i })).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.getByRole('button', { name: /Select sections/i })).toHaveAttribute('aria-expanded', 'false');
+    });
+    expect(screen.getByRole('button', { name: /Drag to reorder formulas/i })).toHaveAttribute('aria-expanded', 'true');
+  });
+
   it('keeps the LaTeX editor closed when compiled content exists', () => {
     useLatex.mockReturnValue({
       ...mockUseLatex,

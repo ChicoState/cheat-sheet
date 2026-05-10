@@ -459,6 +459,7 @@ const FormulaSelection = React.memo(function FormulaSelection({
   useEffect(() => {
     if (collapseClassesSignal > 0) {
       setClassesOpen(false);
+      setSectionsOpen(false);
     }
   }, [collapseClassesSignal]);
 
