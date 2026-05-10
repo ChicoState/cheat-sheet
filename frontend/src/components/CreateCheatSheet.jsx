@@ -470,26 +470,19 @@ const FormulaSelection = React.memo(function FormulaSelection({
   onToggle={() => setClassesOpen((current) => !current)}
   countBadge={selectedCount > 0 ? `${selectedCount}` : null}
 >
-  <div className="class-select-all-row">
-    <button
-      type="button"
-      className="btn-select-all"
-      onClick={() => classesData.forEach((cls) => {
-        if (!selectedClasses[cls.name]) toggleClass(cls.name);
-      })}
-    >
-      Select All
-    </button>
-    <button
-      type="button"
-      className="btn-select-all btn-deselect-all"
-      onClick={() => classesData.forEach((cls) => {
-        if (selectedClasses[cls.name]) toggleClass(cls.name);
+  {hasSelectedClasses && (
+    <div className="class-select-all-row">
+      <button
+        type="button"
+        className="btn-select-all btn-deselect-all"
+        onClick={() => classesData.forEach((cls) => {
+          if (selectedClasses[cls.name]) toggleClass(cls.name);
         })}
-        >
+      >
         Deselect All
-        </button>
-      </div>
+      </button>
+    </div>
+  )}
         <div className="class-checkboxes">
           {classesData.map((cls) => {
             const isChecked = !!selectedClasses[cls.name];

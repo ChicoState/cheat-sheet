@@ -102,6 +102,32 @@ describe('CreateCheatSheet Component', () => {
     expect(screen.getByText(/Compile will generate the first draft if the editor is still empty/i)).toBeInTheDocument();
   });
 
+  it('does not render a Select All classes button', () => {
+    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
+
+    expect(screen.queryByRole('button', { name: /^Select All$/i })).not.toBeInTheDocument();
+  });
+
+  it('shows Deselect All only after a class is selected', () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onReset = vi.fn();
+
+    const { rerender } = render(<CreateCheatSheet onSave={onSave} onReset={onReset} />);
+
+    expect(screen.queryByRole('button', { name: /^Deselect All$/i })).not.toBeInTheDocument();
+
+    useFormulas.mockReturnValue({
+      ...mockUseFormulas,
+      selectedClasses: { 'Math 101': true },
+      selectedCount: 1,
+      hasSelectedClasses: true,
+    });
+
+    rerender(<CreateCheatSheet onSave={onSave} onReset={onReset} />);
+
+    expect(screen.getByRole('button', { name: /^Deselect All$/i })).toBeInTheDocument();
+  });
+
   it('regenerates selected formulas from the main compile action', () => {
     const handlePreviewMock = vi.fn();
     const selectedFormulas = [{ name: 'test' }];
