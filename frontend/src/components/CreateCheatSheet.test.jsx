@@ -120,16 +120,17 @@ describe('CreateCheatSheet Component', () => {
     const spacingSelect = screen.getByLabelText(/Spacing:/i);
     const marginsSelect = screen.getByLabelText(/Margins:/i);
 
-    expect(within(fontSizeSelect).getByRole('option', { name: /Minimum \(7pt\)/i })).toHaveValue('7pt');
+    expect(within(fontSizeSelect).getByRole('option', { name: /Minimum \(6pt\)/i })).toHaveValue('6pt');
+    expect(within(fontSizeSelect).getByRole('option', { name: /Tiny \(7pt\)/i })).toHaveValue('7pt');
     expect(within(fontSizeSelect).getByRole('option', { name: /Compact \(8pt\)/i })).toHaveValue('8pt');
     expect(within(marginsSelect).getByRole('option', { name: /Minimum \(0\.1in\)/i })).toHaveValue('0.1in');
     expect(within(marginsSelect).getByRole('option', { name: /Narrow \(0\.15in\)/i })).toHaveValue('0.15in');
 
-    fireEvent.change(fontSizeSelect, { target: { value: '7pt' } });
+    fireEvent.change(fontSizeSelect, { target: { value: '6pt' } });
     fireEvent.change(spacingSelect, { target: { value: 'small' } });
     fireEvent.change(marginsSelect, { target: { value: '0.1in' } });
 
-    expect(mockUseLatex.setFontSize).toHaveBeenCalledWith('7pt');
+    expect(mockUseLatex.setFontSize).toHaveBeenCalledWith('6pt');
     expect(mockUseLatex.setSpacing).toHaveBeenCalledWith('small');
     expect(mockUseLatex.setMargins).toHaveBeenCalledWith('0.1in');
   });
@@ -368,7 +369,7 @@ describe('CreateCheatSheet Component', () => {
     expect(screen.queryByLabelText(/Generated LaTeX Code:/i)).not.toBeInTheDocument();
   });
 
-  it('shows syntax-colored LaTeX immediately while typing', () => {
+  it('shows native editor text while typing instead of rendering highlight content', () => {
     useLatex.mockReturnValue({
       ...mockUseLatex,
       content: '\\frac{a}{b}',
@@ -386,9 +387,27 @@ describe('CreateCheatSheet Component', () => {
     expect(highlightLayer).toBeInTheDocument();
     expect(highlightLayer).toHaveTextContent('\\frac{a}{b}');
 
-    fireEvent.change(textarea, { target: { value: '\\alpha + \\beta' } });
+    act(() => {
+      fireEvent.focus(textarea);
+    });
+
+    expect(highlightLayer).toHaveClass('is-editing');
+    expect(highlightLayer).toHaveTextContent('\\frac{a}{b}');
+
+    act(() => {
+      fireEvent.change(textarea, { target: { value: '\\alpha + \\beta' } });
+    });
 
     expect(textarea).toHaveValue('\\alpha + \\beta');
+    expect(highlightLayer).toHaveClass('is-editing');
+    expect(highlightLayer).toHaveTextContent('\\frac{a}{b}');
+    expect(highlightLayer).not.toHaveTextContent('\\alpha + \\beta');
+
+    act(() => {
+      fireEvent.blur(textarea);
+    });
+
+    expect(highlightLayer).not.toHaveClass('is-editing');
     expect(highlightLayer).toHaveTextContent('\\alpha + \\beta');
   });
 

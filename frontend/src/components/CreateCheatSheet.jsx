@@ -720,11 +720,20 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
   const lineNumbersRef = useRef(null);
   const highlightLayerRef = useRef(null);
   const scrollSyncFrameRef = useRef(null);
+  const lastContentPropRef = useRef(content);
   const [draftContent, setDraftContent] = useState(content);
+  const [highlightContent, setHighlightContent] = useState(content);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
+    if (lastContentPropRef.current === content) return;
+
+    lastContentPropRef.current = content;
     setDraftContent(content);
-  }, [content]);
+    if (!isEditing) {
+      setHighlightContent(content);
+    }
+  }, [content, isEditing]);
 
   useEffect(() => () => {
     if (scrollSyncFrameRef.current && typeof window.cancelAnimationFrame === 'function') {
@@ -736,14 +745,14 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
   const compileErrorSummary = useMemo(() => getCompileErrorSummary(compileError), [compileError]);
   const lineCount = useMemo(() => (draftContent ? draftContent.split('\n').length : 1), [draftContent]);
   const highlightedLines = useMemo(() => {
-    const lines = draftContent ? draftContent.split('\n') : [''];
+    const lines = highlightContent ? highlightContent.split('\n') : [''];
 
     return lines.map((line, index) => ({
       lineNumber: index + 1,
       highlightedHtml: highlightLatexLine(line),
       hasError: errorLines.has(index + 1),
     }));
-  }, [draftContent, errorLines]);
+  }, [highlightContent, errorLines]);
 
   const syncScrollLayers = useCallback(() => {
     scrollSyncFrameRef.current = null;
@@ -772,6 +781,21 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
     syncScrollLayers();
   }, [syncScrollLayers]);
 
+  useEffect(() => {
+    if (isEditing) return undefined;
+
+    const syncFrame = typeof window.requestAnimationFrame === 'function'
+      ? window.requestAnimationFrame(syncScrollLayers)
+      : null;
+
+    if (syncFrame === null) {
+      syncScrollLayers();
+      return undefined;
+    }
+
+    return () => window.cancelAnimationFrame?.(syncFrame);
+  }, [isEditing, syncScrollLayers, highlightedLines]);
+
   return (
     <div className="input-section">
       <label htmlFor="content">Generated LaTeX Code:</label>
@@ -787,7 +811,7 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
           ))}
         </div>
         <div className="editor-surface">
-          <div className={`editor-highlight-layer ${isModified ? 'modified' : ''}`} ref={highlightLayerRef} aria-hidden="true">
+          <div className={`editor-highlight-layer ${isModified ? 'modified' : ''} ${isEditing ? 'is-editing' : ''}`} ref={highlightLayerRef} aria-hidden="true">
             {highlightedLines.map(({ lineNumber, highlightedHtml, hasError }) => (
               <div
                 key={lineNumber}
@@ -806,8 +830,13 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
               onChange(nextContent);
             }}
             onScroll={handleScroll}
+            onFocus={() => setIsEditing(true)}
+            onBlur={() => {
+              setHighlightContent(draftContent);
+              setIsEditing(false);
+            }}
             placeholder='Select classes and categories above, then click "GET CHEAT SHEET" to see the LaTeX code here.'
-            className={`textarea-field ${isModified ? 'modified' : ''}`}
+            className={`textarea-field ${isModified ? 'modified' : ''} ${isEditing ? 'is-editing' : ''}`}
             rows={15}
             spellCheck="false"
             wrap="off"
@@ -1052,7 +1081,7 @@ const SnapshotTray = ({ snapshots, onRestore }) => {
   );
 };
 
-const FONT_SIZE_PRESETS = ['7pt', '8pt', '9pt', '10pt', '11pt', '12pt'];
+const FONT_SIZE_PRESETS = ['6pt', '7pt', '8pt', '9pt', '10pt', '11pt', '12pt'];
 const SPACING_PRESETS = ['tiny', 'small', 'medium', 'large'];
 
 const LayoutOptions = ({ columns, setColumns, fontSize, setFontSize, spacing, setSpacing, margins, setMargins, orientation, setOrientation }) => {
@@ -1088,7 +1117,8 @@ const LayoutOptions = ({ columns, setColumns, fontSize, setFontSize, spacing, se
           onChange={(e) => setFontSize(e.target.value === 'custom' ? '10.5pt' : e.target.value)}
           className="layout-select"
         >
-          <option value="7pt">Minimum (7pt)</option>
+          <option value="6pt">Minimum (6pt)</option>
+          <option value="7pt">Tiny (7pt)</option>
           <option value="8pt">Compact (8pt)</option>
           <option value="9pt">Small (9pt)</option>
           <option value="10pt">Normal (10pt)</option>

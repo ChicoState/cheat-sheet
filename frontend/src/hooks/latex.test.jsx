@@ -164,6 +164,63 @@ describe('useLatex hook', () => {
     }
   });
 
+  test('keeps the selected 6pt text size when compiling layout changes', async () => {
+    const { result } = renderHook(() => useLatex({ content: '\\documentclass{article}\nBody' }), { wrapper });
+
+    global.fetch
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ tex_code: '\\documentclass{article}\n\\fontsize{6pt}{6pt}\\selectfont\nBody' }) })
+      .mockResolvedValueOnce({ ok: true, blob: async () => new Blob(['fake pdf data']) });
+
+    act(() => {
+      result.current.setFontSize('6pt');
+    });
+
+    await act(async () => {
+      await result.current.handleCompileOnly([]);
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    const normalizeBody = JSON.parse(global.fetch.mock.calls[0][1].body);
+    const compileBody = JSON.parse(global.fetch.mock.calls[1][1].body);
+
+    expect(normalizeBody.font_size).toBe('6pt');
+    expect(compileBody.font_size).toBe('6pt');
+    expect(result.current.fontSize).toBe('6pt');
+  });
+
+  test('keeps 6pt text size when regenerating a selected formula sheet', async () => {
+    const { result } = renderHook(() => useLatex(), { wrapper });
+    const selectedFormulas = [{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }];
+
+    act(() => {
+      result.current.setFontSize('6pt');
+      result.current.setSpacing('tiny');
+    });
+
+    global.fetch
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ tex_code: '\\documentclass{article}\n\\fontsize{6pt}{6pt}\\selectfont\nGenerated' }) })
+      .mockResolvedValueOnce({ ok: true, blob: async () => new Blob(['fake pdf data']) });
+
+    await act(async () => {
+      await result.current.handlePreview(null, {
+        formulas: selectedFormulas,
+        columns: 4,
+        fontSize: '6pt',
+        spacing: 'tiny',
+      });
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    const generateBody = JSON.parse(global.fetch.mock.calls[0][1].body);
+    const compileBody = JSON.parse(global.fetch.mock.calls[1][1].body);
+
+    expect(generateBody.font_size).toBe('6pt');
+    expect(generateBody.spacing).toBe('tiny');
+    expect(compileBody.font_size).toBe('6pt');
+    expect(result.current.fontSize).toBe('6pt');
+    expect(result.current.content).toContain('Generated');
+  });
+
   test('merges selected formulas into manually edited latex before compiling', async () => {
     const { result } = renderHook(() => useLatex(), { wrapper });
     const selectedFormulas = [{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }];

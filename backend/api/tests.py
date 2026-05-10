@@ -391,10 +391,10 @@ class TestLatexUtils:
         assert "\\begin{multicols}{5}" in header
 
     def test_build_dynamic_header_uses_dense_compact_presets(self):
-        tiny_header = build_dynamic_header(columns=5, font_size="7pt", margins="0.1in", spacing="tiny")
+        tiny_header = build_dynamic_header(columns=5, font_size="6pt", margins="0.1in", spacing="tiny")
         assert "letterpaper,margin=0.1in" in tiny_header
-        assert "\\fontsize{7pt}{7pt}\\selectfont" in tiny_header
-        assert "\\setlength{\\baselineskip}{7pt}" in tiny_header
+        assert "\\fontsize{6pt}{6pt}\\selectfont" in tiny_header
+        assert "\\setlength{\\baselineskip}{6pt}" in tiny_header
         assert "\\setlength{\\parskip}{0pt}" in tiny_header
         assert "\\setlength{\\abovedisplayskip}{0pt}" in tiny_header
 
@@ -1194,7 +1194,7 @@ class TestGenerateSheetEndpoint:
             "/api/generate-sheet/",
             {
                 "formulas": [{"class": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula"}],
-                "font_size": "7pt",
+                "font_size": "6pt",
                 "spacing": "tiny",
                 "margins": "0.1in",
             },
@@ -1203,7 +1203,7 @@ class TestGenerateSheetEndpoint:
         assert resp.status_code == 200
         tex = resp.json()["tex_code"]
         assert "margin=0.1in" in tex
-        assert "\\fontsize{7pt}{7pt}\\selectfont" in tex
+        assert "\\fontsize{6pt}{6pt}\\selectfont" in tex
         assert "\\setlength{\\parskip}{0pt}" in tex
         assert "\\setlength{\\abovedisplayskip}{0pt}" in tex
         assert "\\vspace{" not in tex
