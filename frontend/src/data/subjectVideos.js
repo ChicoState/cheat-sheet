@@ -619,47 +619,188 @@ export const CURATED_SUBJECT_VIDEOS = {
      topic: "Decompositions"
    },
  ],
- "LINEAR ALGEBRA I": [
-  {
-    title: "Introduction to Vectors and Their Operations",
-    videoId: "KBSCMTYaH1s",
-    channel: "Professor Dave Explains",
-    topic: "Vector Basics"
-  },
-  {
-    title: "Linear Algebra - Matrix Operations",
-    videoId: "p48uw2vFWQs",
-    channel: "Postcard Professor",
-    topic: "Matrix Operations"
-  },
-  {
-    title: "Cramer's Rule - 2x2 Linear System",
-    videoId: "vXqlIOX2itM",
-    channel: "The Organic Chemistry Tutor",
-    topic: "2x2 Systems"
-  },
- ],
- "LINEAR ALGEBRA II": [
-  {
-    title: "Linear Algebra: Properties of Matrix Operations - Part 1 (Section 2.2) | Math with Professor V",
-    videoId: "pqhI8RCNkZk",
-    channel: "Math With Professor V",
-    topic: "Matrix Properties"
-  },
-  {
-    title: "Eigenvectors and eigenvalues | Chapter 14, Essence of linear algebra",
-    videoId: "PFDu9oVAE-g",
-    channel: "3Blue1Brown",
-    topic: "Eigenvalues & Eigenvectors"
-  },
-  {
-    title: "Further Matrix Decompositions: LU, Cholesky, QR, and SVD",
-    videoId: "wHAJzemKQW4",
-    channel: "Professor Dave Explains",
-    topic: "Decompositions & Spaces",
-  },
- ],
-
+ 'CHEMISTRY I': [
+    {
+      title: 'Molarity Practice Problems',
+      videoId: '0hXEqnB5-Yg',
+      channel: 'Tyler DeWitt',
+      topic: 'Moles & Stoichiometry',
+    },
+    {
+      title: 'Ideal Gas Law Practice Problems',
+      videoId: 'TLRZjcCGzDo',
+      channel: 'The Organic Chemistry Tutor',
+      topic: 'Gas Laws',
+    },
+    {
+      title: 'Specific Heat Capacity Problems & Calculations',
+      videoId: 'v1zOnyC4RgQ',
+      channel: 'The Organic Chemistry Tutor',
+      topic: 'Thermochemistry',
+    },
+    {
+      title: 'Speed of Light, Frequency, and Wavelength',
+      videoId: 'mJWOJPsGzD0',
+      channel: 'The Organic Chemistry Tutor',
+      topic: 'Atomic Structure & Light',
+    },
+    {
+      title: 'Boiling Point Elevation and Freezing Point Depression',
+      videoId: 'z9LxdqYntlU',
+      channel: 'The Organic Chemistry Tutor',
+      topic: 'Solutions & Properties',
+    },
+  ],
+  'CHEMISTRY II': [
+    {
+      title: 'Gibbs Free Energy',
+      videoId: 'O1_x12A7YAA',
+      channel: 'The Organic Chemistry Tutor',
+      topic: 'Thermodynamics',
+    },
+    {
+      title: 'First Order and Second Order Chemical Kinetics',
+      videoId: '7qOFtL3VEBc',
+      channel: 'The Organic Chemistry Tutor',
+      topic: 'Kinetics',
+    },
+    {
+      title: 'Equilibrium Equations: Crash Course Chemistry #29',
+      videoId: 'DP-vWN1yXrY',
+      channel: 'CrashCourse',
+      topic: 'Chemical Equilibrium',
+    },
+    {
+      title: 'Acid Base Titration Curves, pH Calculations',
+      videoId: 'FqSkoWWeE8I',
+      channel: 'The Organic Chemistry Tutor',
+      topic: 'Acids, Bases & Buffers',
+    },
+    {
+      title: 'Electrochemistry: Crash Course Chemistry #36',
+      videoId: 'teTkvUtW4SA',
+      channel: 'CrashCourse',
+      topic: 'Electrochemistry',
+    },
+  ],
+  'DISCRETE MATH I': [
+    {
+      title: 'Propositional Logic, Logical Equivalence, and Truth Tables',
+      videoId: 'fKudJb53_u8',
+      channel: 'TrevTutor',
+      topic: 'Propositional Logic',
+    },
+    {
+      title: 'Set Theory Introduction',
+      videoId: 'tyDKR4FG3Yw',
+      channel: 'The Organic Chemistry Tutor',
+      topic: 'Set Theory',
+    },
+    {
+      title: 'Injective, Surjective, and Bijective Functions',
+      videoId: 'ZcvN-h5U6S0',
+      channel: 'Kimberly Brehm',
+      topic: 'Functions & Relations',
+    },
+    {
+      title: 'Permutations and Combinations Tutorial',
+      videoId: 'XqQTXW7XfYA',
+      channel: 'The Organic Chemistry Tutor',
+      topic: 'Basic Combinatorics',
+    },
+  ],
+  'DISCRETE MATH II': [
+    {
+      title: 'The Pigeonhole Principle',
+      videoId: 'KjT1h18xNPE',
+      channel: 'Kimberly Brehm',
+      topic: 'Advanced Counting',
+    },
+    {
+      title: 'Modular Arithmetic and Cryptography',
+      videoId: 'YvJGEA1G9xY',
+      channel: 'Neso Academy',
+      topic: 'Number Theory & Cryptography',
+    },
+    {
+      title: 'Graph Theory Introduction',
+      videoId: 'lfOUlTgQO6A',
+      channel: 'freeCodeCamp.org',
+      topic: 'Graph Theory',
+    },
+    {
+      title: 'Solving Linear Recurrence Relations',
+      videoId: 'YjX_RXXk7W4',
+      channel: 'TrevTutor',
+      topic: 'Recurrence Relations',
+    },
+  ],
+  'ALGORITHMS I': [
+    {
+      title: 'Time and Space Complexity (Big-O Notation)',
+      videoId: 'bgJZQf3xWkA',
+      channel: 'NeetCode',
+      topic: 'Asymptotic Notation',
+    },
+    {
+      title: 'Data Structures Easy to Advanced Course',
+      videoId: 'RBSGKlAvoiM',
+      channel: 'freeCodeCamp.org',
+      topic: 'Linear Data Structures (Time)',
+    },
+    {
+      title: 'Sorting Algorithms Explained Visually',
+      videoId: 'kPRA0W1kECg',
+      channel: 'NeetCode',
+      topic: 'Sorting Algorithms',
+    },
+  ],
+  'ALGORITHMS II': [
+    {
+      title: 'Trees and Graphs Data Structures',
+      videoId: 'tWVWeAqZ0WU',
+      channel: 'freeCodeCamp.org',
+      topic: 'Non-Linear Data Structures',
+    },
+    {
+      title: 'Graph Algorithms for Technical Interviews',
+      videoId: 'tWVWeAqZ0WU',
+      channel: 'freeCodeCamp.org',
+      topic: 'Graph Algorithms',
+    },
+    {
+      title: 'Dynamic Programming - Learn to Solve Algorithmic Problems',
+      videoId: 'oBt53YbR9Kk',
+      channel: 'freeCodeCamp.org',
+      topic: 'Dynamic Programming',
+    },
+  ],
+  'DATA STRUCTURES & ALGORITHMS III': [
+    {
+      title: 'Disjoint Set Union (Union Find) Explained',
+      videoId: 'ayW5B2W9hfo',
+      channel: 'NeetCode',
+      topic: 'Advanced Data Structures',
+    },
+    {
+      title: 'Topological Sort Algorithm',
+      videoId: 'eL-KzMXSXXI',
+      channel: 'WilliamFiset',
+      topic: 'Advanced Graphs & Network Flow',
+    },
+    {
+      title: 'Rabin-Karp String Matching Algorithm',
+      videoId: 'qQ8vS2btsxI',
+      channel: 'Abdul Bari',
+      topic: 'Advanced String Matching',
+    },
+    {
+      title: 'Convex Hull - Graham Scan Algorithm',
+      videoId: 'B2AJoQSZf4M',
+      channel: 'WilliamFiset',
+      topic: 'Computational Geometry',
+    },
+  ],
 };
 
 const YOUTUBE_HOSTS = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be']);
