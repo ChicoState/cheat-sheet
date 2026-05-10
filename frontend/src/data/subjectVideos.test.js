@@ -49,4 +49,12 @@ describe('subjectVideos helpers', () => {
     expect(videos[0]).toMatchObject({ category: 'First Section', videoId: 'firstfirst1' });
     expect(videos[1]).toMatchObject({ category: 'Second Section', videoId: 'fallback123' });
   });
+
+  it('registers curated videos under the backend algorithm class names', () => {
+    expect(CURATED_SUBJECT_VIDEOS['DATA STRUCTURES & ALGORITHMS I']).toEqual(expect.any(Array));
+    expect(CURATED_SUBJECT_VIDEOS['DATA STRUCTURES & ALGORITHMS I'].length).toBeGreaterThan(0);
+    expect(CURATED_SUBJECT_VIDEOS['DATA STRUCTURES & ALGORITHMS II']).toEqual(expect.any(Array));
+    expect(CURATED_SUBJECT_VIDEOS['DATA STRUCTURES & ALGORITHMS II'].length).toBeGreaterThan(0);
+    expect(CURATED_SUBJECT_VIDEOS['DATA STRUCTURES & ALGORITHMS III']).toEqual(expect.any(Array));
+  });
 });

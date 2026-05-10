@@ -1112,6 +1112,8 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     pdfBlob,
     isCompiling,
     compileError,
+    canGoBack,
+    canGoForward,
     goBack,
     goForward,
     handlePreview,
@@ -1141,6 +1143,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const appBodyRef = useRef(null);
   const centerPanelRef = useRef(null);
   const compileBtnRef = useRef(null);
+  const saveInFlightRef = useRef(false);
   const snapshots = useMemo(() => [...(initialData?.compileHistory || [])].reverse(), [initialData?.compileHistory]);
   const selectedClassNames = useMemo(
     () => classesData.filter((cls) => selectedClasses[cls.name]).map((cls) => cls.name),
@@ -1501,6 +1504,9 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
 
   const handleSave = useCallback(async (e) => {
     e?.preventDefault?.();
+    if (isSaving || saveInFlightRef.current) return;
+
+    saveInFlightRef.current = true;
     setSaveStatus('saving');
     try {
       await onSave({
@@ -1520,8 +1526,10 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     } catch {
       setSaveStatus('offline');
       showToast('Failed to save. Please try again.', 'error');
+    } finally {
+      saveInFlightRef.current = false;
     }
-  }, [columns, content, contentSource, fontSize, getSelectedFormulasList, margins, onSave, orientation, showToast, spacing, title]);
+  }, [columns, content, contentSource, fontSize, getSelectedFormulasList, isSaving, margins, onSave, orientation, showToast, spacing, title]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -1634,7 +1642,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                 {isCompiling ? 'Compiling…' :  (
                   <>
                   GET CHEAT SHEET 
-                  <span classnName="btn-compile-hint"> Ctrl + ↵</span>
+                  <span className="btn-compile-hint"> Ctrl + ↵</span>
                   </>
 
                 )}
@@ -1646,6 +1654,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                   type="button"
                   onClick={goBack}
                   className="btn history-btn"
+                  disabled={!canGoBack}
                 >
                   Back
                 </button>
@@ -1653,6 +1662,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                   type="button"
                   onClick={goForward}
                   className="btn history-btn"
+                  disabled={!canGoForward}
                 >
                   Forward
                 </button>

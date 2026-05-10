@@ -18,7 +18,7 @@ FORMULAS = {
         {"name": "Euler's Formula (Planar Graphs)", "latex": r"V - E + F = 2"},
         {"name": "Complete Graph Edges (K_n)", "latex": r"|E| = \frac{n(n-1)}{2}"},
         {"name": "Tree Edges", "latex": r"|E| = |V| - 1"},
-        {"name": "Chromatic Number (\chi)", "latex": r"\text{Minimum colors needed to color } G \text{ such that no adjacent vertices share a color}"},
+        {"name": "Chromatic Number (\\chi)", "latex": r"\text{Minimum colors needed to color } G \text{ such that no adjacent vertices share a color}"},
     ],
     "Recurrence Relations": [
         {"name": "Linear Homogeneous (Distinct Roots)", "latex": r"a_n = \alpha_1 r_1^n + \alpha_2 r_2^n"},

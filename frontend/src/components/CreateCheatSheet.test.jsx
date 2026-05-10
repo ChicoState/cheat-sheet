@@ -261,6 +261,63 @@ describe('CreateCheatSheet Component', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
   });
 
+  it('does not start another Ctrl+S save while a save is already running', () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(<CreateCheatSheet onSave={onSave} onReset={vi.fn()} isSaving />);
+
+    const shortcutEvent = new window.KeyboardEvent('keydown', {
+      key: 's',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+
+    window.dispatchEvent(shortcutEvent);
+
+    expect(shortcutEvent.defaultPrevented).toBe(true);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('ignores repeated Ctrl+S presses before save state updates', () => {
+    const onSave = vi.fn(() => new Promise(() => {}));
+
+    render(<CreateCheatSheet onSave={onSave} onReset={vi.fn()} />);
+
+    const firstShortcut = new window.KeyboardEvent('keydown', {
+      key: 's',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    const secondShortcut = new window.KeyboardEvent('keydown', {
+      key: 's',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+
+    window.dispatchEvent(firstShortcut);
+    window.dispatchEvent(secondShortcut);
+
+    expect(firstShortcut.defaultPrevented).toBe(true);
+    expect(secondShortcut.defaultPrevented).toBe(true);
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables history navigation buttons when there is no history to move through', () => {
+    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: /^Back$/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Forward$/i })).toBeDisabled();
+  });
+
+  it('applies the compile shortcut hint class', () => {
+    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
+
+    expect(screen.getByText(/Ctrl \+ ↵/i)).toHaveClass('btn-compile-hint');
+  });
+
   it('can open youtube resources when class is selected', () => {
     const mockDataWithClass = {
       ...mockUseFormulas,

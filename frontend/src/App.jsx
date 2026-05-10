@@ -29,6 +29,7 @@ const createDefaultSheet = () => ({
   fontSize: '9pt',
   spacing: 'small',
   margins: '0.15in',
+  orientation: 'portrait',
   selectedFormulas: [],
   compileHistory: [],
 });
@@ -51,6 +52,7 @@ const sameSnapshot = (left, right) => {
     && left.fontSize === right.fontSize
     && left.spacing === right.spacing
     && left.margins === right.margins
+    && left.orientation === right.orientation
     && sameFormulas(left.selectedFormulas, right.selectedFormulas)
   );
 };
@@ -64,6 +66,7 @@ const buildRestoredSheet = (baseSheet, snapshot) => ({
   fontSize: snapshot.fontSize ?? baseSheet.fontSize,
   spacing: snapshot.spacing ?? baseSheet.spacing,
   margins: snapshot.margins ?? baseSheet.margins,
+  orientation: snapshot.orientation ?? baseSheet.orientation ?? 'portrait',
   selectedFormulas: snapshot.selectedFormulas ?? [],
   compileHistory: Array.isArray(baseSheet.compileHistory) ? baseSheet.compileHistory : [],
 });
@@ -268,6 +271,7 @@ function App() {
           margins: nextSheet.margins,
           font_size: nextSheet.fontSize,
           spacing: nextSheet.spacing,
+          orientation: nextSheet.orientation ?? 'portrait',
           selected_formulas: nextSheet.selectedFormulas,
         }),
       });
@@ -288,6 +292,7 @@ function App() {
             contentSource: savedSheet.content_source ?? nextSheet.contentSource,
             fontSize: savedSheet.font_size ?? nextSheet.fontSize,
             spacing: savedSheet.spacing ?? nextSheet.spacing,
+            orientation: savedSheet.orientation ?? nextSheet.orientation ?? 'portrait',
             selectedFormulas: savedSheet.selected_formulas ?? nextSheet.selectedFormulas,
           }));
       }
@@ -306,6 +311,7 @@ function App() {
         contentSource: savedSheet.content_source ?? nextSheet.contentSource,
         fontSize: savedSheet.font_size ?? nextSheet.fontSize,
         spacing: savedSheet.spacing ?? nextSheet.spacing,
+        orientation: savedSheet.orientation ?? nextSheet.orientation ?? 'portrait',
         selectedFormulas: savedSheet.selected_formulas ?? nextSheet.selectedFormulas,
       };
 
@@ -342,6 +348,7 @@ function App() {
       margins: sheet.margins,
       fontSize: sheet.font_size,
       spacing: sheet.spacing,
+      orientation: sheet.orientation ?? 'portrait',
       selectedFormulas,
       compileHistory: getStoredCompileHistory(sheet.id),
     };

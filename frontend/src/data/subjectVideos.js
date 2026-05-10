@@ -735,7 +735,7 @@ export const CURATED_SUBJECT_VIDEOS = {
       topic: 'Recurrence Relations',
     },
   ],
-  'ALGORITHMS I': [
+  'DATA STRUCTURES & ALGORITHMS I': [
     {
       title: 'Time and Space Complexity (Big-O Notation)',
       videoId: 'bgJZQf3xWkA',
@@ -755,7 +755,7 @@ export const CURATED_SUBJECT_VIDEOS = {
       topic: 'Sorting Algorithms',
     },
   ],
-  'ALGORITHMS II': [
+  'DATA STRUCTURES & ALGORITHMS II': [
     {
       title: 'Trees and Graphs Data Structures',
       videoId: 'tWVWeAqZ0WU',
