@@ -253,6 +253,40 @@ describe('CreateCheatSheet Component', () => {
     expect(document.querySelector('.app-body')).not.toHaveStyle('--app-body-columns: 220px 10px minmax(0, 1fr) 10px 300px');
   });
 
+  it('still runs the first-create collapse for restored uncompiled drafts', async () => {
+    const handleCompileOnlyMock = vi.fn().mockResolvedValue(true);
+
+    useLatex.mockReturnValue({
+      ...mockUseLatex,
+      content: 'x + y',
+      contentSource: 'manual',
+      canRegenerateFromSelections: false,
+      handleCompileOnly: handleCompileOnlyMock,
+    });
+    useFormulas.mockReturnValue({
+      ...mockUseFormulas,
+      selectedClasses: { 'Math 101': true },
+      selectedCount: 1,
+      hasSelectedClasses: true,
+      getSelectedFormulasList: vi.fn().mockReturnValue([]),
+    });
+
+    render(
+      <CreateCheatSheet
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onReset={vi.fn()}
+        initialData={{ content: 'x + y', compileHistory: [] }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Compile PDF/i }));
+
+    await waitFor(() => expect(handleCompileOnlyMock).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(document.querySelector('.app-body')).toHaveStyle('--app-body-columns: 220px 10px minmax(0, 1fr) 10px 300px');
+    });
+  });
+
   it('collapses classes and sections after first compile while keeping reorder open', async () => {
     const handlePreviewMock = vi.fn();
     const selectedFormulas = [{ name: 'test' }];
