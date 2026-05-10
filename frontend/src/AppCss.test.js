@@ -46,13 +46,11 @@ describe('App.css regressions', () => {
     expect(getRule('.video-card-sm.compact .video-info-sm')).toMatch(/flex-direction:\s*column/);
   });
 
-  it('keeps a syntax highlight layer for the LaTeX editor', () => {
-    expectAnyRule('.editor-highlight-layer', /position:\s*absolute/);
-    expectAnyRule('.editor-highlight-layer', /pointer-events:\s*none/);
-    expectAnyRule('.editor-highlight-layer,\n.textarea-field', /box-sizing:\s*border-box/);
-    expect(getRule('.textarea-field')).toMatch(/color:\s*transparent/);
-    expect(getRule('.textarea-field')).toMatch(/-webkit-text-fill-color:\s*transparent/);
-    expect(getRule('.latex-token.command')).toMatch(/color:/);
+  it('styles CodeMirror as the LaTeX editor surface', () => {
+    expect(getRule('.latex-codemirror')).toMatch(/height:\s*100%/);
+    expect(getRule('.latex-codemirror .cm-editor')).toMatch(/height:\s*100%/);
+    expect(getRule('.latex-codemirror .cm-scroller')).toMatch(/font-family:\s*'JetBrains Mono'/);
+    expect(getRule('.latex-codemirror .cm-content')).toMatch(/caret-color:\s*var\(--input-text\)/);
   });
 
   it('stacks the compile shortcut hint under the button text on narrow widths', () => {

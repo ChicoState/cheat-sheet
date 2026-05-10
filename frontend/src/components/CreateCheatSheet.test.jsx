@@ -7,10 +7,27 @@ import { useLatex } from '../hooks/latex';
 import { useYouTubeResources } from '../hooks/youtubeResources';
 import { CURATED_SUBJECT_VIDEOS } from '../data/subjectVideos';
 
+const { codeMirrorRenderSpy } = vi.hoisted(() => ({
+  codeMirrorRenderSpy: vi.fn(),
+}));
+
 // Mock the dependencies
 vi.mock('../hooks/formulas');
 vi.mock('../hooks/latex');
 vi.mock('../hooks/youtubeResources');
+vi.mock('@uiw/react-codemirror', () => ({
+  default: (props) => {
+    codeMirrorRenderSpy(props);
+    return (
+      <textarea
+        aria-label="Generated LaTeX Code:"
+        data-testid="latex-codemirror-editor"
+        value={props.value}
+        onChange={(event) => props.onChange?.(event.target.value)}
+      />
+    );
+  },
+}));
 vi.mock('react-pdf', () => ({
   Document: ({ children }) => <div data-testid="mock-document">{children}</div>,
   Page: () => <div data-testid="mock-page" />,
@@ -369,7 +386,7 @@ describe('CreateCheatSheet Component', () => {
     expect(screen.queryByLabelText(/Generated LaTeX Code:/i)).not.toBeInTheDocument();
   });
 
-  it('keeps syntax highlighting visible and current while typing', async () => {
+  it('uses CodeMirror for LaTeX editing and sends edits through onChange', async () => {
     useLatex.mockReturnValue({
       ...mockUseLatex,
       content: '\\frac{a}{b}',
@@ -380,85 +397,29 @@ describe('CreateCheatSheet Component', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Show LaTeX editor/i }));
 
-    const textarea = screen.getByLabelText(/Generated LaTeX Code:/i);
-    const highlightLayer = document.querySelector('.editor-highlight-layer');
+    const editor = await screen.findByTestId('latex-codemirror-editor');
 
-    expect(textarea).toHaveValue('\\frac{a}{b}');
-    expect(highlightLayer).toBeInTheDocument();
-    expect(highlightLayer).toHaveTextContent('\\frac{a}{b}');
+    expect(editor).toHaveValue('\\frac{a}{b}');
+    expect(document.querySelector('.editor-highlight-layer')).not.toBeInTheDocument();
+    expect(codeMirrorRenderSpy).toHaveBeenCalledWith(expect.objectContaining({
+      value: '\\frac{a}{b}',
+      height: '100%',
+    }));
 
-    act(() => {
-      fireEvent.change(textarea, { target: { value: '\\alpha + \\beta' } });
-    });
+    fireEvent.change(editor, { target: { value: '\\alpha + \\beta' } });
 
-    expect(textarea).toHaveValue('\\alpha + \\beta');
-    expect(highlightLayer).toBeVisible();
-    await waitFor(() => expect(highlightLayer).toHaveTextContent('\\alpha + \\beta'));
-    expect(highlightLayer.querySelector('.latex-token.command')).toHaveTextContent('\\alpha');
+    expect(editor).toHaveValue('\\alpha + \\beta');
+    expect(mockUseLatex.handleContentChange).toHaveBeenCalledWith('\\alpha + \\beta');
   });
 
-  it('refreshes every changed highlight line for multi-line edits', async () => {
-    useLatex.mockReturnValue({
-      ...mockUseLatex,
-      content: 'first\\alpha\nsecond\\beta\nthird',
-      pdfBlob: new Blob(['pdf'], { type: 'application/pdf' }),
-    });
-
-    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Show LaTeX editor/i }));
-
-    const textarea = screen.getByLabelText(/Generated LaTeX Code:/i);
-    const highlightLayer = document.querySelector('.editor-highlight-layer');
-    const nextContent = 'FIRST\\gamma\nSECOND\\delta\nthird';
-
-    fireEvent.change(textarea, {
-      target: {
-        value: nextContent,
-        selectionStart: 'FIRST\\gamma\nSECOND\\delta'.length,
-      },
-    });
-
-    await waitFor(() => expect(highlightLayer).toHaveTextContent('FIRST\\gamma'));
-    expect(highlightLayer).toHaveTextContent('SECOND\\delta');
-    expect(highlightLayer).not.toHaveTextContent('first\\alpha');
-    expect(highlightLayer).not.toHaveTextContent('second\\beta');
-  });
-
-  it('adds and removes highlighted rows when lines are inserted or deleted', async () => {
-    useLatex.mockReturnValue({
-      ...mockUseLatex,
-      content: 'one\\alpha\ntwo\\beta',
-      pdfBlob: new Blob(['pdf'], { type: 'application/pdf' }),
-    });
-
-    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Show LaTeX editor/i }));
-
-    const textarea = screen.getByLabelText(/Generated LaTeX Code:/i);
-    const highlightLayer = document.querySelector('.editor-highlight-layer');
-
-    fireEvent.change(textarea, { target: { value: 'one\\alpha\ninserted\\gamma\ntwo\\beta' } });
-
-    await waitFor(() => expect(highlightLayer).toHaveTextContent('inserted\\gamma'));
-    expect(highlightLayer.querySelectorAll('.editor-highlight-line')).toHaveLength(3);
-
-    fireEvent.change(textarea, { target: { value: 'one\\alpha\ntwo\\beta' } });
-
-    await waitFor(() => expect(highlightLayer.querySelectorAll('.editor-highlight-line')).toHaveLength(2));
-    expect(highlightLayer).not.toHaveTextContent('inserted\\gamma');
-  });
-
-  it('updates compile error highlighting without changing editor content', async () => {
+  it('updates CodeMirror when external LaTeX content changes', async () => {
     const { rerender } = render(
       <CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />
     );
 
     useLatex.mockReturnValue({
       ...mockUseLatex,
-      content: 'line one\nline two',
-      compileError: 'document.tex:2: Undefined control sequence',
+      content: '\\updated{}',
       pdfBlob: new Blob(['pdf'], { type: 'application/pdf' }),
     });
 
@@ -466,8 +427,23 @@ describe('CreateCheatSheet Component', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Show LaTeX editor/i }));
 
-    await waitFor(() => expect(document.querySelector('.editor-highlight-line.error')).toHaveTextContent('line two'));
-    expect(document.querySelector('.line-number.error')).toHaveTextContent('2');
+    expect(await screen.findByTestId('latex-codemirror-editor')).toHaveValue('\\updated{}');
+  });
+
+  it('shows compile errors with the CodeMirror editor mounted', async () => {
+    useLatex.mockReturnValue({
+      ...mockUseLatex,
+      content: 'line one\nline two',
+      compileError: 'document.tex:2: Undefined control sequence',
+      pdfBlob: new Blob(['pdf'], { type: 'application/pdf' }),
+    });
+
+    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Show LaTeX editor/i }));
+
+    expect(screen.getByText('Line 2: Undefined control sequence')).toBeInTheDocument();
+    expect(await screen.findByTestId('latex-codemirror-editor')).toHaveValue('line one\nline two');
   });
 
   it('does not remap restored generated content into a manual edit on mount', () => {

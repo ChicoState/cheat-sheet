@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, useId } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useId } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -31,6 +31,7 @@ const MIN_CENTER_WIDTH = 360;
 const MIN_PREVIEW_WIDTH = 260;
 const DEFAULT_PDF_ZOOM = 0.85;
 const MIN_SPLIT_CENTER_WIDTH = LATEX_PANEL_MIN_WIDTH + RESIZER_WIDTH + MIN_PREVIEW_WIDTH;
+const LatexCodeMirrorEditor = React.lazy(() => import('./LatexCodeMirrorEditor'));
 
 function loadPanelLayout() {
   try {
@@ -625,88 +626,6 @@ const FormulaSelection = React.memo(function FormulaSelection({
   );
 });
 
-const COMPILE_ERROR_LINE_REGEX = /document\.tex:(\d+):/g;
-const APP_LAYOUT_COMMENT_PREFIX = '% @cheatsheet-layout';
-
-const escapeHtml = (value = '') => value
-  .replace(/&/g, '&amp;')
-  .replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;')
-  .replace(/'/g, '&#39;');
-
-const tokenizeLatexLine = (line = '') => {
-  if (!line) {
-    return [{ type: 'text', value: '' }];
-  }
-
-  if (line.trimStart().startsWith(APP_LAYOUT_COMMENT_PREFIX)) {
-    return [{ type: 'app-comment', value: line }];
-  }
-
-  const commentStart = line.indexOf('%');
-  const codePart = commentStart >= 0 ? line.slice(0, commentStart) : line;
-  const commentPart = commentStart >= 0 ? line.slice(commentStart) : '';
-  const tokens = [];
-  const syntaxRegex = /(\\[a-zA-Z@]+|\\.|[{}[\]]|[$&#_^])/g;
-  let lastIndex = 0;
-  let match;
-
-  while ((match = syntaxRegex.exec(codePart)) !== null) {
-    if (match.index > lastIndex) {
-      tokens.push({ type: 'text', value: codePart.slice(lastIndex, match.index) });
-    }
-
-    const value = match[0];
-    const type = value.startsWith('\\')
-      ? 'command'
-      : /[{}[\]]/.test(value)
-        ? 'brace'
-        : 'symbol';
-
-    tokens.push({ type, value });
-    lastIndex = match.index + value.length;
-  }
-
-  if (lastIndex < codePart.length) {
-    tokens.push({ type: 'text', value: codePart.slice(lastIndex) });
-  }
-
-  if (commentPart) {
-    tokens.push({ type: 'comment', value: commentPart });
-  }
-
-  return tokens.length ? tokens : [{ type: 'text', value: codePart }];
-};
-
-const highlightLatexLine = (line = '') => tokenizeLatexLine(line).map(({ type, value }, index) => {
-  const escapedValue = value ? escapeHtml(value) : '&nbsp;';
-
-  if (type === 'text') {
-    return `<span data-token-index="${index}">${escapedValue}</span>`;
-  }
-
-  return `<span class="latex-token ${type}" data-token-index="${index}">${escapedValue}</span>`;
-}).join('');
-
-const createHighlightLineElement = (line = '', lineNumber = 1, errorLines = new Set()) => {
-  const lineElement = document.createElement('div');
-  lineElement.className = `editor-highlight-line${errorLines.has(lineNumber) ? ' error' : ''}`;
-  lineElement.innerHTML = highlightLatexLine(line);
-  return lineElement;
-};
-
-const extractCompileErrorLines = (compileError = '') => {
-  const normalizedError = compileError || '';
-  const lineNumbers = new Set();
-
-  for (const match of normalizedError.matchAll(COMPILE_ERROR_LINE_REGEX)) {
-    lineNumbers.add(Number(match[1]));
-  }
-
-  return lineNumbers;
-};
-
 const getCompileErrorSummary = (compileError = '') => {
   const normalizedError = compileError || '';
 
@@ -723,136 +642,42 @@ const getCompileErrorSummary = (compileError = '') => {
 };
 
 const LatexEditor = ({ content, onChange, isModified, compileError }) => {
-  const textareaRef = useRef(null);
-  const lineNumbersRef = useRef(null);
-  const highlightLayerRef = useRef(null);
-  const scrollSyncFrameRef = useRef(null);
-  const renderedHighlightLinesRef = useRef(content ? content.split('\n') : ['']);
-  const latestDraftContentRef = useRef(content);
   const lastContentPropRef = useRef(content);
+  const editorLabelId = useId();
   const [draftContent, setDraftContent] = useState(content);
-  const [lineCount, setLineCount] = useState(() => (content ? content.split('\n').length : 1));
-
-  useEffect(() => () => {
-    if (scrollSyncFrameRef.current && typeof window.cancelAnimationFrame === 'function') {
-      window.cancelAnimationFrame(scrollSyncFrameRef.current);
-    }
-  }, []);
-
-  const errorLines = useMemo(() => extractCompileErrorLines(compileError), [compileError]);
   const compileErrorSummary = useMemo(() => getCompileErrorSummary(compileError), [compileError]);
-
-  const syncScrollLayers = useCallback(() => {
-    scrollSyncFrameRef.current = null;
-
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    if (lineNumbersRef.current) {
-      lineNumbersRef.current.scrollTop = textarea.scrollTop;
-    }
-
-    if (highlightLayerRef.current) {
-      highlightLayerRef.current.scrollTop = textarea.scrollTop;
-      highlightLayerRef.current.scrollLeft = textarea.scrollLeft;
-    }
-  }, []);
-
-  const renderHighlightLayer = useCallback((nextContent = '') => {
-    const layer = highlightLayerRef.current;
-    if (!layer) return;
-
-    const nextLines = nextContent ? nextContent.split('\n') : [''];
-    const renderedLines = renderedHighlightLinesRef.current;
-
-    nextLines.forEach((line, index) => {
-      const lineNumber = index + 1;
-      const existingLine = renderedLines[index];
-      const existingElement = layer.children[index];
-      const expectedError = errorLines.has(lineNumber);
-      const hasError = existingElement?.classList.contains('error') ?? false;
-
-      if (existingLine === line && existingElement && expectedError === hasError) return;
-
-      const nextElement = createHighlightLineElement(line, lineNumber, errorLines);
-      if (existingElement) {
-        layer.replaceChild(nextElement, existingElement);
-        return;
-      }
-
-      layer.appendChild(nextElement);
-    });
-
-    while (layer.children.length > nextLines.length) {
-      layer.removeChild(layer.lastChild);
-    }
-
-    renderedHighlightLinesRef.current = nextLines;
-  }, [errorLines]);
-
-  useLayoutEffect(() => {
-    renderHighlightLayer(latestDraftContentRef.current);
-    syncScrollLayers();
-  }, [renderHighlightLayer, syncScrollLayers]);
 
   useEffect(() => {
     if (lastContentPropRef.current === content) return;
 
     lastContentPropRef.current = content;
-    latestDraftContentRef.current = content;
     setDraftContent(content);
-    setLineCount(content ? content.split('\n').length : 1);
-    renderHighlightLayer(content);
-  }, [content, renderHighlightLayer]);
+  }, [content]);
 
-  const handleScroll = useCallback(() => {
-    if (scrollSyncFrameRef.current) return;
-
-    if (typeof window.requestAnimationFrame === 'function') {
-      scrollSyncFrameRef.current = window.requestAnimationFrame(syncScrollLayers);
-      return;
-    }
-
-    syncScrollLayers();
-  }, [syncScrollLayers]);
+  const handleEditorChange = useCallback((nextContent) => {
+    setDraftContent(nextContent);
+    onChange(nextContent);
+  }, [onChange]);
 
   return (
     <div className="input-section">
-      <label htmlFor="content">Generated LaTeX Code:</label>
+      <label id={editorLabelId}>Generated LaTeX Code:</label>
       {compileErrorSummary ? (
         <div className="editor-status error">{compileErrorSummary}</div>
       ) : isModified ? (
         <div className="editor-status modified">Manual edits ready to recompile</div>
       ) : null}
       <div className={`editor-wrapper ${compileErrorSummary ? 'has-error' : ''}`}>
-        <div className="line-numbers" ref={lineNumbersRef}>
-          {Array.from({ length: lineCount }, (_, i) => (
-            <div key={i + 1} className={`line-number ${errorLines.has(i + 1) ? 'error' : ''}`}>{i + 1}</div>
-          ))}
-        </div>
-        <div className="editor-surface">
-          <div className={`editor-highlight-layer ${isModified ? 'modified' : ''}`} ref={highlightLayerRef} aria-hidden="true" />
-          <textarea
-            ref={textareaRef}
-            id="content"
-            value={draftContent}
-            onChange={(e) => {
-              const nextContent = e.target.value;
-              const nextLineCount = nextContent ? nextContent.split('\n').length : 1;
-              latestDraftContentRef.current = nextContent;
-              setDraftContent(nextContent);
-              setLineCount((currentLineCount) => (currentLineCount === nextLineCount ? currentLineCount : nextLineCount));
-              renderHighlightLayer(nextContent);
-              syncScrollLayers();
-              onChange(nextContent);
-            }}
-            onScroll={handleScroll}
-            placeholder='Select classes and categories above, then click "GET CHEAT SHEET" to see the LaTeX code here.'
-            className={`textarea-field ${isModified ? 'modified' : ''}`}
-            rows={15}
-            spellCheck="false"
-            wrap="off"
-          />
+        <div className="editor-surface codemirror-surface">
+          <React.Suspense fallback={<div className="latex-editor-loading">Loading LaTeX editor…</div>}>
+            <LatexCodeMirrorEditor
+              value={draftContent}
+              isModified={isModified}
+              labelId={editorLabelId}
+              onChange={handleEditorChange}
+              placeholder='Select classes and categories above, then click "GET CHEAT SHEET" to see the LaTeX code here.'
+            />
+          </React.Suspense>
         </div>
       </div>
     </div>
