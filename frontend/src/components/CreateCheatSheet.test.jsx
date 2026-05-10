@@ -405,11 +405,13 @@ describe('CreateCheatSheet Component', () => {
       value: '\\frac{a}{b}',
       height: '100%',
     }));
+    const initialBasicSetup = codeMirrorRenderSpy.mock.calls.at(-1)[0].basicSetup;
 
     fireEvent.change(editor, { target: { value: '\\alpha + \\beta' } });
 
     expect(editor).toHaveValue('\\alpha + \\beta');
     expect(mockUseLatex.handleContentChange).toHaveBeenCalledWith('\\alpha + \\beta');
+    expect(codeMirrorRenderSpy.mock.calls.at(-1)[0].basicSetup).toBe(initialBasicSetup);
   });
 
   it('updates CodeMirror when external LaTeX content changes', async () => {

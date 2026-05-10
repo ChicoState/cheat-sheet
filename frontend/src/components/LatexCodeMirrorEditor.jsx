@@ -50,6 +50,13 @@ const LATEX_LANGUAGE_EXTENSIONS = [
   }),
 ];
 
+const LATEX_BASIC_SETUP = {
+  lineNumbers: true,
+  foldGutter: false,
+  highlightActiveLine: true,
+  highlightActiveLineGutter: true,
+};
+
 export default function LatexCodeMirrorEditor({ value, onChange, isModified, placeholder, labelId }) {
   const extensions = useMemo(() => [
     ...LATEX_LANGUAGE_EXTENSIONS,
@@ -64,12 +71,7 @@ export default function LatexCodeMirrorEditor({ value, onChange, isModified, pla
       value={value}
       height="100%"
       className={`latex-codemirror ${isModified ? 'modified' : ''}`}
-      basicSetup={{
-        lineNumbers: true,
-        foldGutter: false,
-        highlightActiveLine: true,
-        highlightActiveLineGutter: true,
-      }}
+      basicSetup={LATEX_BASIC_SETUP}
       extensions={extensions}
       onChange={onChange}
       placeholder={placeholder}
