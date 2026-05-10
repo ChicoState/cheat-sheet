@@ -45,4 +45,23 @@ describe('App.css regressions', () => {
     expect(getRule('.video-card-sm.compact .video-info-sm')).toMatch(/display:\s*flex/);
     expect(getRule('.video-card-sm.compact .video-info-sm')).toMatch(/flex-direction:\s*column/);
   });
+
+  it('keeps a syntax highlight layer for the LaTeX editor', () => {
+    expectAnyRule('.editor-highlight-layer', /position:\s*absolute/);
+    expectAnyRule('.editor-highlight-layer', /pointer-events:\s*none/);
+    expect(getRule('.textarea-field')).toMatch(/color:\s*transparent/);
+    expect(getRule('.latex-token.command')).toMatch(/color:/);
+  });
+
+  it('stacks the compile shortcut hint under the button text on narrow widths', () => {
+    expect(css).toMatch(/@media\s*\(max-width:\s*560px\)\s*\{[\s\S]*\.btn-compile-text\s*\{[\s\S]*flex-direction:\s*column/);
+    expect(css).toMatch(/@media\s*\(max-width:\s*560px\)\s*\{[\s\S]*\.btn-compile-hint\s*\{[\s\S]*display:\s*block/);
+    expect(css).toMatch(/@media\s*\(max-width:\s*560px\)\s*\{[\s\S]*\.btn-compile-hint\s*\{[\s\S]*margin-left:\s*0/);
+  });
+
+  it('keeps compact video action controls flush to the left', () => {
+    expect(getRule('.section-video-picks.compact .section-video-search-row')).toMatch(/display:\s*flex/);
+    expect(getRule('.section-video-picks.compact .section-video-search-row')).toMatch(/justify-content:\s*flex-start/);
+    expect(getRule('.section-video-picks.compact .section-video-search')).toMatch(/justify-self:\s*start/);
+  });
 });

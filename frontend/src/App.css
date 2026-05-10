@@ -627,7 +627,10 @@ label {
   overflow: hidden;
 }
 
+.editor-highlight-layer,
 .textarea-field {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   padding: var(--space-md);
@@ -639,11 +642,64 @@ label {
   overflow: auto;
 }
 
-.textarea-field {
-  display: block;
-  background: var(--input-bg);
+.editor-highlight-layer {
+  margin: 0;
   color: var(--input-text);
+  background: var(--input-bg);
+  pointer-events: none;
+  scrollbar-width: none;
+}
+
+.editor-highlight-layer {
+  position: absolute;
+}
+
+.editor-highlight-layer::-webkit-scrollbar {
+  display: none;
+}
+
+.editor-highlight-layer.modified {
+  background: linear-gradient(180deg, var(--code-modified-bg) 0%, transparent 22%), var(--input-bg);
+}
+
+.editor-highlight-line {
+  min-height: calc(13px * 1.6);
+  color: var(--input-text);
+}
+
+.editor-highlight-line.error {
+  background: linear-gradient(90deg, var(--code-error-bg) 0%, transparent 85%);
+  border-left: 2px solid var(--code-error);
+  padding-left: calc(var(--space-sm) - 2px);
+}
+
+.latex-token.command {
+  color: var(--code-command);
+}
+
+.latex-token.comment {
+  color: var(--code-comment);
+}
+
+.latex-token.app-comment {
+  color: var(--code-app-comment);
+}
+
+.latex-token.brace {
+  color: var(--code-brace);
+}
+
+.latex-token.symbol {
+  color: var(--code-symbol);
+}
+
+.textarea-field {
+  z-index: 1;
+  display: block;
+  background: transparent;
+  color: transparent;
   caret-color: var(--input-text);
+  -webkit-text-fill-color: transparent;
   border: none;
   border-radius: 0;
   resize: none;
@@ -652,7 +708,6 @@ label {
 
 .textarea-field.modified {
   caret-color: var(--primary);
-  background: linear-gradient(180deg, var(--code-modified-bg) 0%, transparent 22%), var(--input-bg);
 }
 
 .textarea-field::selection {
@@ -1278,8 +1333,17 @@ label {
 }
 
 .section-video-picks.compact .section-video-search-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.3rem;
   margin-top: 0;
   justify-self: start;
+}
+
+.section-video-picks.compact .section-video-search {
+  justify-self: start;
+  align-self: start;
 }
 
 .section-video-search {
@@ -2072,6 +2136,25 @@ left panel - footer buttons
   margin-left: 0.4rem;
   font-weight: 400;
   letter-spacing: 0;
+}
+
+.btn-compile-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+@media (max-width: 560px) {
+  .btn-compile-text {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.12rem;
+  }
+
+  .btn-compile-hint {
+    display: block;
+    margin-left: 0;
+  }
 }
 
 .btn-compile:hover:not(:disabled) {

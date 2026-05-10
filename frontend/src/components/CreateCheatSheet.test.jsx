@@ -368,10 +368,10 @@ describe('CreateCheatSheet Component', () => {
     expect(screen.queryByLabelText(/Generated LaTeX Code:/i)).not.toBeInTheDocument();
   });
 
-  it('shows the live textarea directly instead of a delayed highlight mirror', () => {
+  it('shows syntax-colored LaTeX immediately while typing', () => {
     useLatex.mockReturnValue({
       ...mockUseLatex,
-      content: 'alpha',
+      content: '\\frac{a}{b}',
       pdfBlob: new Blob(['pdf'], { type: 'application/pdf' }),
     });
 
@@ -379,8 +379,38 @@ describe('CreateCheatSheet Component', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Show LaTeX editor/i }));
 
-    expect(screen.getByLabelText(/Generated LaTeX Code:/i)).toHaveValue('alpha');
-    expect(document.querySelector('.editor-highlight-layer')).not.toBeInTheDocument();
+    const textarea = screen.getByLabelText(/Generated LaTeX Code:/i);
+    const highlightLayer = document.querySelector('.editor-highlight-layer');
+
+    expect(textarea).toHaveValue('\\frac{a}{b}');
+    expect(highlightLayer).toBeInTheDocument();
+    expect(highlightLayer).toHaveTextContent('\\frac{a}{b}');
+
+    fireEvent.change(textarea, { target: { value: '\\alpha + \\beta' } });
+
+    expect(textarea).toHaveValue('\\alpha + \\beta');
+    expect(highlightLayer).toHaveTextContent('\\alpha + \\beta');
+  });
+
+  it('does not remap restored generated content into a manual edit on mount', () => {
+    const handleContentChange = vi.fn();
+
+    useLatex.mockReturnValue({
+      ...mockUseLatex,
+      content: '\\generated{}',
+      contentSource: 'generated',
+      handleContentChange,
+    });
+
+    render(
+      <CreateCheatSheet
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onReset={vi.fn()}
+        initialData={{ content: '\\generated{}', contentSource: 'generated' }}
+      />,
+    );
+
+    expect(handleContentChange).not.toHaveBeenCalled();
   });
 
   it('restores saved orientation from initial data', () => {

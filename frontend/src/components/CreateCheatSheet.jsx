@@ -626,6 +626,68 @@ const FormulaSelection = React.memo(function FormulaSelection({
 });
 
 const COMPILE_ERROR_LINE_REGEX = /document\.tex:(\d+):/g;
+const APP_LAYOUT_COMMENT_PREFIX = '% @cheatsheet-layout';
+
+const escapeHtml = (value = '') => value
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+const tokenizeLatexLine = (line = '') => {
+  if (!line) {
+    return [{ type: 'text', value: '' }];
+  }
+
+  if (line.trimStart().startsWith(APP_LAYOUT_COMMENT_PREFIX)) {
+    return [{ type: 'app-comment', value: line }];
+  }
+
+  const commentStart = line.indexOf('%');
+  const codePart = commentStart >= 0 ? line.slice(0, commentStart) : line;
+  const commentPart = commentStart >= 0 ? line.slice(commentStart) : '';
+  const tokens = [];
+  const syntaxRegex = /(\\[a-zA-Z@]+|\\.|[{}[\]]|[$&#_^])/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = syntaxRegex.exec(codePart)) !== null) {
+    if (match.index > lastIndex) {
+      tokens.push({ type: 'text', value: codePart.slice(lastIndex, match.index) });
+    }
+
+    const value = match[0];
+    const type = value.startsWith('\\')
+      ? 'command'
+      : /[{}[\]]/.test(value)
+        ? 'brace'
+        : 'symbol';
+
+    tokens.push({ type, value });
+    lastIndex = match.index + value.length;
+  }
+
+  if (lastIndex < codePart.length) {
+    tokens.push({ type: 'text', value: codePart.slice(lastIndex) });
+  }
+
+  if (commentPart) {
+    tokens.push({ type: 'comment', value: commentPart });
+  }
+
+  return tokens.length ? tokens : [{ type: 'text', value: codePart }];
+};
+
+const highlightLatexLine = (line = '') => tokenizeLatexLine(line).map(({ type, value }, index) => {
+  const escapedValue = value ? escapeHtml(value) : '&nbsp;';
+
+  if (type === 'text') {
+    return `<span data-token-index="${index}">${escapedValue}</span>`;
+  }
+
+  return `<span class="latex-token ${type}" data-token-index="${index}">${escapedValue}</span>`;
+}).join('');
 
 const extractCompileErrorLines = (compileError = '') => {
   const normalizedError = compileError || '';
@@ -656,6 +718,7 @@ const getCompileErrorSummary = (compileError = '') => {
 const LatexEditor = ({ content, onChange, isModified, compileError }) => {
   const textareaRef = useRef(null);
   const lineNumbersRef = useRef(null);
+  const highlightLayerRef = useRef(null);
   const scrollSyncFrameRef = useRef(null);
   const [draftContent, setDraftContent] = useState(content);
 
@@ -672,6 +735,15 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
   const errorLines = useMemo(() => extractCompileErrorLines(compileError), [compileError]);
   const compileErrorSummary = useMemo(() => getCompileErrorSummary(compileError), [compileError]);
   const lineCount = useMemo(() => (draftContent ? draftContent.split('\n').length : 1), [draftContent]);
+  const highlightedLines = useMemo(() => {
+    const lines = draftContent ? draftContent.split('\n') : [''];
+
+    return lines.map((line, index) => ({
+      lineNumber: index + 1,
+      highlightedHtml: highlightLatexLine(line),
+      hasError: errorLines.has(index + 1),
+    }));
+  }, [draftContent, errorLines]);
 
   const syncScrollLayers = useCallback(() => {
     scrollSyncFrameRef.current = null;
@@ -681,6 +753,11 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
 
     if (lineNumbersRef.current) {
       lineNumbersRef.current.scrollTop = textarea.scrollTop;
+    }
+
+    if (highlightLayerRef.current) {
+      highlightLayerRef.current.scrollTop = textarea.scrollTop;
+      highlightLayerRef.current.scrollLeft = textarea.scrollLeft;
     }
   }, []);
 
@@ -710,6 +787,15 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
           ))}
         </div>
         <div className="editor-surface">
+          <div className={`editor-highlight-layer ${isModified ? 'modified' : ''}`} ref={highlightLayerRef} aria-hidden="true">
+            {highlightedLines.map(({ lineNumber, highlightedHtml, hasError }) => (
+              <div
+                key={lineNumber}
+                className={`editor-highlight-line ${hasError ? 'error' : ''}`}
+                dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+              />
+            ))}
+          </div>
           <textarea
             ref={textareaRef}
             id="content"
@@ -1241,15 +1327,12 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   useEffect(() => {
     if (!initialData) return;
     if (initialData.title) setTitle(initialData.title);
-    if (initialData.content) {
-      handleContentChange(initialData.content);
-    }
     if (initialData.columns) setColumns(initialData.columns);
     if (initialData.fontSize) setFontSize(initialData.fontSize);
     if (initialData.spacing) setSpacing(initialData.spacing);
     if (initialData.margins) setMargins(initialData.margins);
     if (initialData.orientation) setOrientation(initialData.orientation);
-  }, [handleContentChange, initialData, setColumns, setFontSize, setMargins, setOrientation, setSpacing, setTitle]);
+  }, [initialData, setColumns, setFontSize, setMargins, setOrientation, setSpacing, setTitle]);
 
   useEffect(() => {
     const hasCompiledBefore = Boolean(initialData?.compileHistory?.length || pdfBlob || content.trim());
