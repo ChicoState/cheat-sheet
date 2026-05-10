@@ -425,6 +425,51 @@ describe('CreateCheatSheet Component', () => {
     expect(highlightLayer).not.toHaveTextContent('second\\beta');
   });
 
+  it('adds and removes highlighted rows when lines are inserted or deleted', async () => {
+    useLatex.mockReturnValue({
+      ...mockUseLatex,
+      content: 'one\\alpha\ntwo\\beta',
+      pdfBlob: new Blob(['pdf'], { type: 'application/pdf' }),
+    });
+
+    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Show LaTeX editor/i }));
+
+    const textarea = screen.getByLabelText(/Generated LaTeX Code:/i);
+    const highlightLayer = document.querySelector('.editor-highlight-layer');
+
+    fireEvent.change(textarea, { target: { value: 'one\\alpha\ninserted\\gamma\ntwo\\beta' } });
+
+    await waitFor(() => expect(highlightLayer).toHaveTextContent('inserted\\gamma'));
+    expect(highlightLayer.querySelectorAll('.editor-highlight-line')).toHaveLength(3);
+
+    fireEvent.change(textarea, { target: { value: 'one\\alpha\ntwo\\beta' } });
+
+    await waitFor(() => expect(highlightLayer.querySelectorAll('.editor-highlight-line')).toHaveLength(2));
+    expect(highlightLayer).not.toHaveTextContent('inserted\\gamma');
+  });
+
+  it('updates compile error highlighting without changing editor content', async () => {
+    const { rerender } = render(
+      <CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />
+    );
+
+    useLatex.mockReturnValue({
+      ...mockUseLatex,
+      content: 'line one\nline two',
+      compileError: 'document.tex:2: Undefined control sequence',
+      pdfBlob: new Blob(['pdf'], { type: 'application/pdf' }),
+    });
+
+    rerender(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Show LaTeX editor/i }));
+
+    await waitFor(() => expect(document.querySelector('.editor-highlight-line.error')).toHaveTextContent('line two'));
+    expect(document.querySelector('.line-number.error')).toHaveTextContent('2');
+  });
+
   it('does not remap restored generated content into a manual edit on mount', () => {
     const handleContentChange = vi.fn();
 

@@ -49,6 +49,7 @@ describe('App.css regressions', () => {
   it('keeps a syntax highlight layer for the LaTeX editor', () => {
     expectAnyRule('.editor-highlight-layer', /position:\s*absolute/);
     expectAnyRule('.editor-highlight-layer', /pointer-events:\s*none/);
+    expectAnyRule('.editor-highlight-layer,\n.textarea-field', /box-sizing:\s*border-box/);
     expect(getRule('.textarea-field')).toMatch(/color:\s*transparent/);
     expect(getRule('.textarea-field')).toMatch(/-webkit-text-fill-color:\s*transparent/);
     expect(getRule('.latex-token.command')).toMatch(/color:/);

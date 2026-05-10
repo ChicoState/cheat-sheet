@@ -640,6 +640,7 @@ label {
   white-space: pre;
   tab-size: 2;
   overflow: auto;
+  box-sizing: border-box;
 }
 
 .editor-highlight-layer {
