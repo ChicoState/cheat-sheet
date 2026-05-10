@@ -466,14 +466,14 @@ function saveSelectionPanelState(state) {
   }
 }
 
-const FormulaSelection = React.memo(function FormulaSelection({ 
-  classesData, 
-  selectedClasses, 
-  selectedCategories, 
+const FormulaSelection = React.memo(function FormulaSelection({
+  classesData,
+  selectedClasses,
+  selectedCategories,
   groupedFormulas,
-  toggleClass, 
-  toggleCategory, 
-  selectedCount, 
+  toggleClass,
+  toggleCategory,
+  selectedCount,
   hasSelectedClasses,
   onReorderClass,
   onReorderFormula,

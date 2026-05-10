@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { cwd } from 'node:process';
 
-const css = readFileSync(resolve(process.cwd(), 'src/App.css'), 'utf8');
+const css = readFileSync(resolve(cwd(), 'src/App.css'), 'utf8');
 
 function escapeSelector(selector) {
   return selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
