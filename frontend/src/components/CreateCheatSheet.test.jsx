@@ -369,7 +369,7 @@ describe('CreateCheatSheet Component', () => {
     expect(screen.queryByLabelText(/Generated LaTeX Code:/i)).not.toBeInTheDocument();
   });
 
-  it('shows native editor text while typing instead of rendering highlight content', () => {
+  it('keeps syntax highlighting visible and current while typing', async () => {
     useLatex.mockReturnValue({
       ...mockUseLatex,
       content: '\\frac{a}{b}',
@@ -388,27 +388,41 @@ describe('CreateCheatSheet Component', () => {
     expect(highlightLayer).toHaveTextContent('\\frac{a}{b}');
 
     act(() => {
-      fireEvent.focus(textarea);
-    });
-
-    expect(highlightLayer).toHaveClass('is-editing');
-    expect(highlightLayer).toHaveTextContent('\\frac{a}{b}');
-
-    act(() => {
       fireEvent.change(textarea, { target: { value: '\\alpha + \\beta' } });
     });
 
     expect(textarea).toHaveValue('\\alpha + \\beta');
-    expect(highlightLayer).toHaveClass('is-editing');
-    expect(highlightLayer).toHaveTextContent('\\frac{a}{b}');
-    expect(highlightLayer).not.toHaveTextContent('\\alpha + \\beta');
+    expect(highlightLayer).toBeVisible();
+    await waitFor(() => expect(highlightLayer).toHaveTextContent('\\alpha + \\beta'));
+    expect(highlightLayer.querySelector('.latex-token.command')).toHaveTextContent('\\alpha');
+  });
 
-    act(() => {
-      fireEvent.blur(textarea);
+  it('refreshes every changed highlight line for multi-line edits', async () => {
+    useLatex.mockReturnValue({
+      ...mockUseLatex,
+      content: 'first\\alpha\nsecond\\beta\nthird',
+      pdfBlob: new Blob(['pdf'], { type: 'application/pdf' }),
     });
 
-    expect(highlightLayer).not.toHaveClass('is-editing');
-    expect(highlightLayer).toHaveTextContent('\\alpha + \\beta');
+    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Show LaTeX editor/i }));
+
+    const textarea = screen.getByLabelText(/Generated LaTeX Code:/i);
+    const highlightLayer = document.querySelector('.editor-highlight-layer');
+    const nextContent = 'FIRST\\gamma\nSECOND\\delta\nthird';
+
+    fireEvent.change(textarea, {
+      target: {
+        value: nextContent,
+        selectionStart: 'FIRST\\gamma\nSECOND\\delta'.length,
+      },
+    });
+
+    await waitFor(() => expect(highlightLayer).toHaveTextContent('FIRST\\gamma'));
+    expect(highlightLayer).toHaveTextContent('SECOND\\delta');
+    expect(highlightLayer).not.toHaveTextContent('first\\alpha');
+    expect(highlightLayer).not.toHaveTextContent('second\\beta');
   });
 
   it('does not remap restored generated content into a manual edit on mount', () => {

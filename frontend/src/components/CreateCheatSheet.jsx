@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, useId } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, useId } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -689,6 +689,13 @@ const highlightLatexLine = (line = '') => tokenizeLatexLine(line).map(({ type, v
   return `<span class="latex-token ${type}" data-token-index="${index}">${escapedValue}</span>`;
 }).join('');
 
+const createHighlightLineElement = (line = '', lineNumber = 1, errorLines = new Set()) => {
+  const lineElement = document.createElement('div');
+  lineElement.className = `editor-highlight-line${errorLines.has(lineNumber) ? ' error' : ''}`;
+  lineElement.innerHTML = highlightLatexLine(line);
+  return lineElement;
+};
+
 const extractCompileErrorLines = (compileError = '') => {
   const normalizedError = compileError || '';
   const lineNumbers = new Set();
@@ -720,20 +727,11 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
   const lineNumbersRef = useRef(null);
   const highlightLayerRef = useRef(null);
   const scrollSyncFrameRef = useRef(null);
+  const renderedHighlightLinesRef = useRef(content ? content.split('\n') : ['']);
+  const latestDraftContentRef = useRef(content);
   const lastContentPropRef = useRef(content);
   const [draftContent, setDraftContent] = useState(content);
-  const [highlightContent, setHighlightContent] = useState(content);
-  const [isEditing, setIsEditing] = useState(false);
-
-  useEffect(() => {
-    if (lastContentPropRef.current === content) return;
-
-    lastContentPropRef.current = content;
-    setDraftContent(content);
-    if (!isEditing) {
-      setHighlightContent(content);
-    }
-  }, [content, isEditing]);
+  const [lineCount, setLineCount] = useState(() => (content ? content.split('\n').length : 1));
 
   useEffect(() => () => {
     if (scrollSyncFrameRef.current && typeof window.cancelAnimationFrame === 'function') {
@@ -743,16 +741,6 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
 
   const errorLines = useMemo(() => extractCompileErrorLines(compileError), [compileError]);
   const compileErrorSummary = useMemo(() => getCompileErrorSummary(compileError), [compileError]);
-  const lineCount = useMemo(() => (draftContent ? draftContent.split('\n').length : 1), [draftContent]);
-  const highlightedLines = useMemo(() => {
-    const lines = highlightContent ? highlightContent.split('\n') : [''];
-
-    return lines.map((line, index) => ({
-      lineNumber: index + 1,
-      highlightedHtml: highlightLatexLine(line),
-      hasError: errorLines.has(index + 1),
-    }));
-  }, [highlightContent, errorLines]);
 
   const syncScrollLayers = useCallback(() => {
     scrollSyncFrameRef.current = null;
@@ -770,6 +758,53 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
     }
   }, []);
 
+  const renderHighlightLayer = useCallback((nextContent = '') => {
+    const layer = highlightLayerRef.current;
+    if (!layer) return;
+
+    const nextLines = nextContent ? nextContent.split('\n') : [''];
+    const renderedLines = renderedHighlightLinesRef.current;
+
+    nextLines.forEach((line, index) => {
+      const lineNumber = index + 1;
+      const existingLine = renderedLines[index];
+      const existingElement = layer.children[index];
+      const expectedError = errorLines.has(lineNumber);
+      const hasError = existingElement?.classList.contains('error') ?? false;
+
+      if (existingLine === line && existingElement && expectedError === hasError) return;
+
+      const nextElement = createHighlightLineElement(line, lineNumber, errorLines);
+      if (existingElement) {
+        layer.replaceChild(nextElement, existingElement);
+        return;
+      }
+
+      layer.appendChild(nextElement);
+    });
+
+    while (layer.children.length > nextLines.length) {
+      layer.removeChild(layer.lastChild);
+    }
+
+    renderedHighlightLinesRef.current = nextLines;
+  }, [errorLines]);
+
+  useLayoutEffect(() => {
+    renderHighlightLayer(latestDraftContentRef.current);
+    syncScrollLayers();
+  }, [renderHighlightLayer, syncScrollLayers]);
+
+  useEffect(() => {
+    if (lastContentPropRef.current === content) return;
+
+    lastContentPropRef.current = content;
+    latestDraftContentRef.current = content;
+    setDraftContent(content);
+    setLineCount(content ? content.split('\n').length : 1);
+    renderHighlightLayer(content);
+  }, [content, renderHighlightLayer]);
+
   const handleScroll = useCallback(() => {
     if (scrollSyncFrameRef.current) return;
 
@@ -780,21 +815,6 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
 
     syncScrollLayers();
   }, [syncScrollLayers]);
-
-  useEffect(() => {
-    if (isEditing) return undefined;
-
-    const syncFrame = typeof window.requestAnimationFrame === 'function'
-      ? window.requestAnimationFrame(syncScrollLayers)
-      : null;
-
-    if (syncFrame === null) {
-      syncScrollLayers();
-      return undefined;
-    }
-
-    return () => window.cancelAnimationFrame?.(syncFrame);
-  }, [isEditing, syncScrollLayers, highlightedLines]);
 
   return (
     <div className="input-section">
@@ -811,32 +831,24 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
           ))}
         </div>
         <div className="editor-surface">
-          <div className={`editor-highlight-layer ${isModified ? 'modified' : ''} ${isEditing ? 'is-editing' : ''}`} ref={highlightLayerRef} aria-hidden="true">
-            {highlightedLines.map(({ lineNumber, highlightedHtml, hasError }) => (
-              <div
-                key={lineNumber}
-                className={`editor-highlight-line ${hasError ? 'error' : ''}`}
-                dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-              />
-            ))}
-          </div>
+          <div className={`editor-highlight-layer ${isModified ? 'modified' : ''}`} ref={highlightLayerRef} aria-hidden="true" />
           <textarea
             ref={textareaRef}
             id="content"
             value={draftContent}
             onChange={(e) => {
               const nextContent = e.target.value;
+              const nextLineCount = nextContent ? nextContent.split('\n').length : 1;
+              latestDraftContentRef.current = nextContent;
               setDraftContent(nextContent);
+              setLineCount((currentLineCount) => (currentLineCount === nextLineCount ? currentLineCount : nextLineCount));
+              renderHighlightLayer(nextContent);
+              syncScrollLayers();
               onChange(nextContent);
             }}
             onScroll={handleScroll}
-            onFocus={() => setIsEditing(true)}
-            onBlur={() => {
-              setHighlightContent(draftContent);
-              setIsEditing(false);
-            }}
             placeholder='Select classes and categories above, then click "GET CHEAT SHEET" to see the LaTeX code here.'
-            className={`textarea-field ${isModified ? 'modified' : ''} ${isEditing ? 'is-editing' : ''}`}
+            className={`textarea-field ${isModified ? 'modified' : ''}`}
             rows={15}
             spellCheck="false"
             wrap="off"

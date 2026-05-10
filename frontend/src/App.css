@@ -662,10 +662,6 @@ label {
   background: linear-gradient(180deg, var(--code-modified-bg) 0%, transparent 22%), var(--input-bg);
 }
 
-.editor-highlight-layer.is-editing {
-  visibility: hidden;
-}
-
 .editor-highlight-line {
   min-height: calc(13px * 1.6);
   color: var(--input-text);
@@ -712,12 +708,6 @@ label {
 
 .textarea-field.modified {
   caret-color: var(--primary);
-}
-
-.textarea-field.is-editing {
-  background: var(--input-bg);
-  color: var(--input-text);
-  -webkit-text-fill-color: var(--input-text);
 }
 
 .textarea-field::selection {
