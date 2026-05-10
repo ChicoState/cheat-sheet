@@ -327,6 +327,35 @@ export function useLatex(initialData) {
     return data.tex_code || latexContent;
   }, [authTokens, columns, fontSize, margins, spacing, orientation]);
 
+  const mergeSelectedFormulasIntoContent = useCallback(async (latexContent, selectedList = []) => {
+    const response = await fetch('/api/compile/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authTokens ? { 'Authorization': `Bearer ${authTokens.access}` } : {}),
+      },
+      body: JSON.stringify({
+        content: latexContent,
+        formulas: selectedList,
+        merge_formulas: true,
+        columns,
+        font_size: fontSize,
+        spacing,
+        margins,
+        orientation,
+        normalize_only: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await readErrorResponse(response);
+      throw new Error(formatCompileError(errorData));
+    }
+
+    const data = await response.json();
+    return data.tex_code || latexContent;
+  }, [authTokens, columns, fontSize, margins, spacing, orientation]);
+
   const hasLayoutChanges =
     lastCompiledLayoutRef.current.columns !== columns ||
     lastCompiledLayoutRef.current.fontSize !== fontSize ||
@@ -336,13 +365,16 @@ export function useLatex(initialData) {
     
   const canRegenerateFromSelections = !contentRef.current.trim() || contentSource === 'generated';
 
-  const handleCompileOnly = useCallback(async (selectedList = []) => {
+  const handleCompileOnly = useCallback(async (selectedList = null) => {
     clearAutoCompileTimer();
     if (isCompilingRef.current) return false;
 
     const liveContent = contentRef.current;
     const hasContent = liveContent.trim().length > 0;
-    if (!hasContent && selectedList.length === 0) {
+    const selectedFormulas = Array.isArray(selectedList) ? selectedList : [];
+    const shouldMergeSelections = Array.isArray(selectedList);
+
+    if (!hasContent && selectedFormulas.length === 0) {
       alert('Select formulas first or generate a sheet before compiling.');
       return false;
     }
@@ -355,11 +387,16 @@ export function useLatex(initialData) {
       let contentToCompile = liveContent;
 
       if (!hasContent) {
-        const generatedContent = await generateLatexContent(selectedList);
+        const generatedContent = await generateLatexContent(selectedFormulas);
         saveToHistory(generatedContent);
         contentToCompile = generatedContent;
         syncContentNow(generatedContent);
         setContentSource('generated');
+      }
+
+      if (hasContent && shouldMergeSelections) {
+        contentToCompile = await mergeSelectedFormulasIntoContent(contentToCompile, selectedFormulas);
+        syncContentNow(contentToCompile);
       }
 
       if (hasContent && hasLayoutChanges) {
@@ -384,7 +421,7 @@ export function useLatex(initialData) {
       setIsCompiling(false);
       isCompilingRef.current = false;
     }
-  }, [clearAutoCompileTimer, columns, compileLatexContent, fontSize, generateLatexContent, hasLayoutChanges, margins, normalizeLatexContent, saveToHistory, spacing, orientation, syncContentNow]);
+  }, [clearAutoCompileTimer, columns, compileLatexContent, fontSize, generateLatexContent, hasLayoutChanges, margins, mergeSelectedFormulasIntoContent, normalizeLatexContent, saveToHistory, spacing, orientation, syncContentNow]);
 
   useEffect(() => {
     if (!initialLoaded.current) return;

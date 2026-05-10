@@ -10,7 +10,7 @@ from io import BytesIO
 from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIClient
-from api.latex_utils import LATEX_HEADER, build_dynamic_header, build_latex_for_formulas, normalize_latex_layout
+from api.latex_utils import LATEX_HEADER, build_dynamic_header, build_latex_for_formulas, merge_selected_formulas_into_latex, normalize_latex_layout
 from api.models import Template, CheatSheet, PracticeProblem
 from api.views import YOUTUBE_RESOURCE_CACHE, fetch_top_youtube_video, get_youtube_http_error_message
 
@@ -423,6 +423,128 @@ class TestLatexUtils:
         assert "% @cheatsheet-layout spacing: 0.6pt | change layout options up top to update spacing" in tex
         assert "% @cheatsheet-layout margins: 0.5in | change layout options up top to update margins" in tex
         assert "% @cheatsheet-layout orientation: portrait | change layout options up top to update orientation" in tex
+
+    def test_build_latex_for_formulas_adds_formula_merge_markers(self):
+        tex = build_latex_for_formulas(
+            [{"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula", "latex": "m=\\frac{y_2-y_1}{x_2-x_1}"}],
+        )
+
+        assert "% @cheatsheet-managed-formulas-start" in tex
+        assert "% @cheatsheet-managed-formulas-end" in tex
+        assert "% @cheatsheet-formula-start:" in tex
+        assert "% @cheatsheet-formula-end:" in tex
+
+    def test_merge_selected_formulas_preserves_manual_text_and_adds_missing_formula(self):
+        current = """\\documentclass{article}
+\\begin{document}
+\\begin{multicols}{4}
+Manual note that should stay.
+\\end{multicols}
+\\end{document}
+"""
+
+        merged = merge_selected_formulas_into_latex(
+            current,
+            [{"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula", "latex": "m=\\frac{y_2-y_1}{x_2-x_1}"}],
+        )
+
+        assert "Manual note that should stay." in merged
+        assert "% @cheatsheet-formula-start:" in merged
+        assert "Slope Formula" in merged
+        assert merged.index("Slope Formula") < merged.index("\\end{multicols}")
+
+    def test_merge_selected_formulas_removes_deselected_managed_formula(self):
+        original = build_latex_for_formulas([
+            {"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula", "latex": "m=\\frac{y_2-y_1}{x_2-x_1}"},
+            {"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Point-Slope Form", "latex": "y-y_1=m(x-x_1)"},
+        ])
+
+        merged = merge_selected_formulas_into_latex(
+            original,
+            [{"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula", "latex": "m=\\frac{y_2-y_1}{x_2-x_1}"}],
+        )
+
+        assert "Slope Formula" in merged
+        assert "Point-Slope Form" not in merged
+
+    def test_merge_selected_formulas_preserves_edits_inside_still_selected_formula_block(self):
+        original = build_latex_for_formulas([
+            {"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula", "latex": "m=\\frac{y_2-y_1}{x_2-x_1}"},
+        ])
+        edited = original.replace("\\vspace{0.2pt}", "Manual note inside selected formula block.\n\\vspace{0.2pt}")
+
+        merged = merge_selected_formulas_into_latex(
+            edited,
+            [{"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula", "latex": "m=\\frac{y_2-y_1}{x_2-x_1}"}],
+        )
+
+        assert "Manual note inside selected formula block." in merged
+        assert merged.count("% Formula Block: Slope Formula") == 1
+
+    def test_merge_selected_formulas_preserves_managed_region_when_selection_is_unchanged(self):
+        original = build_latex_for_formulas([
+            {"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula", "latex": "m=\\frac{y_2-y_1}{x_2-x_1}"},
+        ])
+        edited = original.replace("% @cheatsheet-managed-formulas-end", "Manual note between selected formulas.\n% @cheatsheet-managed-formulas-end")
+
+        merged = merge_selected_formulas_into_latex(
+            edited,
+            [{"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula", "latex": "m=\\frac{y_2-y_1}{x_2-x_1}"}],
+        )
+
+        assert merged == edited
+        assert "Manual note between selected formulas." in merged
+
+    def test_merge_selected_formulas_preserves_notes_between_blocks_when_selection_changes(self):
+        original = build_latex_for_formulas([
+            {"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula", "latex": "m=\\frac{y_2-y_1}{x_2-x_1}"},
+            {"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Point-Slope Form", "latex": "y-y_1=m(x-x_1)"},
+        ])
+        lines = original.splitlines()
+        first_formula_end = next(
+            index for index, line in enumerate(lines)
+            if line.startswith("% @cheatsheet-formula-end:")
+        )
+        lines.insert(first_formula_end + 1, r"\noindent User note between formula blocks.\par")
+        edited = "\n".join(lines)
+
+        merged = merge_selected_formulas_into_latex(
+            edited,
+            [
+                {"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula", "latex": "m=\\frac{y_2-y_1}{x_2-x_1}"},
+                {"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Point-Slope Form", "latex": "y-y_1=m(x-x_1)"},
+                {"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Standard Form", "latex": "Ax+By=C"},
+            ],
+        )
+
+        assert r"\noindent User note between formula blocks.\par" in merged
+        assert "Standard Form" in merged
+        assert merged.count(r"\noindent ALGEBRA I\par") == 1
+        assert merged.count(r"\noindent Linear Equations\par") == 1
+
+    def test_merge_selected_formulas_replaces_legacy_generated_sections_without_duplicates(self):
+        legacy = build_latex_for_formulas([
+            {"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula", "latex": "m=\\frac{y_2-y_1}{x_2-x_1}"},
+        ]).replace("% @cheatsheet-managed-formulas-start\n", "").replace("% @cheatsheet-managed-formulas-end", "")
+        legacy = legacy.replace("\\vspace{0.2pt}", "Manual edit inside legacy formula.\n\\vspace{0.2pt}")
+        legacy = "\n".join(
+            line for line in legacy.splitlines()
+            if not line.startswith("% @cheatsheet-formula-start:")
+            and not line.startswith("% @cheatsheet-formula-end:")
+        )
+
+        merged = merge_selected_formulas_into_latex(
+            legacy,
+            [
+                {"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula", "latex": "m=\\frac{y_2-y_1}{x_2-x_1}"},
+                {"class_name": "ALGEBRA I", "category": "Linear Equations", "name": "Point-Slope Form", "latex": "y-y_1=m(x-x_1)"},
+            ],
+        )
+
+        assert merged.count("% Formula Block: Slope Formula") == 1
+        assert "Manual edit inside legacy formula." in merged
+        assert "Point-Slope Form" in merged
+        assert "% @cheatsheet-formula-start:" in merged
 
 
 # ── API Tests ────────────────────────────────────────────────────────
@@ -1461,6 +1583,34 @@ class TestCompileEndpoint:
         assert "% @cheatsheet-layout spacing: tiny | change layout options up top to update spacing" in tex
         assert "% @cheatsheet-layout margins: 0.25in | change layout options up top to update margins" in tex
         assert "orientation: portrait" in tex 
+
+    def test_compile_normalize_only_merges_selected_formulas_into_manual_content(self, api_client):
+        raw = (
+            "\\documentclass{article}\n"
+            "\\begin{document}\n"
+            "\\begin{multicols}{4}\n"
+            "Manual note that should survive.\n"
+            "\\end{multicols}\n"
+            "\\end{document}"
+        )
+
+        resp = api_client.post(
+            "/api/compile/",
+            {
+                "content": raw,
+                "normalize_only": True,
+                "merge_formulas": True,
+                "formulas": [{"class": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula"}],
+            },
+            format="json",
+        )
+
+        assert resp.status_code == 200
+        tex = resp.json()["tex_code"]
+        assert "Manual note that should survive." in tex
+        assert "Slope Formula" in tex
+        assert "% @cheatsheet-formula-start:" in tex
+        assert tex.index("Slope Formula") < tex.index("\\end{multicols}")
 
 
 # ── Auth Endpoint Tests ──────────────────────────────────────────────

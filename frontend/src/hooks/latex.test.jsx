@@ -164,8 +164,9 @@ describe('useLatex hook', () => {
     }
   });
 
-  test('manual edits remain protected from selection regeneration after compile', async () => {
+  test('merges selected formulas into manually edited latex before compiling', async () => {
     const { result } = renderHook(() => useLatex(), { wrapper });
+    const selectedFormulas = [{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }];
 
     act(() => {
       result.current.handleContentChange('\\documentclass{article}\n% custom manual edit');
@@ -173,15 +174,29 @@ describe('useLatex hook', () => {
 
     expect(result.current.canRegenerateFromSelections).toBe(false);
 
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      blob: async () => new Blob(['fake pdf data'])
-    });
+    global.fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ tex_code: '\\documentclass{article}\n% custom manual edit\n% @cheatsheet-formula-start:abc\nSlope Formula\n% @cheatsheet-formula-end:abc' })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        blob: async () => new Blob(['fake pdf data'])
+      });
 
     await act(async () => {
-      await result.current.handleCompileOnly([{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }]);
+      await result.current.handleCompileOnly(selectedFormulas);
     });
 
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(global.fetch).toHaveBeenNthCalledWith(1, '/api/compile/', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('"merge_formulas":true'),
+    }));
+    expect(global.fetch.mock.calls[0][1].body).toContain('% custom manual edit');
+    expect(global.fetch.mock.calls[0][1].body).toContain('Slope Formula');
+    expect(global.fetch.mock.calls[1][1].body).toContain('% @cheatsheet-formula-start:abc');
+    expect(result.current.content).toContain('Slope Formula');
     expect(result.current.contentModified).toBe(false);
     expect(result.current.canRegenerateFromSelections).toBe(false);
   });

@@ -21,7 +21,7 @@ from .models import Template, CheatSheet, PracticeProblem
 from .serializers import TemplateSerializer, CheatSheetSerializer, PracticeProblemSerializer, UserSerializer, CustomTokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .formula_data import get_formula_data, get_classes_with_details, get_special_class_formula, is_special_class
-from .latex_utils import build_latex_for_formulas, normalize_latex_layout
+from .latex_utils import build_latex_for_formulas, merge_selected_formulas_into_latex, normalize_latex_layout
 
 YOUTUBE_MAX_TOPICS = 6
 YOUTUBE_SEARCH_RESULT_LIMIT = 5
@@ -300,10 +300,19 @@ def generate_sheet(request):
     if not selected:
         tex_code = build_latex_for_formulas([], columns, font_size, margins, spacing, orientation)
         return Response({"tex_code": tex_code})
-    
+
+    selected_formulas = resolve_selected_formulas(selected)
+    if not selected_formulas:
+        return Response({"error": "No valid formulas found"}, status=400)
+
+    tex_code = build_latex_for_formulas(selected_formulas, columns, font_size, margins, spacing, orientation)
+    return Response({"tex_code": tex_code})
+
+
+def resolve_selected_formulas(selected):
     formula_data = get_formula_data()
     selected_formulas = []
-    
+
     for sel in selected:
         class_name = sel.get("class") or sel.get("class_name")
         category = sel.get("category")
@@ -341,12 +350,8 @@ def generate_sheet(request):
                             "latex": match["latex"]
                         })
                         break
-    
-    if not selected_formulas:
-        return Response({"error": "No valid formulas found"}, status=400)
-    
-    tex_code = build_latex_for_formulas(selected_formulas, columns, font_size, margins, spacing, orientation)
-    return Response({"tex_code": tex_code})
+
+    return selected_formulas
 
 
 @api_view(["POST"])
@@ -363,6 +368,8 @@ def compile_latex(request):
     margins = request.data.get("margins", DEFAULT_MARGINS)
     spacing = request.data.get("spacing", DEFAULT_SPACING)
     orientation = request.data.get("orientation", "portrait")
+    selected = request.data.get("formulas", [])
+    merge_formulas = is_truthy(request.data.get("merge_formulas"))
     
     columns, font_size, margins, spacing, orientation = validate_layout_params(columns, font_size, margins, spacing, orientation)
     
@@ -377,6 +384,10 @@ def compile_latex(request):
     
     if not content:
         return Response({"error": "No LaTeX content provided"}, status=400)
+
+    if merge_formulas:
+        selected_formulas = resolve_selected_formulas(selected)
+        content = merge_selected_formulas_into_latex(content, selected_formulas, font_size, spacing)
 
     content = normalize_latex_layout(content, columns, font_size, margins, spacing, orientation)
 
