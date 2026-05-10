@@ -1641,7 +1641,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                 <span className="btn-compile-text">
                 {isCompiling ? 'Compiling…' :  (
                   <>
-                  GET CHEAT SHEET 
+                  GET CHEAT SHEET
                   <span className="btn-compile-hint"> Ctrl + ↵</span>
                   </>
 

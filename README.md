@@ -78,24 +78,24 @@ The main editor is a three-region workspace:
 - LaTeX editor remains closed by default so the compiled PDF stays front and center
 - GitHub Pages project-page assets were removed; the app is now documented as a local/Docker full-stack project
 - Animated compile button with shimmer effect while compiling with a green flash on success
-- Toast notification now replaces the browser alert on save 
+- Toast notification now replaces the browser alert on save
 - Keyboard Shortcuts: Ctrl+Enter to compile, Ctrl+S to save, Escape to close the video model
-- Browser tab title now updates to reflect the name of the active cheat sheet 
+- Browser tab title now updates to reflect the name of the active cheat sheet
 - character counter on the title input with a limit of 80 characters
 - New 'last saved' timestamp displayed next to the save button
 - Scroll to top button in the PDF Preview
 - Empty state illustration in the right panel when no sections are selected
 - Section count badge on the right panel header
-- Select all/Deselect all option above the subject class list 
+- Select all/Deselect all option above the subject class list
 - Clear search button for YouTube Search Results
-- PDF page number display in the preview toolbar 
-- Focus ring styles for keyboard navigation accessibility 
+- PDF page number display in the preview toolbar
+- Focus ring styles for keyboard navigation accessibility
 - Improved muted text contrast to meet the WCAG AA standards
 - Custom scrollbar styling across all the panels
 - Hover transitions on video cards
 - Smooth transitiions for panel show/hide options
 - Improvements for mobile responsiveness for screens under 768px
-- Divider lines between the layout option selections 
+- Divider lines between the layout option selections
 - Full implementation of YouTube videos across each subject
 
 ### Editing and generation

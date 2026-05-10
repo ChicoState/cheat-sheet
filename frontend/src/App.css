@@ -3239,7 +3239,7 @@ three - column responsive
     grid-template-rows: auto;
     overflow-y: auto;
   }
-  .left-panel, 
+  .left-panel,
   .right-panel {
     max-height: 300px;
     border: none;
@@ -3517,7 +3517,7 @@ select:focus:not(:focus-visible) {
   background: transparent;
   color: var(--primary);
   cursor: pointer;
-  transition: all var(--transition-fast);  
+  transition: all var(--transition-fast);
 }
 
 .btn-select-all:hover {
