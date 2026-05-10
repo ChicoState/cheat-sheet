@@ -437,7 +437,7 @@ const SectionVideoPicks = ({
   );
 };
 
-const FormulaSelection = ({ 
+const FormulaSelection = React.memo(function FormulaSelection({ 
   classesData, 
   selectedClasses, 
   selectedCategories, 
@@ -451,7 +451,7 @@ const FormulaSelection = ({
   onRemoveClass,
   onRemoveFormula,
   collapseClassesSignal = 0,
-}) => {
+}) {
   const [classesOpen, setClassesOpen] = useState(true);
   const [sectionsOpen, setSectionsOpen] = useState(true);
   const [reorderOpen, setReorderOpen] = useState(true);
@@ -594,10 +594,11 @@ const FormulaSelection = ({
       )}
     </div>
   );
-};
+});
 
 const COMPILE_ERROR_LINE_REGEX = /document\.tex:(\d+):/g;
 const APP_LAYOUT_COMMENT_PREFIX = '% @cheatsheet-layout';
+const HIGHLIGHT_DEBOUNCE_MS = 120;
 
 const escapeHtml = (value = '') => value
   .replace(/&/g, '&amp;')
@@ -660,31 +661,64 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
   const textareaRef = useRef(null);
   const lineNumbersRef = useRef(null);
   const highlightLayerRef = useRef(null);
+  const scrollSyncFrameRef = useRef(null);
+  const [highlightContent, setHighlightContent] = useState(content);
+
+  useEffect(() => {
+    const highlightTimer = setTimeout(() => {
+      setHighlightContent(content);
+    }, HIGHLIGHT_DEBOUNCE_MS);
+
+    return () => clearTimeout(highlightTimer);
+  }, [content]);
+
+  useEffect(() => () => {
+    if (scrollSyncFrameRef.current && typeof window.cancelAnimationFrame === 'function') {
+      window.cancelAnimationFrame(scrollSyncFrameRef.current);
+    }
+  }, []);
 
   const errorLines = useMemo(() => extractCompileErrorLines(compileError), [compileError]);
   const compileErrorSummary = useMemo(() => getCompileErrorSummary(compileError), [compileError]);
+  const liveLineCount = useMemo(() => (content ? content.split('\n').length : 1), [content]);
   const highlightedLines = useMemo(() => {
-    const lines = content ? content.split('\n') : [''];
+    const lines = highlightContent ? highlightContent.split('\n') : [''];
 
     return lines.map((line, index) => ({
       lineNumber: index + 1,
       highlightedHtml: highlightLatexLine(line),
       hasError: errorLines.has(index + 1),
     }));
-  }, [content, errorLines]);
+  }, [highlightContent, errorLines]);
 
-  const lineCount = highlightedLines.length;
+  const lineCount = Math.max(liveLineCount, highlightedLines.length);
 
-  const handleScroll = () => {
-    if (lineNumbersRef.current && textareaRef.current) {
-      lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop;
+  const syncScrollLayers = useCallback(() => {
+    scrollSyncFrameRef.current = null;
+
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    if (lineNumbersRef.current) {
+      lineNumbersRef.current.scrollTop = textarea.scrollTop;
     }
 
-    if (highlightLayerRef.current && textareaRef.current) {
-      highlightLayerRef.current.scrollTop = textareaRef.current.scrollTop;
-      highlightLayerRef.current.scrollLeft = textareaRef.current.scrollLeft;
+    if (highlightLayerRef.current) {
+      highlightLayerRef.current.scrollTop = textarea.scrollTop;
+      highlightLayerRef.current.scrollLeft = textarea.scrollLeft;
     }
-  };
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    if (scrollSyncFrameRef.current) return;
+
+    if (typeof window.requestAnimationFrame === 'function') {
+      scrollSyncFrameRef.current = window.requestAnimationFrame(syncScrollLayers);
+      return;
+    }
+
+    syncScrollLayers();
+  }, [syncScrollLayers]);
 
   return (
     <div className="input-section">
@@ -728,7 +762,7 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
   );
 };
 
-const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => {
+const PdfPreview = React.memo(function PdfPreview({ pdfBlob, compileError, isCompiling, layoutSignature }) {
   const [numPages, setNumPages] = useState(null);
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(null);
@@ -924,7 +958,7 @@ const PdfPreview = ({ pdfBlob, compileError, isCompiling, layoutSignature }) => 
       </div>
     </div>
   );
-};
+});
 
 const SnapshotTray = ({ snapshots, onRestore }) => {
   if (!snapshots.length) {

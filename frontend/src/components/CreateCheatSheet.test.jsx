@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreateCheatSheet from './CreateCheatSheet';
 import { useFormulas } from '../hooks/formulas';
@@ -151,6 +151,46 @@ describe('CreateCheatSheet Component', () => {
 
     expect(screen.getByRole('button', { name: /Show LaTeX editor/i })).toBeInTheDocument();
     expect(screen.queryByLabelText(/Generated LaTeX Code:/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps editor input live while delaying syntax highlighting work', async () => {
+    vi.useFakeTimers();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onReset = vi.fn();
+
+    useLatex.mockReturnValue({
+      ...mockUseLatex,
+      content: 'alpha',
+      pdfBlob: new Blob(['pdf'], { type: 'application/pdf' }),
+    });
+
+    try {
+      const { rerender } = render(<CreateCheatSheet onSave={onSave} onReset={onReset} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Show LaTeX editor/i }));
+
+      const highlightLayer = document.querySelector('.editor-highlight-layer');
+      expect(highlightLayer).toHaveTextContent('alpha');
+
+      useLatex.mockReturnValue({
+        ...mockUseLatex,
+        content: 'alpha\n\\beta',
+        pdfBlob: new Blob(['pdf'], { type: 'application/pdf' }),
+      });
+
+      rerender(<CreateCheatSheet onSave={onSave} onReset={onReset} />);
+
+      expect(screen.getByLabelText(/Generated LaTeX Code:/i)).toHaveValue('alpha\n\\beta');
+      expect(highlightLayer).not.toHaveTextContent('\\beta');
+
+      await act(async () => {
+        vi.advanceTimersByTime(150);
+      });
+
+      expect(highlightLayer).toHaveTextContent('\\beta');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('restores saved orientation from initial data', () => {

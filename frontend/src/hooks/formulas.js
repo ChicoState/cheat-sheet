@@ -196,7 +196,7 @@ export function useFormulas(initialData) {
     );
   }, []);
 
-  const toggleClass = (className) => {
+  const toggleClass = useCallback((className) => {
     setSelectedClasses((prev) => {
       const newSelected = { ...prev };
       if (newSelected[className]) {
@@ -229,9 +229,9 @@ export function useFormulas(initialData) {
       }
       return newSelected;
     });
-  };
+  }, [addFormulasToOrder, classesData]);
 
-  const toggleCategory = (className, categoryName) => {
+  const toggleCategory = useCallback((className, categoryName) => {
     const key = `${className}:${categoryName}`;
     setSelectedCategories((prev) => {
       const newSelected = { ...prev };
@@ -250,7 +250,7 @@ export function useFormulas(initialData) {
       }
       return newSelected;
     });
-  };
+  }, [addFormulasToOrder, classesData, removeFormulasFromOrder]);
 
   const reorderClass = useCallback((oldIndex, newIndex) => {
     setGroupedFormulas(prev => {
@@ -274,15 +274,15 @@ export function useFormulas(initialData) {
     });
   }, []);
 
-  const getSelectedFormulasList = () => groupedFormulas.flatMap(g => g.formulas);
+  const getSelectedFormulasList = useCallback(() => groupedFormulas.flatMap(g => g.formulas), [groupedFormulas]);
 
-  const clearSelections = () => {
+  const clearSelections = useCallback(() => {
     skipNextPersist.current = true;
     setSelectedClasses({});
     setSelectedCategories({});
     setGroupedFormulas([]);
     localStorage.removeItem(STORAGE_KEY);
-  };
+  }, []);
 
   const selectedCount = getSelectedFormulasList().length;
   const hasSelectedClasses = Object.keys(selectedClasses).length > 0;
