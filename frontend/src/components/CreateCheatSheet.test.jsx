@@ -109,6 +109,27 @@ describe('CreateCheatSheet Component', () => {
     expect(screen.queryByRole('button', { name: /^Select All$/i })).not.toBeInTheDocument();
   });
 
+  it('offers aggressively compact layout presets', () => {
+    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
+
+    const fontSizeSelect = screen.getByLabelText(/Text Size:/i);
+    const spacingSelect = screen.getByLabelText(/Spacing:/i);
+    const marginsSelect = screen.getByLabelText(/Margins:/i);
+
+    expect(within(fontSizeSelect).getByRole('option', { name: /Minimum \(7pt\)/i })).toHaveValue('7pt');
+    expect(within(fontSizeSelect).getByRole('option', { name: /Compact \(8pt\)/i })).toHaveValue('8pt');
+    expect(within(marginsSelect).getByRole('option', { name: /Minimum \(0\.1in\)/i })).toHaveValue('0.1in');
+    expect(within(marginsSelect).getByRole('option', { name: /Narrow \(0\.15in\)/i })).toHaveValue('0.15in');
+
+    fireEvent.change(fontSizeSelect, { target: { value: '7pt' } });
+    fireEvent.change(spacingSelect, { target: { value: 'small' } });
+    fireEvent.change(marginsSelect, { target: { value: '0.1in' } });
+
+    expect(mockUseLatex.setFontSize).toHaveBeenCalledWith('7pt');
+    expect(mockUseLatex.setSpacing).toHaveBeenCalledWith('small');
+    expect(mockUseLatex.setMargins).toHaveBeenCalledWith('0.1in');
+  });
+
   it('shows Deselect All only after a class is selected', () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const onReset = vi.fn();

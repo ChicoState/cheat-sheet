@@ -206,7 +206,7 @@ class TestCheatSheetModel(TestCase):
         full = sheet.build_full_latex()
 
         assert "\\documentclass[10pt,fleqn,letterpaper]{article}" in full
-        assert "\\fontsize{10.5pt}{11.3pt}\\selectfont" in full
+        assert "\\fontsize{10.5pt}{10.7pt}\\selectfont" in full
 
     def test_build_full_latex_includes_saved_spacing(self):
         sheet = CheatSheet.objects.create(
@@ -263,7 +263,7 @@ class TestLatexUtils:
 
         normalized = normalize_latex_layout(raw, columns=5, font_size="10.5pt", margins="0.25in", spacing="0.6pt")
 
-        assert normalized.count("\\fontsize{10.5pt}{11.3pt}\\selectfont") == 1
+        assert normalized.count("\\fontsize{10.5pt}{11.1pt}\\selectfont") == 1
         assert normalized.count("\\begin{multicols}{5}") == 1
         assert normalized.count("\\end{multicols}") == 1
         assert "Body line" in normalized
@@ -345,7 +345,7 @@ class TestLatexUtils:
 
         normalized = normalize_latex_layout(raw, columns=2, font_size="8pt", margins="0.25in", spacing="0.6pt")
 
-        assert normalized.count("\\fontsize{8pt}{8.8pt}\\selectfont") == 1
+        assert normalized.count("\\fontsize{8pt}{8.6pt}\\selectfont") == 1
         assert "\\small" not in normalized
         assert "\\fontsize{14pt}{16pt}\\selectfont" not in normalized
         assert "Manual note" in normalized
@@ -385,10 +385,23 @@ class TestLatexUtils:
     def test_build_dynamic_header_accepts_custom_font_and_spacing(self):
         header = build_dynamic_header(columns=5, font_size="10.5pt", margins="0.25in", spacing="0.6pt")
         assert "\\documentclass[10pt,fleqn,letterpaper]{article}" in header
-        assert "\\fontsize{10.5pt}{11.3pt}\\selectfont" in header
+        assert "\\fontsize{10.5pt}{11.1pt}\\selectfont" in header
         assert "\\setlength{\\baselineskip}{11.1pt}" in header
         assert "\\setlength{\\parskip}{0.6pt}" in header
         assert "\\begin{multicols}{5}" in header
+
+    def test_build_dynamic_header_uses_dense_compact_presets(self):
+        tiny_header = build_dynamic_header(columns=5, font_size="7pt", margins="0.1in", spacing="tiny")
+        assert "letterpaper,margin=0.1in" in tiny_header
+        assert "\\fontsize{7pt}{7pt}\\selectfont" in tiny_header
+        assert "\\setlength{\\baselineskip}{7pt}" in tiny_header
+        assert "\\setlength{\\parskip}{0pt}" in tiny_header
+        assert "\\setlength{\\abovedisplayskip}{0pt}" in tiny_header
+
+        small_header = build_dynamic_header(columns=4, font_size="8pt", margins="0.15in", spacing="small")
+        assert "\\fontsize{8pt}{8.2pt}\\selectfont" in small_header
+        assert "\\setlength{\\parskip}{0.2pt}" in small_header
+        assert "\\setlength{\\belowdisplayskip}{0.2pt}" in small_header
 
     def test_build_dynamic_header_landscape_includes_landscape_options(self):
         header = build_dynamic_header(columns=4, font_size="9pt", margins="0.15in", spacing="small", orientation="landscape")
@@ -991,7 +1004,7 @@ class TestGenerateSheetEndpoint:
         )
         assert resp.status_code == 200
         tex = resp.json()["tex_code"]
-        assert "\\fontsize{8pt}{8.8pt}\\selectfont" in tex
+        assert "\\fontsize{8pt}{8.2pt}\\selectfont" in tex
 
     def test_generate_sheet_with_margins(self, auth_client):
         """Test that margins parameter is reflected in geometry package."""
@@ -1019,7 +1032,7 @@ class TestGenerateSheetEndpoint:
         )
         assert resp.status_code == 200
         tex = resp.json()["tex_code"]
-        assert "\\setlength{\\baselineskip}{9.2pt}" in tex
+        assert "\\setlength{\\baselineskip}{9pt}" in tex
 
     def test_generate_sheet_with_custom_font_size(self, auth_client):
         """Custom pt body sizes should be accepted."""
@@ -1033,7 +1046,7 @@ class TestGenerateSheetEndpoint:
         )
         assert resp.status_code == 200
         tex = resp.json()["tex_code"]
-        assert "\\fontsize{10.5pt}{11.3pt}\\selectfont" in tex
+        assert "\\fontsize{10.5pt}{10.7pt}\\selectfont" in tex
 
     def test_generate_sheet_with_custom_spacing(self, auth_client):
         """Custom pt spacing values should be accepted."""
@@ -1049,6 +1062,45 @@ class TestGenerateSheetEndpoint:
         tex = resp.json()["tex_code"]
         assert "\\setlength{\\baselineskip}{9.6pt}" in tex
         assert "\\vspace{0.6pt}" in tex
+
+    def test_generate_sheet_with_minimum_compact_presets(self, auth_client):
+        """Minimum compact presets should maximize printable formula density."""
+        resp = auth_client.post(
+            "/api/generate-sheet/",
+            {
+                "formulas": [{"class": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula"}],
+                "font_size": "7pt",
+                "spacing": "tiny",
+                "margins": "0.1in",
+            },
+            format="json",
+        )
+        assert resp.status_code == 200
+        tex = resp.json()["tex_code"]
+        assert "margin=0.1in" in tex
+        assert "\\fontsize{7pt}{7pt}\\selectfont" in tex
+        assert "\\setlength{\\parskip}{0pt}" in tex
+        assert "\\setlength{\\abovedisplayskip}{0pt}" in tex
+        assert "\\vspace{" not in tex
+
+    def test_generate_sheet_with_second_smallest_compact_presets(self, auth_client):
+        """Second-smallest presets should still be denser than the old compact defaults."""
+        resp = auth_client.post(
+            "/api/generate-sheet/",
+            {
+                "formulas": [{"class": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula"}],
+                "font_size": "8pt",
+                "spacing": "small",
+                "margins": "0.15in",
+            },
+            format="json",
+        )
+        assert resp.status_code == 200
+        tex = resp.json()["tex_code"]
+        assert "\\fontsize{8pt}{8.2pt}\\selectfont" in tex
+        assert "\\setlength{\\parskip}{0.2pt}" in tex
+        assert "\\setlength{\\belowdisplayskip}{0.2pt}" in tex
+        assert "\\vspace{0.2pt}" in tex
 
     def test_generate_sheet_invalid_font_size_defaults(self, auth_client):
         """Invalid font_size should be replaced with default."""
@@ -1092,7 +1144,7 @@ class TestGenerateSheetEndpoint:
         tex = resp.json()["tex_code"]
         assert "\\usepackage{titlesec}" not in tex
         assert "\\titleformat{" not in tex
-        assert "\\setlength{\\baselineskip}{9.4pt}" in tex
+        assert "\\setlength{\\baselineskip}{9.2pt}" in tex
 
     def test_generate_sheet_10pt_uses_plain_text_headings(self, auth_client):
         """Generated sheets should use plain bold text headings instead of LaTeX section commands."""
@@ -1352,7 +1404,7 @@ class TestCompileEndpoint:
 
         assert resp.status_code == 200
         tex = resp.json()["tex_code"]
-        assert "\\fontsize{8pt}{8.8pt}\\selectfont" in tex
+        assert "\\fontsize{8pt}{8.6pt}\\selectfont" in tex
         assert "\\setlength{\\parskip}{0.6pt}" in tex
         assert "\\setlength{\\baselineskip}{8.6pt}" in tex
         assert "\\noindent Example\\par" in tex
@@ -1399,7 +1451,7 @@ class TestCompileEndpoint:
             "orientation": "portrait", 
         }
         assert "\\begin{multicols}{2}" in tex
-        assert "\\fontsize{8pt}{8.8pt}\\selectfont" in tex
+        assert "\\fontsize{8pt}{8pt}\\selectfont" in tex
         assert "\\setlength{\\parskip}{0pt}" in tex
         assert "% @cheatsheet-layout columns: 2 | change layout options up top to update columns" in tex
         assert "% @cheatsheet-layout font_size: 8pt | change layout options up top to update text size" in tex

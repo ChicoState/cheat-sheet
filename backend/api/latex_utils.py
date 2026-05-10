@@ -24,8 +24,8 @@ LATEX_FOOTER = r"""
 
 # Spacing presets: (formula_gap, baselineskip)
 SPACING_MAP = {
-    "tiny": ("0pt", "0.2pt"),
-    "small": ("0.4pt", "0.4pt"),
+    "tiny": ("0pt", "0pt"),
+    "small": ("0.2pt", "0.2pt"),
     "medium": ("0.8pt", "0.8pt"),
     "large": ("1.2pt", "1.2pt"),
 }
@@ -65,10 +65,11 @@ def format_pt_value(value):
     return f"{value:.2f}".rstrip("0").rstrip(".") + "pt"
 
 
-def get_body_font_command(font_size):
+def get_body_font_command(font_size, line_height=None):
     size_pt = parse_pt_value(font_size, 10.0)
-    line_height = max(size_pt + 0.8, size_pt)
-    return f"\\fontsize{{{format_pt_value(size_pt)}}}{{{format_pt_value(line_height)}}}\\selectfont"
+    line_height_pt = parse_pt_value(line_height, size_pt + 0.8) if line_height else size_pt + 0.8
+    line_height_pt = max(line_height_pt, size_pt)
+    return f"\\fontsize{{{format_pt_value(size_pt)}}}{{{format_pt_value(line_height_pt)}}}\\selectfont"
 
 
 def get_document_class(font_size):
@@ -98,6 +99,7 @@ def get_spacing_values(spacing, font_size):
         "formula_gap": formula_gap,
         "baseline_skip": format_pt_value(baseline_pt),
         "paragraph_skip": formula_gap,
+        "display_skip": formula_gap,
     }
 
 
@@ -144,8 +146,8 @@ def build_dynamic_header(columns=4, font_size="9pt", margins="0.15in", spacing="
     """
     Build a dynamic LaTeX header based on user-selected options.
     """
-    size_command = get_body_font_command(font_size)
     spacing_values = get_spacing_values(spacing, font_size)
+    size_command = get_body_font_command(font_size, spacing_values["baseline_skip"])
     doc_class, doc_class_size = get_document_class(font_size)
     
     # Force the PDF driver to use letterpaper, add landscape if requested
@@ -172,6 +174,10 @@ def build_dynamic_header(columns=4, font_size="9pt", margins="0.15in", spacing="
         "",
         f"\\setlength{{\\baselineskip}}{{{spacing_values['baseline_skip']}}}",
         f"\\setlength{{\\parskip}}{{{spacing_values['paragraph_skip']}}}",
+        f"\\setlength{{\\abovedisplayskip}}{{{spacing_values['display_skip']}}}",
+        f"\\setlength{{\\belowdisplayskip}}{{{spacing_values['display_skip']}}}",
+        f"\\setlength{{\\abovedisplayshortskip}}{{{spacing_values['display_skip']}}}",
+        f"\\setlength{{\\belowdisplayshortskip}}{{{spacing_values['display_skip']}}}",
         "",
         "\\begin{document}",
         size_command,

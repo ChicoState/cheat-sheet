@@ -34,9 +34,9 @@ YOUTUBE_RESOURCE_CACHE = {}
 # Whitelist validation for layout parameters
 # ------------------------------------------------------------------
 
-VALID_FONT_SIZES = {"8pt", "9pt", "10pt", "11pt", "12pt"}
+VALID_FONT_SIZES = {"7pt", "8pt", "9pt", "10pt", "11pt", "12pt"}
 VALID_SPACING = {"tiny", "small", "medium", "large"}
-VALID_MARGINS = {"0.15in", "0.25in", "0.5in", "0.75in", "1in", "1.5in", "2in"}
+VALID_MARGINS = {"0.1in", "0.15in", "0.25in", "0.5in", "0.75in", "1in", "1.5in", "2in"}
 VALID_ORIENTATION = {"portrait", "landscape"} 
 DEFAULT_COLUMNS = 4
 DEFAULT_FONT_SIZE = "9pt"

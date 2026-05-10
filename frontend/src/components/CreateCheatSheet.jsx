@@ -1027,7 +1027,7 @@ const SnapshotTray = ({ snapshots, onRestore }) => {
   );
 };
 
-const FONT_SIZE_PRESETS = ['8pt', '9pt', '10pt', '11pt', '12pt'];
+const FONT_SIZE_PRESETS = ['7pt', '8pt', '9pt', '10pt', '11pt', '12pt'];
 const SPACING_PRESETS = ['tiny', 'small', 'medium', 'large'];
 
 const LayoutOptions = ({ columns, setColumns, fontSize, setFontSize, spacing, setSpacing, margins, setMargins, orientation, setOrientation }) => {
@@ -1063,6 +1063,7 @@ const LayoutOptions = ({ columns, setColumns, fontSize, setFontSize, spacing, se
           onChange={(e) => setFontSize(e.target.value === 'custom' ? '10.5pt' : e.target.value)}
           className="layout-select"
         >
+          <option value="7pt">Minimum (7pt)</option>
           <option value="8pt">Compact (8pt)</option>
           <option value="9pt">Small (9pt)</option>
           <option value="10pt">Normal (10pt)</option>
@@ -1112,6 +1113,7 @@ const LayoutOptions = ({ columns, setColumns, fontSize, setFontSize, spacing, se
           onChange={(e) => setMargins(e.target.value)}
           className="layout-select"
         >
+          <option value="0.1in">Minimum (0.1in)</option>
           <option value="0.15in">Narrow (0.15in)</option>
           <option value="0.25in">Normal (0.25in)</option>
           <option value="0.5in">Wide (0.5in)</option>

@@ -118,6 +118,10 @@ class CheatSheet(models.Model):
             f"\\usepackage[{geometry_options}]{{geometry}}",
             f"\\setlength{{\\baselineskip}}{{{spacing_values['baseline_skip']}}}",
             f"\\setlength{{\\parskip}}{{{spacing_values['paragraph_skip']}}}",
+            f"\\setlength{{\\abovedisplayskip}}{{{spacing_values['display_skip']}}}",
+            f"\\setlength{{\\belowdisplayskip}}{{{spacing_values['display_skip']}}}",
+            f"\\setlength{{\\abovedisplayshortskip}}{{{spacing_values['display_skip']}}}",
+            f"\\setlength{{\\belowdisplayshortskip}}{{{spacing_values['display_skip']}}}",
         ]
             
         # Add multicolumn support if needed
@@ -125,7 +129,7 @@ class CheatSheet(models.Model):
             header.append("\\usepackage{multicol}")
             
         # Start document
-        document_parts = header + ["\\begin{document}", get_body_font_command(self.font_size)]
+        document_parts = header + ["\\begin{document}", get_body_font_command(self.font_size, spacing_values['baseline_skip'])]
         
         # Add title if exists
         if self.title:
