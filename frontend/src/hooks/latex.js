@@ -323,7 +323,7 @@ export function useLatex(initialData) {
 
       if (!hasContent) {
         const generatedContent = await generateLatexContent(selectedList);
-        if (content) saveToHistory(generatedContent);
+        saveToHistory(generatedContent);
         contentToCompile = generatedContent;
         setContent(generatedContent);
         setContentSource('generated');
@@ -393,7 +393,7 @@ export function useLatex(initialData) {
           contentToCompile = data.tex_code;
           setContent(data.tex_code);
           setContentSource('generated');
-          if (content) saveToHistory(data.tex_code);
+          saveToHistory(data.tex_code);
         }
       } catch (e) {
         console.error('Failed to regenerate:', e);
@@ -447,7 +447,7 @@ export function useLatex(initialData) {
     setIsGenerating(true);
     try {
       const generatedContent = await generateLatexContent(selectedList);
-      if (content) saveToHistory(generatedContent);
+      saveToHistory(generatedContent);
       setContent(generatedContent);
       setContentSource('generated');
       setContentModified(false);

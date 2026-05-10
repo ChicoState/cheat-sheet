@@ -181,6 +181,36 @@ describe('useLatex hook', () => {
     expect(result.current.content).toBe('Gen 2');
   });
 
+  test('history starts with the first generated sheet from an empty editor', async () => {
+    const { result } = renderHook(() => useLatex(), { wrapper });
+
+    global.fetch
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ tex_code: 'Gen 1' }) })
+      .mockResolvedValueOnce({ ok: true, blob: async () => new Blob() })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ tex_code: 'Gen 2' }) })
+      .mockResolvedValueOnce({ ok: true, blob: async () => new Blob() });
+
+    await act(async () => {
+      await result.current.handleGenerateSheet(['first-selection']);
+    });
+
+    expect(result.current.content).toBe('Gen 1');
+    expect(result.current.canGoBack).toBe(false);
+
+    await act(async () => {
+      await result.current.handleGenerateSheet(['second-selection']);
+    });
+
+    expect(result.current.content).toBe('Gen 2');
+    expect(result.current.canGoBack).toBe(true);
+
+    act(() => {
+      result.current.goBack();
+    });
+
+    expect(result.current.content).toBe('Gen 1');
+  });
+
   test('handleCompileOnly handles successful compilation', async () => {
     const { result } = renderHook(() => useLatex(), { wrapper });
     const selectedFormulas = [{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }];
