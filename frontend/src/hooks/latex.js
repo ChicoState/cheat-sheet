@@ -306,12 +306,12 @@ export function useLatex(initialData) {
 
   const handleCompileOnly = useCallback(async (selectedList = []) => {
     clearAutoCompileTimer();
-    if (isCompilingRef.current) return;
+    if (isCompilingRef.current) return false;
 
     const hasContent = content.trim().length > 0;
     if (!hasContent && selectedList.length === 0) {
       alert('Select formulas first or generate a sheet before compiling.');
-      return;
+      return false;
     }
     
     isCompilingRef.current = true;
@@ -343,8 +343,10 @@ export function useLatex(initialData) {
       });
       lastCompiledLayoutRef.current = { columns, fontSize, spacing, margins, orientation };
       setContentModified(false);
+      return true;
     } catch (error) {
       setCompileError(error.message);
+      return false;
     } finally {
       setIsCompiling(false);
       isCompilingRef.current = false;
@@ -370,7 +372,7 @@ export function useLatex(initialData) {
 
   const handlePreview = useCallback(async (latexContent = null, regenerateOptions = null) => {
     clearAutoCompileTimer();
-    if (isCompilingRef.current) return;
+    if (isCompilingRef.current) return false;
     
     let contentToCompile = latexContent || content;
     
@@ -388,15 +390,19 @@ export function useLatex(initialData) {
             orientation: orientation
           }),
         });
-        if (response.ok) {
-          const data = await response.json();
-          contentToCompile = data.tex_code;
-          setContent(data.tex_code);
-          setContentSource('generated');
-          saveToHistory(data.tex_code);
+        if (!response.ok) {
+          const errorData = await readErrorResponse(response);
+          throw new Error(formatCompileError(errorData));
         }
+        const data = await response.json();
+        contentToCompile = data.tex_code;
+        setContent(data.tex_code);
+        setContentSource('generated');
+        saveToHistory(data.tex_code);
       } catch (e) {
         console.error('Failed to regenerate:', e);
+        setCompileError(e.message);
+        return false;
       }
     }
     
@@ -418,8 +424,10 @@ export function useLatex(initialData) {
       });
       lastCompiledLayoutRef.current = { columns, fontSize, spacing, margins, orientation };
       setContentModified(false);
+      return true;
     } catch (error) {
       setCompileError(error.message);
+      return false;
     } finally {
       setIsCompiling(false);
       isCompilingRef.current = false;

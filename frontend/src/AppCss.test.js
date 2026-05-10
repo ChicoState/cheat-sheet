@@ -10,20 +10,32 @@ function escapeSelector(selector) {
 }
 
 function getRule(selector) {
-  const match = css.match(new RegExp(`(?:^|\\n)${escapeSelector(selector)}\\s*\\{([^}]*)\\}`));
-  if (!match) throw new Error(`Missing CSS rule for ${selector}`);
-  return match[1];
+  const matches = [...css.matchAll(new RegExp(String.raw`(?:^|\n)${escapeSelector(selector)}\s*\{([^}]*)\}`, 'g'))];
+  if (!matches.length) throw new Error(`Missing CSS rule for ${selector}`);
+  return matches.at(-1)[1];
+}
+
+function expectAnyRule(selector, pattern) {
+  const matches = [...css.matchAll(new RegExp(String.raw`(?:^|\n)${escapeSelector(selector)}\s*\{([^}]*)\}`, 'g'))];
+  if (!matches.length) throw new Error(`Missing CSS rule for ${selector}`);
+  expect(matches.some((match) => pattern.test(match[1]))).toBe(true);
 }
 
 describe('App.css regressions', () => {
   it('contains video cards inside the sidebar width', () => {
-    expect(getRule('.right-panel')).toMatch(/min-width:\s*0/);
-    expect(getRule('.right-panel-scroll')).toMatch(/overflow-x:\s*hidden/);
-    expect(getRule('.subject-video-group')).toMatch(/max-width:\s*100%/);
-    expect(getRule('.subject-video-group')).toMatch(/overflow:\s*hidden/);
-    expect(getRule('.section-video-picks')).toMatch(/max-width:\s*100%/);
-    expect(getRule('.section-video-picks.compact')).toMatch(/min-width:\s*0/);
-    expect(getRule('.video-card-sm')).toMatch(/max-width:\s*100%/);
-    expect(getRule('.video-card-sm')).toMatch(/min-width:\s*0/);
+    expectAnyRule('.right-panel', /min-width:\s*0/);
+    expectAnyRule('.right-panel-scroll', /overflow-x:\s*hidden/);
+    expectAnyRule('.subject-video-group', /max-width:\s*100%/);
+    expectAnyRule('.section-video-picks', /max-width:\s*100%/);
+    expectAnyRule('.section-video-picks.compact', /min-width:\s*0/);
+    expectAnyRule('.video-card-sm', /max-width:\s*100%/);
+    expectAnyRule('.video-card-sm', /min-width:\s*0/);
+  });
+
+  it('keeps sidebar focus rings visible while containing video cards', () => {
+    expect(getRule('.subject-video-group')).not.toMatch(/overflow:\s*hidden/);
+    expect(getRule('.section-video-picks')).not.toMatch(/overflow:\s*hidden/);
+    expect(getRule('.video-card-sm:focus-visible')).toMatch(/outline-offset:\s*-2px/);
+    expect(getRule('.video-more-toggle:focus-visible')).toMatch(/outline-offset:\s*0/);
   });
 });

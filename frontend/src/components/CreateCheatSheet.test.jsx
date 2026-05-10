@@ -168,8 +168,8 @@ describe('CreateCheatSheet Component', () => {
     expect(handlePreviewMock).toHaveBeenCalledWith(null, expect.objectContaining({ formulas: selectedFormulas }));
   });
 
-  it('shrinks the subject panel on first compile without hiding the compile controls', () => {
-    const handlePreviewMock = vi.fn();
+  it('shrinks the subject panel on first compile without hiding the compile controls', async () => {
+    const handlePreviewMock = vi.fn().mockResolvedValue(true);
     const selectedFormulas = [{ name: 'test' }];
 
     useLatex.mockReturnValue({ ...mockUseLatex, handlePreview: handlePreviewMock });
@@ -183,9 +183,74 @@ describe('CreateCheatSheet Component', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Compile PDF/i }));
 
-    expect(document.querySelector('.app-body')).toHaveStyle('--app-body-columns: 220px 10px minmax(0, 1fr) 10px 300px');
+    await waitFor(() => {
+      expect(document.querySelector('.app-body')).toHaveStyle('--app-body-columns: 220px 10px minmax(0, 1fr) 10px 300px');
+    });
     expect(screen.getByRole('button', { name: /Compile PDF/i })).toBeInTheDocument();
     expect(handlePreviewMock).toHaveBeenCalledWith(null, expect.objectContaining({ formulas: selectedFormulas }));
+  });
+
+  it('does not collapse selection panels when compile exits before starting', async () => {
+    const handleCompileOnlyMock = vi.fn().mockResolvedValue(false);
+
+    useLatex.mockReturnValue({
+      ...mockUseLatex,
+      canRegenerateFromSelections: false,
+      handleCompileOnly: handleCompileOnlyMock,
+    });
+    useFormulas.mockReturnValue({
+      ...mockUseFormulas,
+      selectedClasses: { 'Math 101': true },
+      selectedCount: 1,
+      hasSelectedClasses: true,
+      getSelectedFormulasList: vi.fn().mockReturnValue([]),
+    });
+
+    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Compile PDF/i }));
+
+    await waitFor(() => expect(handleCompileOnlyMock).toHaveBeenCalledWith([]));
+    await act(async () => {});
+
+    expect(screen.getByRole('button', { name: /Select classes/i })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /Select sections/i })).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('does not run the first-create collapse for restored compiled sheets', async () => {
+    const handleCompileOnlyMock = vi.fn().mockResolvedValue(true);
+
+    useLatex.mockReturnValue({
+      ...mockUseLatex,
+      content: '\\documentclass{article}',
+      contentSource: 'manual',
+      canRegenerateFromSelections: false,
+      handleCompileOnly: handleCompileOnlyMock,
+    });
+    useFormulas.mockReturnValue({
+      ...mockUseFormulas,
+      selectedClasses: { 'Math 101': true },
+      selectedCount: 1,
+      hasSelectedClasses: true,
+      getSelectedFormulasList: vi.fn().mockReturnValue([]),
+    });
+
+    render(
+      <CreateCheatSheet
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onReset={vi.fn()}
+        initialData={{ content: '\\documentclass{article}', compileHistory: [{ content: '\\documentclass{article}' }] }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Compile PDF/i }));
+
+    await waitFor(() => expect(handleCompileOnlyMock).toHaveBeenCalled());
+    await act(async () => {});
+
+    expect(screen.getByRole('button', { name: /Select classes/i })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /Select sections/i })).toHaveAttribute('aria-expanded', 'true');
+    expect(document.querySelector('.app-body')).not.toHaveStyle('--app-body-columns: 220px 10px minmax(0, 1fr) 10px 300px');
   });
 
   it('collapses classes and sections after first compile while keeping reorder open', async () => {

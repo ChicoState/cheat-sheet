@@ -1203,7 +1203,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const [toast, setToast] = useState(null);
   const [classesCollapseSignal, setClassesCollapseSignal] = useState(0);
   const pendingPanelLayoutRef = useRef(panelLayout);
-  const hasCollapsedLeftPanelOnceRef = useRef(false);
+  const hasCollapsedLeftPanelOnceRef = useRef(Boolean(initialData?.compileHistory?.length || initialData?.content));
   const lastAutoSavedPdfRef = useRef(null);
   const lastVideoOpenerRef = useRef(null);
   const modalDialogRef = useRef(null);
@@ -1543,31 +1543,32 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       }, 600);
       return () => clearTimeout(timer);
     }, [pdfBlob, isCompiling]);
+  const collapseSelectionPanelsAfterSuccessfulCompile = useCallback((compileSucceeded) => {
+    if (compileSucceeded === false || hasCollapsedLeftPanelOnceRef.current) return;
+
+    // First successful compile: keep controls reachable while reclaiming preview space.
+    hasCollapsedLeftPanelOnceRef.current = true;
+    setClassesCollapseSignal((current) => current + 1);
+    setPanelLayout((current) => {
+      const nextLayout = {
+        ...current,
+        leftWidth: LEFT_PANEL_MIN_WIDTH,
+      };
+
+      pendingPanelLayoutRef.current = nextLayout;
+      localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(nextLayout));
+      return nextLayout;
+    });
+  }, []);
+
   const handleCompileClick = useCallback(() => {
-    if (!hasCollapsedLeftPanelOnceRef.current) {
-      // First compile: keep controls reachable while reclaiming preview space.
-      hasCollapsedLeftPanelOnceRef.current = true;
-      setClassesCollapseSignal((current) => current + 1);
-      setPanelLayout((current) => {
-        const nextLayout = {
-          ...current,
-          leftWidth: LEFT_PANEL_MIN_WIDTH,
-        };
-
-        pendingPanelLayoutRef.current = nextLayout;
-        localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(nextLayout));
-        return nextLayout;
-      });
-    }
-
     const selectedFormulas = getSelectedFormulasList();
-    if (!contentModified && canRegenerateFromSelections && selectedFormulas.length > 0) {
-      handlePreview(null, { formulas: selectedFormulas, columns, fontSize, spacing });
-      return;
-    }
+    const compileResult = (!contentModified && canRegenerateFromSelections && selectedFormulas.length > 0)
+      ? handlePreview(null, { formulas: selectedFormulas, columns, fontSize, spacing })
+      : handleCompileOnly(selectedFormulas);
 
-    handleCompileOnly(selectedFormulas);
-  }, [canRegenerateFromSelections, columns, contentModified, fontSize, getSelectedFormulasList, handleCompileOnly, handlePreview, spacing]);
+    Promise.resolve(compileResult).then(collapseSelectionPanelsAfterSuccessfulCompile);
+  }, [canRegenerateFromSelections, collapseSelectionPanelsAfterSuccessfulCompile, columns, contentModified, fontSize, getSelectedFormulasList, handleCompileOnly, handlePreview, spacing]);
 
   const handleSave = useCallback(async (e) => {
     e?.preventDefault?.();
