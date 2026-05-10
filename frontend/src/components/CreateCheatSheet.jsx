@@ -437,6 +437,35 @@ const SectionVideoPicks = ({
   );
 };
 
+const SELECTION_PANEL_STATE_STORAGE_KEY = 'cheatSheetSelectionPanelState';
+const DEFAULT_SELECTION_PANEL_STATE = {
+  classesOpen: true,
+  sectionsOpen: true,
+};
+
+function loadSelectionPanelState() {
+  try {
+    const stored = localStorage.getItem(SELECTION_PANEL_STATE_STORAGE_KEY);
+    if (!stored) return DEFAULT_SELECTION_PANEL_STATE;
+
+    const parsed = JSON.parse(stored);
+    return {
+      classesOpen: typeof parsed.classesOpen === 'boolean' ? parsed.classesOpen : DEFAULT_SELECTION_PANEL_STATE.classesOpen,
+      sectionsOpen: typeof parsed.sectionsOpen === 'boolean' ? parsed.sectionsOpen : DEFAULT_SELECTION_PANEL_STATE.sectionsOpen,
+    };
+  } catch {
+    return DEFAULT_SELECTION_PANEL_STATE;
+  }
+}
+
+function saveSelectionPanelState(state) {
+  try {
+    localStorage.setItem(SELECTION_PANEL_STATE_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // Ignore storage failures; panel controls should still work in-memory.
+  }
+}
+
 const FormulaSelection = React.memo(function FormulaSelection({ 
   classesData, 
   selectedClasses, 
@@ -452,23 +481,31 @@ const FormulaSelection = React.memo(function FormulaSelection({
   onRemoveFormula,
   collapseClassesSignal = 0,
 }) {
-  const [classesOpen, setClassesOpen] = useState(true);
-  const [sectionsOpen, setSectionsOpen] = useState(true);
+  const [selectionPanelState, setSelectionPanelState] = useState(loadSelectionPanelState);
   const [reorderOpen, setReorderOpen] = useState(true);
+  const { classesOpen, sectionsOpen } = selectionPanelState;
+
+  const updateSelectionPanelState = useCallback((updater) => {
+    setSelectionPanelState((current) => {
+      const patch = typeof updater === 'function' ? updater(current) : updater;
+      const next = { ...current, ...patch };
+      saveSelectionPanelState(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (collapseClassesSignal > 0) {
-      setClassesOpen(false);
-      setSectionsOpen(false);
+      updateSelectionPanelState({ classesOpen: false, sectionsOpen: false });
     }
-  }, [collapseClassesSignal]);
+  }, [collapseClassesSignal, updateSelectionPanelState]);
 
   return (
     <div className="formula-selection">
       <CollapsiblePanelSection
   title="Select classes"
   isOpen={classesOpen}
-  onToggle={() => setClassesOpen((current) => !current)}
+  onToggle={() => updateSelectionPanelState((current) => ({ classesOpen: !current.classesOpen }))}
   countBadge={selectedCount > 0 ? `${selectedCount}` : null}
 >
   {hasSelectedClasses && (
@@ -511,7 +548,7 @@ const FormulaSelection = React.memo(function FormulaSelection({
         <CollapsiblePanelSection
           title="Select sections"
           isOpen={sectionsOpen}
-          onToggle={() => setSectionsOpen((current) => !current)}
+          onToggle={() => updateSelectionPanelState((current) => ({ sectionsOpen: !current.sectionsOpen }))}
           className="category-dropdowns"
         >
           {classesData.map((cls) => {

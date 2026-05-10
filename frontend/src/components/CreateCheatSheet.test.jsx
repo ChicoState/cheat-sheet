@@ -80,6 +80,7 @@ describe('CreateCheatSheet Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     window.ResizeObserver = class ResizeObserver {
       observe = vi.fn();
       disconnect = vi.fn();
@@ -193,6 +194,40 @@ describe('CreateCheatSheet Component', () => {
       expect(screen.getByRole('button', { name: /Select classes/i })).toHaveAttribute('aria-expanded', 'false');
       expect(screen.getByRole('button', { name: /Select sections/i })).toHaveAttribute('aria-expanded', 'false');
     });
+    expect(screen.getByRole('button', { name: /Drag to reorder formulas/i })).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('remembers collapsed class and section panels across page returns', () => {
+    const selectedFormulas = [{ name: 'test' }];
+
+    useFormulas.mockReturnValue({
+      ...mockUseFormulas,
+      selectedClasses: { 'Math 101': true },
+      selectedCategories: { 'Math 101:Algebra': true },
+      groupedFormulas: [{ class: 'Math 101', formulas: selectedFormulas }],
+      selectedCount: 1,
+      hasSelectedClasses: true,
+    });
+
+    const { unmount } = render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Select classes/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Select sections/i }));
+
+    expect(screen.getByRole('button', { name: /Select classes/i })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: /Select sections/i })).toHaveAttribute('aria-expanded', 'false');
+
+    unmount();
+    render(
+      <CreateCheatSheet
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onReset={vi.fn()}
+        initialData={{ title: 'Restored snapshot' }}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /Select classes/i })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: /Select sections/i })).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByRole('button', { name: /Drag to reorder formulas/i })).toHaveAttribute('aria-expanded', 'true');
   });
 
