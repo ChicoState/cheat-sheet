@@ -314,8 +314,6 @@ def build_latex_for_formulas(selected_formulas, columns=4, font_size="9pt", marg
     for formula in selected_formulas:
         class_name = formula.get("class_name") or formula.get("class", "")
         category = formula.get("category", "")
-        name = formula.get("name", "")
-        latex = formula.get("latex", "")
         
         if class_name != current_class:
             if in_flushleft:
