@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  Full-stack React + Django editor for building LaTeX cheat sheets with live PDF preview, local draft recovery, account-backed saves, compile snapshots, and section-based YouTube study picks.
+  Full-stack React + Django editor for building dense LaTeX cheat sheets with CodeMirror editing, live PDF preview, local draft recovery, account-backed saves, compile snapshots, and section-based YouTube study picks.
 </p>
 
 <p align="center">
@@ -73,37 +73,30 @@ The main editor is a three-region workspace:
 
 ### Recent updates
 
-- clearer left-rail section disclosures and a first-compile rail shrink for a wider preview
+- CodeMirror 6 LaTeX editor with a calmer Tokyo Night syntax theme, real editor behavior, and lazy loading so the main bundle stays smaller
+- automatic add/remove syncing between sidebar formula selections and edited LaTeX, using backend-managed formula markers that preserve manual notes where possible
+- strict formula-merge validation so stale or unresolved selections fail clearly instead of silently dropping formulas
+- landscape orientation support across save, restore, compile, and dashboard download flows
+- compact layout presets for dense math sheets, including 6pt text, 0.1in margins, and tighter display-math spacing
+- first successful compile collapses class/section selection while leaving formula reorder controls available
+- selected class/section collapse state persists across page returns and snapshot changes
+- Back/Forward history now includes the first generated sheet from an empty editor
 - curated class/section video links with compact right-rail cards and API search kept as a per-section fallback
-- LaTeX editor remains closed by default so the compiled PDF stays front and center
-- GitHub Pages project-page assets were removed; the app is now documented as a local/Docker full-stack project
-- Animated compile button with shimmer effect while compiling with a green flash on success
-- Toast notification now replaces the browser alert on save
-- Keyboard Shortcuts: Ctrl+Enter to compile, Ctrl+S to save, Escape to close the video model
-- Browser tab title now updates to reflect the name of the active cheat sheet
-- character counter on the title input with a limit of 80 characters
-- New 'last saved' timestamp displayed next to the save button
-- Scroll to top button in the PDF Preview
-- Empty state illustration in the right panel when no sections are selected
-- Section count badge on the right panel header
-- Select all/Deselect all option above the subject class list
-- Clear search button for YouTube Search Results
-- PDF page number display in the preview toolbar
-- Focus ring styles for keyboard navigation accessibility
-- Improved muted text contrast to meet the WCAG AA standards
-- Custom scrollbar styling across all the panels
-- Hover transitions on video cards
-- Smooth transitiions for panel show/hide options
-- Improvements for mobile responsiveness for screens under 768px
-- Divider lines between the layout option selections
-- Full implementation of YouTube videos across each subject
+- Algorithms, Chemistry, Discrete Math, Statistics, and Linear Algebra formula/video coverage expanded
+- clearer unresolved-formula messages that explain when the current LaTeX was left unchanged
+- keyboard shortcuts: Ctrl+Enter to compile, Ctrl+S to save, Escape to close the video modal
+- browser tab title reflects the active cheat sheet name
+- title character counter with an 80-character limit
+- last-saved timestamp next to the save button
+- scroll-to-top and page-number controls in the PDF preview
+- focus ring, muted-text contrast, and compact panel styling improvements
 
 ### Editing and generation
 
 - formula library spanning pre-algebra through calculus
 - category-based formula picking
 - drag-and-drop ordering for classes and formulas
-- generated LaTeX editing in-browser
+- generated LaTeX editing in-browser with CodeMirror 6 and LaTeX syntax highlighting
 - compile through the backend with Tectonic
 - PDF preview with button-driven zoom controls
 - print support from the current compiled PDF
@@ -112,9 +105,10 @@ The main editor is a three-region workspace:
 ### Layout controls
 
 - **1 to 5 columns**
-- preset and custom font sizing
-- preset and custom spacing
-- adjustable page margins
+- preset and custom font sizing, including a 6pt minimum preset for dense reference sheets
+- preset and custom spacing, including 0pt / 0.2pt compact spacing options
+- adjustable page margins, including a 0.1in minimum preset
+- portrait and landscape orientation
 - automatic preview rebuild after layout-only changes
 
 ### Persistence and recovery
@@ -124,6 +118,7 @@ The main editor is a three-region workspace:
 - local compile snapshots for the active draft
 - snapshot restore flow that repopulates the editor and rebuilds preview on reopen
 - local-only save success message when the user is not signed in
+- persisted successful-compile state so reopened compiled sheets do not repeat first-compile collapse behavior
 
 ### UI workflow
 
@@ -156,7 +151,7 @@ The main editor is a three-region workspace:
 
 | Layer | Technology |
 | --- | --- |
-| Frontend | React 18, Vite 6, react-pdf, dnd-kit, lucide-react, framer-motion |
+| Frontend | React 18, Vite 6, CodeMirror 6, react-pdf, dnd-kit, lucide-react, framer-motion |
 | Backend | Django 6, Django REST Framework, Simple JWT |
 | PDF pipeline | Tectonic |
 | Database | SQLite by default, PostgreSQL in Docker |
@@ -168,7 +163,7 @@ The main editor is a three-region workspace:
 Frontend (React + Vite)
   ├─ Auth + dashboard routes
   ├─ Formula selection and ordering UI
-  ├─ Layout controls + LaTeX editor
+  ├─ Layout controls + CodeMirror LaTeX editor
   ├─ PDF preview and export actions
   └─ YouTube resource rail
          │
@@ -210,7 +205,7 @@ Backend (Django + DRF)
 │   │   ├── App.css                # Main application styling
 │   │   └── App.jsx                # Routing, shell, save workflow
 │   ├── Dockerfile
-│   ├── package.json
+│   ├── package.json               # Frontend deps, including CodeMirror editor packages
 │   └── vite.config.js
 ├── .github/workflows/             # CI workflows
 ├── docker-compose.yml
@@ -224,7 +219,7 @@ Backend (Django + DRF)
 
 - Node.js 24+
 - Python 3.14+
-- Tectonic
+- Tectonic 0.15+ locally, or the Tectonic binary installed by the backend Docker image
 - Docker Desktop or equivalent container runtime
 
 ### Environment
@@ -285,6 +280,8 @@ Services:
 - backend: `http://localhost:8000/api/`
 - postgres: internal Compose service used by Django
 
+The frontend Docker image runs the Vite dev server and uses `npm ci`, so `frontend/package-lock.json` must stay committed when dependencies change. The backend image installs `backend/requirements.txt`, downloads Tectonic, warms the Tectonic cache, and runs migrations before starting Django.
+
 ## Editor workflow
 
 1. Select one or more classes.
@@ -292,10 +289,12 @@ Services:
 3. Reorder class groups or formulas if needed.
 4. Generate/compile the sheet.
 5. Adjust columns, spacing, font size, or margins.
-6. Open the LaTeX editor only if you need to inspect or edit the generated source.
+6. Open the CodeMirror LaTeX editor if you need to inspect or edit the generated source.
 7. Save locally or, if signed in, save to your account.
 8. Restore a compile snapshot if you want to jump back to an earlier draft.
 9. Export `.pdf` / `.tex` or print directly from the preview toolbar.
+
+When selected formulas change after manual LaTeX edits, compile syncs the selected formulas into the current document instead of regenerating the whole sheet. Managed formula blocks use hidden markers. Still-selected formula blocks and manual notes are preserved where possible; deselected managed formula blocks are removed. If a selected formula cannot be resolved exactly during this merge, the compile is blocked and the current LaTeX is left unchanged.
 
 ## API endpoints
 
@@ -314,7 +313,7 @@ Services:
 | --- | --- | --- |
 | GET | `/api/classes/` | List classes, categories, and formulas |
 | POST | `/api/generate-sheet/` | Generate LaTeX from selected formulas |
-| POST | `/api/compile/` | Normalize and compile LaTeX into PDF |
+| POST | `/api/compile/` | Normalize, merge selected formulas when requested, and compile LaTeX into PDF |
 | POST | `/api/youtube-resources/` | Return top YouTube picks for selected sections |
 
 ### Persistence
@@ -346,6 +345,13 @@ Services:
 - STATISTICS II
 - LINEAR ALGEBRA I
 - LINEAR ALGEBRA II
+- CHEMISTRY I
+- CHEMISTRY II
+- DISCRETE MATH I
+- DISCRETE MATH II
+- DATA STRUCTURES & ALGORITHMS I
+- DATA STRUCTURES & ALGORITHMS II
+- DATA STRUCTURES & ALGORITHMS III
 
 Each class contains multiple categories and formulas in `backend/api/formula_data/`.
 
@@ -355,8 +361,8 @@ Each class contains multiple categories and formulas in `backend/api/formula_dat
 
 ```bash
 cd frontend
-npx eslint src
 npm test -- --run
+npm run lint
 npm run build
 ```
 
@@ -365,7 +371,7 @@ npm run build
 ```bash
 cd backend
 python manage.py check
-pytest -v
+python -m pytest
 ruff check .
 ```
 

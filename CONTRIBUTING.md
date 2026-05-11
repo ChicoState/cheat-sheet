@@ -42,7 +42,8 @@ Run the relevant checks for the area you changed.
 
 ```bash
 cd backend
-pytest -v
+python manage.py check
+python -m pytest
 ruff check .
 safety check
 ```
@@ -51,9 +52,12 @@ safety check
 
 ```bash
 cd frontend
+npm test -- --run
+npm run lint
 npm run build
-npx eslint src/
 ```
+
+When frontend dependencies change, commit both `frontend/package.json` and `frontend/package-lock.json`. The Docker dev container uses `npm ci`, so the lockfile is part of the runtime setup.
 
 ## Pull Request Guidance
 
