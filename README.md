@@ -45,29 +45,42 @@ The app is split into:
 
 ## Current Editor UI
 
-The main editor is a three-region workspace:
+The current editor is a three-panel workspace built around the compiled PDF. The subject picker stays on the left, the PDF preview stays in the center, and study videos stay on the right. The LaTeX source editor is available when needed, but it no longer dominates the first view.
 
-### Left rail
+### Left subject rail
 
-- class checklist
-- card-style section/category toggles with clearer collapse affordances
-- drag-and-drop formula ordering grouped by class
-- layout controls for columns, text size, spacing, and margins
-- primary actions for compile, save, reset, and downloads
+- Title field with an 80-character counter and automatic starter titles from selected classes.
+- Class and section selectors with collapsible cards; there is no global “Select All” action.
+- Selected formulas grouped by class, with drag-and-drop ordering and per-formula remove buttons.
+- Layout controls for columns, text size, spacing, margins, and portrait/landscape orientation.
+- Main `GET CHEAT SHEET` compile button with Ctrl+Enter shortcut text.
+- Back/Forward draft history, save, clear, print, PDF download, and `.tex` download controls.
 
-### Center workspace
+### Center PDF workspace
 
-- top toolbar with subject toggle, snapshot toggle, save, print, video rail toggle, and manual LaTeX editor toggle
-- optional split view with LaTeX editor on one side and compiled PDF preview on the other; the editor stays closed until the user opens it
-- PDF preview controls for zoom in/out, reset, fit width, fit height, and print
-- animated recompilation overlay while the preview refreshes
+- Toolbar buttons to hide/show subjects, open saved compile snapshots, show/hide the LaTeX editor, print, save, and hide/show videos.
+- PDF-first layout: before compile, the center shows a placeholder; after compile, it focuses on the generated PDF.
+- Optional split view: opening the LaTeX editor places CodeMirror on the left side of the center workspace and the PDF preview on the right.
+- Resizable LaTeX split so users can give more room to either source code or preview.
+- Preview controls for zoom out, zoom in, reset, fit width, fit height, current page, and scroll-to-top.
+- Recompile overlay while layout changes or content changes refresh the PDF.
+- Compile errors appear as a readable summary above the editor/preview instead of leaving users to scan raw LaTeX output first.
 
-### Right rail
+### Right video rail
 
-- compact section-aware study video recommendations
-- one curated video shown by default per selected section, with section-level expansion for more curated links
-- per-section YouTube search only when the curated picks are not enough
-- inline thumbnails with modal playback; video cards live only in the right rail
+- Compact section-aware video recommendations based on the selected class/category.
+- Curated videos shown first, one per selected section by default.
+- Section-level expansion and per-section “search more” behavior when curated links are not enough.
+- YouTube API searches stay behind the backend proxy; the browser never receives the API key.
+- Inline thumbnails open in an accessible modal, and Escape closes the video modal.
+
+### Workspace behavior
+
+- Left and right rails can be hidden from the center toolbar and resized with drag handles.
+- The first successful compile narrows the subject rail so the PDF gets more space while keeping controls reachable.
+- Panel widths and selected class/section collapse state persist across returns to the editor.
+- Saves use the latest live editor draft, even while CodeMirror state is debounced for smoother typing.
+- Successful compiles create local snapshots that can restore title, layout, selected formulas, source, and preview state.
 
 ## Features
 
