@@ -1630,7 +1630,6 @@ class TestCompileEndpoint:
                 "merge_formulas": True,
                 "formulas": [
                     {"class": "ALGEBRA I", "category": "Linear Equations", "name": "Slope Formula"},
-                    {"class": "ALGEBRA I", "category": "Wrong Category", "name": "Slope Formula"},
                     {"class": "ALGEBRA I", "category": "Linear Equations", "name": "Missing Formula"},
                 ],
             },
@@ -1641,8 +1640,69 @@ class TestCompileEndpoint:
         data = resp.json()
         assert data["error"] == "Some selected formulas could not be found."
         assert data["missing_formulas"] == [
-            {"class": "ALGEBRA I", "category": "Wrong Category", "name": "Slope Formula"},
             {"class": "ALGEBRA I", "category": "Linear Equations", "name": "Missing Formula"}
+        ]
+        assert "tex_code" not in data
+
+    def test_compile_merge_rejects_category_fallback_matches(self, api_client):
+        raw = (
+            "\\documentclass{article}\n"
+            "\\begin{document}\n"
+            "\\begin{multicols}{4}\n"
+            "Manual note.\n"
+            "\\end{multicols}\n"
+            "\\end{document}"
+        )
+
+        resp = api_client.post(
+            "/api/compile/",
+            {
+                "content": raw,
+                "normalize_only": True,
+                "merge_formulas": True,
+                "formulas": [
+                    {"class": "ALGEBRA I", "category": "Wrong Category", "name": "Slope Formula"},
+                ],
+            },
+            format="json",
+        )
+
+        assert resp.status_code == 400
+        data = resp.json()
+        assert data["error"] == "Some selected formulas could not be found."
+        assert data["missing_formulas"] == [
+            {"class": "ALGEBRA I", "category": "Wrong Category", "name": "Slope Formula"}
+        ]
+        assert "tex_code" not in data
+
+    def test_compile_merge_rejects_special_class_name_mismatch(self, api_client):
+        raw = (
+            "\\documentclass{article}\n"
+            "\\begin{document}\n"
+            "\\begin{multicols}{4}\n"
+            "Manual note.\n"
+            "\\end{multicols}\n"
+            "\\end{document}"
+        )
+
+        resp = api_client.post(
+            "/api/compile/",
+            {
+                "content": raw,
+                "normalize_only": True,
+                "merge_formulas": True,
+                "formulas": [
+                    {"class": "UNIT CIRCLE", "category": "UNIT CIRCLE", "name": "Wrong Unit Circle Name"},
+                ],
+            },
+            format="json",
+        )
+
+        assert resp.status_code == 400
+        data = resp.json()
+        assert data["error"] == "Some selected formulas could not be found."
+        assert data["missing_formulas"] == [
+            {"class": "UNIT CIRCLE", "category": "UNIT CIRCLE", "name": "Wrong Unit Circle Name"}
         ]
         assert "tex_code" not in data
 
