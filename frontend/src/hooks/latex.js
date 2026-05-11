@@ -44,9 +44,17 @@ function saveLatexStorage(data) {
 }
 
 function formatCompileError(errorData = {}) {
+  const missingFormulas = Array.isArray(errorData?.missing_formulas)
+    ? errorData.missing_formulas
+      .map((formula) => [formula.class || formula.class_name, formula.category, formula.name].filter(Boolean).join(' / '))
+      .filter(Boolean)
+    : [];
   const rawMessage = typeof errorData === 'string'
     ? errorData
-    : (errorData.details || errorData.error || 'Failed to compile LaTeX');
+    : [
+        errorData.details || errorData.error || 'Failed to compile LaTeX',
+        missingFormulas.length ? `Missing formulas: ${missingFormulas.join('; ')}` : '',
+      ].filter(Boolean).join('\n');
 
   return rawMessage
     .replace(/See the LaTeX manual or LaTeX Companion for explanation\.?/ig, '')

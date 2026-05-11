@@ -258,6 +258,31 @@ describe('useLatex hook', () => {
     expect(result.current.canRegenerateFromSelections).toBe(false);
   });
 
+  test('keeps current content when selected formula merge fails validation', async () => {
+    const { result } = renderHook(() => useLatex({ content: 'manual latex before failed merge' }), { wrapper });
+    const selectedFormulas = [
+      { class: 'ALGEBRA I', category: 'Linear Equations', name: 'Missing Formula' }
+    ];
+
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      text: async () => JSON.stringify({
+        error: 'Some selected formulas could not be found.',
+        missing_formulas: selectedFormulas,
+      }),
+    });
+
+    await act(async () => {
+      await result.current.handleCompileOnly(selectedFormulas);
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(result.current.content).toBe('manual latex before failed merge');
+    expect(result.current.compileError).toContain('Some selected formulas could not be found.');
+    expect(result.current.compileError).toContain('Missing Formula');
+    expect(result.current.pdfBlob).toBeNull();
+  });
+
   test('history goBack and goForward work correctly', async () => {
     const { result } = renderHook(() => useLatex(), { wrapper });
 

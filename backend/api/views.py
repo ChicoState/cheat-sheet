@@ -310,23 +310,40 @@ def generate_sheet(request):
 
 
 def resolve_selected_formulas(selected):
+    selected_formulas, _missing = resolve_selected_formulas_with_missing(selected, allow_category_fallback=True)
+    return selected_formulas
+
+
+def normalize_selected_formula(sel):
+    return {
+        "class": sel.get("class") or sel.get("class_name"),
+        "category": sel.get("category"),
+        "name": sel.get("name"),
+    }
+
+
+def resolve_selected_formulas_with_missing(selected, allow_category_fallback=False):
     formula_data = get_formula_data()
     selected_formulas = []
+    missing_formulas = []
 
     for sel in selected:
-        class_name = sel.get("class") or sel.get("class_name")
-        category = sel.get("category")
-        name = sel.get("name")
+        normalized = normalize_selected_formula(sel)
+        class_name = normalized["class"]
+        category = normalized["category"]
+        name = normalized["name"]
+        matched = False
         
         if is_special_class(class_name):
             formula = get_special_class_formula(class_name)
-            if formula:
+            if formula and formula.get("name") == name:
                 selected_formulas.append({
                     "class_name": class_name,
                     "category": class_name,
                     "name": formula["name"],
                     "latex": formula["latex"]
                 })
+                matched = True
         elif class_name in formula_data:
             categories = formula_data[class_name]
             if category in categories:
@@ -339,7 +356,9 @@ def resolve_selected_formulas(selected):
                             "name": f["name"],
                             "latex": f["latex"]
                         })
-            else:
+                        matched = True
+                        break
+            elif allow_category_fallback:
                 for current_category, formulas in categories.items():
                     match = next((f for f in formulas if f.get("name") == name), None)
                     if match:
@@ -349,9 +368,13 @@ def resolve_selected_formulas(selected):
                             "name": match["name"],
                             "latex": match["latex"]
                         })
+                        matched = True
                         break
 
-    return selected_formulas
+        if not matched:
+            missing_formulas.append(normalized)
+
+    return selected_formulas, missing_formulas
 
 
 @api_view(["POST"])
@@ -386,7 +409,12 @@ def compile_latex(request):
         return Response({"error": "No LaTeX content provided"}, status=400)
 
     if merge_formulas:
-        selected_formulas = resolve_selected_formulas(selected)
+        selected_formulas, missing_formulas = resolve_selected_formulas_with_missing(selected, allow_category_fallback=False)
+        if missing_formulas:
+            return Response({
+                "error": "Some selected formulas could not be found.",
+                "missing_formulas": missing_formulas,
+            }, status=400)
         content = merge_selected_formulas_into_latex(content, selected_formulas, font_size, spacing)
 
     content = normalize_latex_layout(content, columns, font_size, margins, spacing, orientation)
