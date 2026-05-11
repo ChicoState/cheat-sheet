@@ -1499,7 +1499,8 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
       setSaveStatus('saved');
       setLastSavedAt(Date.now());
       showToast('Cheat sheet saved successfully!');
-    } catch {
+    } catch (error) {
+      console.error('Failed to save cheat sheet:', error);
       setSaveStatus('offline');
       showToast('Failed to save. Please try again.', 'error');
     } finally {

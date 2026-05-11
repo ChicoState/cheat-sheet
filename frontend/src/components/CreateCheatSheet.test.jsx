@@ -594,6 +594,24 @@ describe('CreateCheatSheet Component', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
   });
 
+  it('logs save errors while keeping the user-facing failure state', async () => {
+    const saveError = new Error('save failed');
+    const onSave = vi.fn().mockRejectedValue(saveError);
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      render(<CreateCheatSheet onSave={onSave} onReset={vi.fn()} />);
+
+      fireEvent.click(screen.getAllByRole('button', { name: /^Save$/i })[0]);
+
+      await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to save cheat sheet:', saveError));
+      expect(screen.getByText('Failed to save. Please try again.')).toBeInTheDocument();
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
   it('does not start another Ctrl+S save while a save is already running', () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
 

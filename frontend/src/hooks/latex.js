@@ -393,6 +393,7 @@ export function useLatex(initialData) {
 
     try {
       let contentToCompile = liveContent;
+      let mergedSelectionsIntoContent = false;
 
       if (!hasContent) {
         const generatedContent = await generateLatexContent(selectedFormulas);
@@ -405,9 +406,10 @@ export function useLatex(initialData) {
       if (hasContent && shouldMergeSelections) {
         contentToCompile = await mergeSelectedFormulasIntoContent(contentToCompile, selectedFormulas);
         syncContentNow(contentToCompile);
+        mergedSelectionsIntoContent = true;
       }
 
-      if (hasContent && hasLayoutChanges) {
+      if (hasContent && hasLayoutChanges && !mergedSelectionsIntoContent) {
         contentToCompile = await normalizeLatexContent(contentToCompile);
         syncContentNow(contentToCompile);
       }

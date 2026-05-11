@@ -258,6 +258,38 @@ describe('useLatex hook', () => {
     expect(result.current.canRegenerateFromSelections).toBe(false);
   });
 
+  test('does not normalize a second time after merging selected formulas with layout changes', async () => {
+    const { result } = renderHook(() => useLatex({ content: '\\documentclass{article}\nManual note' }), { wrapper });
+    const selectedFormulas = [{ class: 'Algebra', category: 'Linear', name: 'Slope Formula' }];
+
+    act(() => {
+      result.current.setFontSize('6pt');
+    });
+
+    global.fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ tex_code: '\\documentclass{article}\nMerged formula at 6pt' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        blob: async () => new Blob(['fake pdf data']),
+      });
+
+    await act(async () => {
+      await result.current.handleCompileOnly(selectedFormulas);
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    const mergeBody = JSON.parse(global.fetch.mock.calls[0][1].body);
+    const compileBody = JSON.parse(global.fetch.mock.calls[1][1].body);
+
+    expect(mergeBody.merge_formulas).toBe(true);
+    expect(mergeBody.normalize_only).toBe(true);
+    expect(mergeBody.font_size).toBe('6pt');
+    expect(compileBody.content).toContain('Merged formula at 6pt');
+  });
+
   test('keeps current content when selected formula merge fails validation', async () => {
     const { result } = renderHook(() => useLatex({ content: 'manual latex before failed merge' }), { wrapper });
     const selectedFormulas = [
