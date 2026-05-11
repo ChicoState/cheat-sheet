@@ -448,6 +448,23 @@ describe('CreateCheatSheet Component', () => {
     expect(await screen.findByTestId('latex-codemirror-editor')).toHaveValue('line one\nline two');
   });
 
+  it('explains unresolved selected formulas without sounding like a LaTeX crash', async () => {
+    useLatex.mockReturnValue({
+      ...mockUseLatex,
+      content: 'line one\nline two',
+      compileError: 'Some selected formulas could not be found.\nMissing formulas: ALGEBRA I / Linear Equations / Missing Formula',
+      pdfBlob: new Blob(['pdf'], { type: 'application/pdf' }),
+    });
+
+    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Show LaTeX editor/i }));
+
+    expect(screen.getByText(/Could not update selected formulas/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Missing Formula/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Your current LaTeX was not changed/i)).toBeInTheDocument();
+  });
+
   it('does not remap restored generated content into a manual edit on mount', () => {
     const handleContentChange = vi.fn();
 

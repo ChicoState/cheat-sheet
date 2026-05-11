@@ -633,6 +633,15 @@ const getCompileErrorSummary = (compileError = '') => {
     return '';
   }
 
+  if (/Some selected formulas could not be found\./i.test(normalizedError)) {
+    const missingLine = normalizedError
+      .split('\n')
+      .find((line) => /^Missing formulas:/i.test(line.trim()))
+      ?.trim();
+    const missingDetails = missingLine ? ` ${missingLine}` : '';
+    return `Could not update selected formulas.${missingDetails} Your current LaTeX was not changed.`;
+  }
+
   const lineMatch = normalizedError.match(/document\.tex:(\d+):\s*([^\n]+)/);
   if (lineMatch) {
     return `Line ${lineMatch[1]}: ${lineMatch[2].replace(/^error:\s*/i, '').trim()}`;
