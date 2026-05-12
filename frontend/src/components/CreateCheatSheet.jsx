@@ -31,7 +31,25 @@ const MIN_CENTER_WIDTH = 360;
 const MIN_PREVIEW_WIDTH = 260;
 const DEFAULT_PDF_ZOOM = 0.85;
 const MIN_SPLIT_CENTER_WIDTH = LATEX_PANEL_MIN_WIDTH + RESIZER_WIDTH + MIN_PREVIEW_WIDTH;
+const LATEX_EDITOR_THEME_STORAGE_KEY = 'latexEditorTheme';
+const LATEX_EDITOR_THEME_OPTIONS = [
+  { id: 'storm', label: 'Tokyo Night Storm' },
+  { id: 'night', label: 'Tokyo Night' },
+  { id: 'light', label: 'Tokyo Night Light' },
+];
+const DEFAULT_LATEX_EDITOR_THEME_ID = 'storm';
 const LatexCodeMirrorEditor = React.lazy(() => import('./LatexCodeMirrorEditor'));
+
+function loadLatexEditorTheme() {
+  try {
+    const savedTheme = localStorage.getItem(LATEX_EDITOR_THEME_STORAGE_KEY);
+    return LATEX_EDITOR_THEME_OPTIONS.some((theme) => theme.id === savedTheme)
+      ? savedTheme
+      : DEFAULT_LATEX_EDITOR_THEME_ID;
+  } catch {
+    return DEFAULT_LATEX_EDITOR_THEME_ID;
+  }
+}
 
 function loadPanelLayout() {
   try {
@@ -650,11 +668,13 @@ const getCompileErrorSummary = (compileError = '') => {
   return (normalizedError.split('\n').find((line) => line.trim()) || '').replace(/^error:\s*/i, '').trim();
 };
 
-const LatexEditor = ({ content, onChange, isModified, compileError }) => {
+const LatexEditor = ({ content, onChange, isModified, compileError, editorThemeId, onCycleEditorTheme }) => {
   const lastContentPropRef = useRef(content);
   const editorLabelId = useId();
   const [draftContent, setDraftContent] = useState(content);
   const compileErrorSummary = useMemo(() => getCompileErrorSummary(compileError), [compileError]);
+  const editorThemeLabel = LATEX_EDITOR_THEME_OPTIONS.find((theme) => theme.id === editorThemeId)?.label
+    || LATEX_EDITOR_THEME_OPTIONS[0].label;
 
   useEffect(() => {
     if (lastContentPropRef.current === content) return;
@@ -670,7 +690,19 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
 
   return (
     <div className="input-section">
-      <label id={editorLabelId}>Generated LaTeX Code:</label>
+      <div className="latex-editor-heading-row">
+        <label id={editorLabelId}>Generated LaTeX Code:</label>
+        <button
+          type="button"
+          className={`latex-editor-theme-toggle latex-editor-theme-toggle-${editorThemeId}`}
+          onClick={onCycleEditorTheme}
+          aria-label={`Editor theme: ${editorThemeLabel}`}
+          title={`Editor theme: ${editorThemeLabel}`}
+        >
+          <span className="theme-toggle-swatch" aria-hidden="true" />
+          <span>{editorThemeLabel}</span>
+        </button>
+      </div>
       {compileErrorSummary ? (
         <div className="editor-status error">{compileErrorSummary}</div>
       ) : isModified ? (
@@ -683,6 +715,7 @@ const LatexEditor = ({ content, onChange, isModified, compileError }) => {
               value={draftContent}
               isModified={isModified}
               labelId={editorLabelId}
+              editorThemeId={editorThemeId}
               onChange={handleEditorChange}
               placeholder='Select classes and categories above, then click "GET CHEAT SHEET" to see the LaTeX code here.'
             />
@@ -1100,6 +1133,7 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
   const [rightPanelVisible, setRightPanelVisible] = useState(true);
   const [panelLayout, setPanelLayout] = useState(() => loadPanelLayout());
   const [videoSearchRequest, setVideoSearchRequest] = useState(null);
+  const [latexEditorThemeId, setLatexEditorThemeId] = useState(() => loadLatexEditorTheme());
   const [saveStatus, setSaveStatus] = useState('idle');
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [toast, setToast] = useState(null);
@@ -1131,6 +1165,18 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
     () => selectedVideoTopics.map((topic) => `${topic.className}:${topic.category}`).join('|'),
     [selectedVideoTopics],
   );
+  const handleCycleLatexEditorTheme = useCallback(() => {
+    setLatexEditorThemeId((currentThemeId) => {
+      const currentIndex = LATEX_EDITOR_THEME_OPTIONS.findIndex((theme) => theme.id === currentThemeId);
+      const nextTheme = LATEX_EDITOR_THEME_OPTIONS[(currentIndex + 1) % LATEX_EDITOR_THEME_OPTIONS.length];
+      try {
+        localStorage.setItem(LATEX_EDITOR_THEME_STORAGE_KEY, nextTheme.id);
+      } catch {
+        // Theme switching should still work if localStorage is unavailable.
+      }
+      return nextTheme.id;
+    });
+  }, []);
   const curatedVideoResources = useMemo(
     () => getCuratedVideosForTopics(selectedVideoTopics),
     [selectedVideoTopics],
@@ -1765,6 +1811,8 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                        onChange={handleContentChange}
                        isModified={contentModified || hasLayoutChanges}
                        compileError={compileError}
+                       editorThemeId={latexEditorThemeId}
+                       onCycleEditorTheme={handleCycleLatexEditorTheme}
                      />
                    </div>
                    <button
@@ -1854,7 +1902,8 @@ const CreateCheatSheet = ({ onSave, onReset, onRestoreSnapshot, initialData, isS
                   return (
                     <div key={topicKey} className="subject-video-group">
                       <div className="subject-video-label" title={`${topic.className} · ${topic.category}`}>
-                        {topic.category}
+                        <span>{topic.category}</span>
+                        <small>{topic.className}</small>
                       </div>
                       <SectionVideoPicks
                         className={topic.className}

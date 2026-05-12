@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import LatexCodeMirrorEditor, { TOKYO_NIGHT_COLORS } from './LatexCodeMirrorEditor';
+import LatexCodeMirrorEditor, { TOKYO_NIGHT_EDITOR_THEMES } from './LatexCodeMirrorEditor';
 
 const { codeMirrorSpy } = vi.hoisted(() => ({
   codeMirrorSpy: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock('@uiw/react-codemirror', () => ({
 }));
 
 describe('LatexCodeMirrorEditor', () => {
-  it('uses a mellow Tokyo Night palette for LaTeX editing', () => {
+  it('uses Tokyo Night Storm as the default LaTeX editor palette', () => {
     render(
       <LatexCodeMirrorEditor
         value="\\alpha"
@@ -25,7 +25,7 @@ describe('LatexCodeMirrorEditor', () => {
       />,
     );
 
-    expect(TOKYO_NIGHT_COLORS).toMatchObject({
+    expect(TOKYO_NIGHT_EDITOR_THEMES.storm.colors).toMatchObject({
       background: '#1a1b26',
       foreground: '#c0caf5',
       muted: '#565f89',
@@ -35,8 +35,32 @@ describe('LatexCodeMirrorEditor', () => {
       string: '#9ece6a',
     });
     expect(codeMirrorSpy).toHaveBeenCalledWith(expect.objectContaining({
-      className: 'latex-codemirror ',
+      className: 'latex-codemirror latex-codemirror-theme-storm ',
       extensions: expect.any(Array),
+    }));
+  });
+
+  it('can switch the LaTeX editor to Tokyo Night Light without changing app theme state', () => {
+    render(
+      <LatexCodeMirrorEditor
+        value="\\alpha"
+        onChange={vi.fn()}
+        isModified={false}
+        placeholder="Write LaTeX"
+        labelId="latex-editor-label"
+        editorThemeId="light"
+      />,
+    );
+
+    expect(TOKYO_NIGHT_EDITOR_THEMES.light.colors).toMatchObject({
+      background: '#d5d6db',
+      foreground: '#343b58',
+      command: '#34548a',
+      math: '#5a4a78',
+      string: '#485e30',
+    });
+    expect(codeMirrorSpy).toHaveBeenLastCalledWith(expect.objectContaining({
+      className: 'latex-codemirror latex-codemirror-theme-light ',
     }));
   });
 });

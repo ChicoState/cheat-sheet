@@ -414,6 +414,34 @@ describe('CreateCheatSheet Component', () => {
     expect(codeMirrorRenderSpy.mock.calls.at(-1)[0].basicSetup).toBe(initialBasicSetup);
   });
 
+  it('cycles and persists the LaTeX editor Tokyo Night theme without changing app theme', async () => {
+    useLatex.mockReturnValue({
+      ...mockUseLatex,
+      content: '\\frac{a}{b}',
+      pdfBlob: new Blob(['pdf'], { type: 'application/pdf' }),
+    });
+
+    render(<CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Show LaTeX editor/i }));
+
+    const themeButton = await screen.findByRole('button', { name: /Editor theme: Tokyo Night Storm/i });
+    expect(codeMirrorRenderSpy.mock.calls.at(-1)[0].className).toContain('latex-codemirror-theme-storm');
+    expect(document.documentElement.getAttribute('data-theme') || '').not.toMatch(/tokyo/i);
+
+    fireEvent.click(themeButton);
+
+    expect(screen.getByRole('button', { name: /Editor theme: Tokyo Night/i })).toBeInTheDocument();
+    expect(codeMirrorRenderSpy.mock.calls.at(-1)[0].className).toContain('latex-codemirror-theme-night');
+    expect(window.localStorage.getItem('latexEditorTheme')).toBe('night');
+
+    fireEvent.click(screen.getByRole('button', { name: /Editor theme: Tokyo Night/i }));
+
+    expect(screen.getByRole('button', { name: /Editor theme: Tokyo Night Light/i })).toBeInTheDocument();
+    expect(codeMirrorRenderSpy.mock.calls.at(-1)[0].className).toContain('latex-codemirror-theme-light');
+    expect(window.localStorage.getItem('latexEditorTheme')).toBe('light');
+  });
+
   it('updates CodeMirror when external LaTeX content changes', async () => {
     const { rerender } = render(
       <CreateCheatSheet onSave={vi.fn().mockResolvedValue(undefined)} onReset={vi.fn()} />
