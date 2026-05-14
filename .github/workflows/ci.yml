@@ -32,10 +32,10 @@ jobs:
         run: ruff check .
 
       - name: Security audit
-        run: safety check
+        run: PYTHONWARNINGS="ignore::UserWarning" safety check
 
       - name: Run tests
-        run: pytest -v
+        run: python -m pytest -v
 
   frontend:
     runs-on: ubuntu-latest

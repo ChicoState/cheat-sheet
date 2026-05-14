@@ -18,6 +18,7 @@
   <img src="https://img.shields.io/badge/django-6-092E20?logo=django&logoColor=white" alt="Django 6" />
   <img src="https://img.shields.io/badge/drf-api-A30000" alt="Django REST Framework" />
   <img src="https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white" alt="Docker Compose" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-blue.svg" alt="License: GPL v3" /></a>
 </p>
 
 <p align="center">
@@ -28,7 +29,8 @@
   <a href="#project-structure">Project Structure</a> •
   <a href="#getting-started">Getting Started</a> •
   <a href="#api-endpoints">API Endpoints</a> •
-  <a href="#checks-and-validation">Checks and Validation</a>
+  <a href="#checks-and-validation">Checks and Validation</a> •
+  <a href="#license">License</a>
 </p>
 
 ![Cheat Sheet Generator interface preview](current-ui.png)
@@ -52,7 +54,7 @@ The main editor is a three-region workspace:
 - class checklist
 - card-style section/category toggles with clearer collapse affordances
 - drag-and-drop formula ordering grouped by class
-- layout controls for columns, text size, spacing, and margins
+- layout controls for columns, text size, spacing, margins, and page orientation
 - primary actions for compile, save, reset, and downloads
 
 ### Center workspace
@@ -100,7 +102,7 @@ The main editor is a three-region workspace:
 
 ### Editing and generation
 
-- formula library spanning pre-algebra through calculus
+- formula library spanning pre-algebra through calculus, physics, statistics, and linear algebra
 - category-based formula picking
 - drag-and-drop ordering for classes and formulas
 - generated LaTeX editing in-browser
@@ -115,6 +117,7 @@ The main editor is a three-region workspace:
 - preset and custom font sizing
 - preset and custom spacing
 - adjustable page margins
+- portrait and landscape page orientation
 - automatic preview rebuild after layout-only changes
 
 ### Persistence and recovery
@@ -214,6 +217,7 @@ Backend (Django + DRF)
 │   └── vite.config.js
 ├── .github/workflows/             # CI workflows
 ├── docker-compose.yml
+├── LICENSE
 ├── current-ui.png
 └── README.md
 ```
@@ -355,8 +359,8 @@ Each class contains multiple categories and formulas in `backend/api/formula_dat
 
 ```bash
 cd frontend
-npx eslint src
 npm test -- --run
+npm run lint
 npm run build
 ```
 
@@ -365,22 +369,24 @@ npm run build
 ```bash
 cd backend
 python manage.py check
-pytest -v
+python -m pytest
 ruff check .
+PYTHONWARNINGS="ignore::UserWarning" safety check
 ```
 
 For the Docker-backed backend checks used before release:
 
 ```bash
 docker compose run --rm backend python manage.py check
-docker compose run --rm backend pytest -q
+docker compose run --rm backend python -m pytest
 docker compose run --rm backend ruff check .
+docker compose run --rm backend sh -lc 'PYTHONWARNINGS="ignore::UserWarning" safety check'
 ```
 
 ### Docker
 
 ```bash
-docker compose config
+docker compose config --quiet
 docker compose build
 ```
 
@@ -421,4 +427,4 @@ If you find a vulnerability, follow [SECURITY.md](SECURITY.md) instead of openin
 
 ## License
 
-No license file is currently included in this repository.
+This project is licensed under the [GNU General Public License v3.0](LICENSE). The GPL keeps the project open source and requires redistributed versions or derivative works to preserve the same license terms.

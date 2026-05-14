@@ -42,9 +42,9 @@ Run the relevant checks for the area you changed.
 
 ```bash
 cd backend
-pytest -v
+python -m pytest
 ruff check .
-safety check
+PYTHONWARNINGS="ignore::UserWarning" safety check
 ```
 
 ### Frontend
@@ -52,7 +52,7 @@ safety check
 ```bash
 cd frontend
 npm run build
-npx eslint src/
+npm run lint
 ```
 
 ## Pull Request Guidance
