@@ -44,7 +44,7 @@ Run the relevant checks for the area you changed.
 cd backend
 pytest -v
 ruff check .
-PYTHONWARNINGS="ignore::UserWarning" safety check
+safety check
 ```
 
 ### Frontend
