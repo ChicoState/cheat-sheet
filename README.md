@@ -360,7 +360,7 @@ Each class contains multiple categories and formulas in `backend/api/formula_dat
 ```bash
 cd frontend
 npm test -- --run
-npm run lint
+npx eslint src/
 npm run build
 ```
 
@@ -369,7 +369,7 @@ npm run build
 ```bash
 cd backend
 python manage.py check
-python -m pytest
+pytest -v
 ruff check .
 PYTHONWARNINGS="ignore::UserWarning" safety check
 ```
@@ -378,7 +378,7 @@ For the Docker-backed backend checks used before release:
 
 ```bash
 docker compose run --rm backend python manage.py check
-docker compose run --rm backend python -m pytest
+docker compose run --rm backend pytest -q
 docker compose run --rm backend ruff check .
 docker compose run --rm backend sh -lc 'PYTHONWARNINGS="ignore::UserWarning" safety check'
 ```

@@ -35,7 +35,7 @@ jobs:
         run: PYTHONWARNINGS="ignore::UserWarning" safety check
 
       - name: Run tests
-        run: python -m pytest -v
+        run: pytest -v
 
   frontend:
     runs-on: ubuntu-latest
